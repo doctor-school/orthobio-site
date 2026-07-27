@@ -119,8 +119,15 @@ jobs:
           # for SITE_HOST exists: we are checking OUR host, by name, not
           # whatever DNS currently points at. Config-only "deploy succeeded"
           # claims are what this step exists to prevent.
-          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' \
+          #
+          # -L plus a :443 override survives the certbot cutover: today plain
+          # HTTP answers 200, and once `certbot --nginx --redirect` installs the
+          # 80 -> 443 redirect the same request follows it to a real
+          # certificate for the same name. Without this the first deploy after
+          # TLS goes live would fail on a 301.
+          code=$(curl -sSL -o /tmp/home.html -w '%{http_code}' \
             --resolve "${SITE_HOST}:80:${DEPLOY_HOST}" \
+            --resolve "${SITE_HOST}:443:${DEPLOY_HOST}" \
             "http://${SITE_HOST}/")
           echo "GET / -> ${code}"
           test "${code}" = "200"

@@ -1,24 +1,31 @@
 ---
 /**
- * Archive year page — MINIMAL data-model smoke template (Issue #1).
+ * /archive/<year> — единый шаблон года (ТЗ §4): заголовок, президиум,
+ * программа, фотогалерея, сборник тезисов, партнёры года.
  *
- * Deliberately unstyled semantic HTML: it exists only to prove that a congress
- * year edition renders from YAML without touching the template. Visual design
- * is a later separate stage (Issue #4 + Claude.design) — do not add styling
- * here.
- *
- * Nullability rendering follows AGENTS.md content integrity: unknown facts
- * show an explicit «нет данных», never an invented value.
+ * Renders ONLY from the congress collection: adding a year is a YAML file, not
+ * markup. The four blocks the ТЗ names as the year template always render — an
+ * absent one says «нет данных» rather than silently disappearing; the optional
+ * blocks (оргкомитет, видео, постеры) appear only when the year has them.
+ * Nothing is ever borrowed from a neighbouring year.
  */
-import { getCongressYears, PARTNER_TIERS, PARTNER_TIER_LABELS } from '@/content';
-import type { CongressEntry } from '@/content';
+import CommitteeList from '@/components/CommitteeList.astro';
+import DocCard from '@/components/DocCard.astro';
+import PartnerTier from '@/components/PartnerTier.astro';
+import PersonCard from '@/components/PersonCard.astro';
+import PhotoGrid from '@/components/PhotoGrid.astro';
+import ProgramSession from '@/components/ProgramSession.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import VideoCard from '@/components/VideoCard.astro';
+import { mediaUrl } from '@/config/site';
+import { getCongressYears, type CongressEntry } from '@/content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { groupPartners, groupSessionsByDay, ordinalLabel, plural, nbsp } from '@/lib/congress';
 
 export async function getStaticPaths() {
-  // year↔filename integrity is enforced inside getCongressYears() (content
-  // layer), so it holds for every consumer, not just this page.
+  // Drafts are filtered inside getCongressYears() — a fixture must never get a
+  // public route.
   const years = await getCongressYears();
-  // Drafts (fixtures) are still built at this stage so the smoke page exists;
-  // prod filtering of drafts arrives with the real pages (Issue #4).
   return years.map((entry) => ({ params: { year: entry.id }, props: { entry } }));
 }
 
@@ -31,209 +38,147 @@ const c = entry.data;
 
 const NO_DATA = 'нет данных';
 
-// Group partners by tier, preserving the canonical tier order.
-const partnerGroups = PARTNER_TIERS.map((tier) => ({
-  tier,
-  label: PARTNER_TIER_LABELS[tier],
-  items: c.partners.filter((p) => p.tier === tier),
-})).filter((g) => g.items.length > 0);
+const sessions = c.program?.sessions ?? [];
+const days = groupSessionsByDay(sessions);
+const talkCount = sessions.reduce((sum, s) => sum + s.talks.length, 0);
+const programSummary =
+  sessions.length > 0
+    ? [
+        nbsp(sessions.length, plural(sessions.length, ['сессия', 'сессии', 'сессий'])),
+        nbsp(talkCount, plural(talkCount, ['доклад', 'доклада', 'докладов'])),
+      ].join(' · ')
+    : null;
 
-const pageTitle = `${c.title ?? `Конгресс ОРТОБИОЛОГИЯ`} — ${c.year} — архив`;
+const partnerGroups = groupPartners(c.partners);
+const posterImages = c.posters.filter((p) => p.width !== null && p.height !== null);
+const posterDocs = c.posters.filter((p) => p.width === null || p.height === null);
+
+const meta = [c.dates ?? NO_DATA, c.place].filter(Boolean).join(' — ');
+const title = c.title ?? `ОРТОБИОЛОГИЯ ${c.year}`;
+const description = `${title}. ${meta}. Программа, фотоотчёт и материалы конгресса в архиве.`;
 ---
 
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {c.draft && <meta name="robots" content="noindex" />}
-    <title>{pageTitle}</title>
-  </head>
-  <body>
-    {c.draft && <p><strong>ЧЕРНОВИК / ФИКСТУРА — не публиковать</strong></p>}
+<BaseLayout title={`${title} — архив`} description={description} noindex={c.draft}>
+  <div class="ob-yh">
+    <div class="ob-container ob-yh__in">
+      {c.draft && <p class="ob-yh__draft">Черновик / фикстура — не публиковать</p>}
+      <p class="ob-yh__num">{ordinalLabel(c.number)} · Архив</p>
+      <h1 class="ob-yh__title">{title}</h1>
+      <p class="ob-yh__meta">{meta}</p>
+    </div>
+  </div>
 
-    <header>
-      <h1>{c.title ?? NO_DATA}</h1>
-      <dl>
-        <dt>Год</dt>
-        <dd>{c.year}</dd>
-        <dt>№ конгресса</dt>
-        <dd>{c.number ?? NO_DATA}</dd>
-        <dt>Даты</dt>
-        <dd>{c.dates ?? NO_DATA}</dd>
-        <dt>Место</dt>
-        <dd>{c.place ?? NO_DATA}</dd>
-      </dl>
-      {
-        c.cover && (
-          <img
-            src={c.cover.url}
-            alt={c.cover.alt ?? `Обложка конгресса ${c.year}`}
-            width={c.cover.width}
-            height={c.cover.height}
-          />
-        )
-      }
-    </header>
+  <div class="ob-container ob-section">
+    <SectionHeading title="Президиум и обращения" />
+    {
+      c.greetings.length > 0 ? (
+        <div class="ob-cards--narrow ob-cards">
+          {c.greetings.map((g) => (
+            <PersonCard name={g.name} role={g.role} photo={g.photo} text={g.text} />
+          ))}
+        </div>
+      ) : (
+        <p class="ob-empty">{NO_DATA}</p>
+      )
+    }
+  </div>
 
-    <section aria-labelledby="greetings-h">
-      <h2 id="greetings-h">Президиум и обращения</h2>
-      {c.greetings.length === 0 && <p>{NO_DATA}</p>}
-      {
-        c.greetings.map((g) => (
-          <article>
-            <h3>{g.name}</h3>
-            {g.role && <p>{g.role}</p>}
-            {g.photo && <img src={g.photo} alt={`Фото: ${g.name}`} width="200" height="200" />}
-            {g.text ? <blockquote>{g.text}</blockquote> : <p>Текст обращения: {NO_DATA}</p>}
-          </article>
-        ))
-      }
-    </section>
+  {
+    c.committee.length > 0 && (
+      <div class="ob-container ob-section">
+        <SectionHeading title="Оргкомитет" />
+        <CommitteeList members={c.committee} />
+      </div>
+    )
+  }
 
-    <section aria-labelledby="committee-h">
-      <h2 id="committee-h">Оргкомитет</h2>
-      {c.committee.length === 0 && <p>{NO_DATA}</p>}
-      {
-        c.committee.length > 0 && (
-          <ul>
-            {c.committee.map((m) => (
-              <li>
-                {m.name}
-                {m.regalia && ` — ${m.regalia}`}
-              </li>
+  <div class="ob-container ob-section">
+    <SectionHeading title="Программа" />
+    {programSummary && <p class="ob-note">{programSummary}</p>}
+    {c.program?.pdf && <DocCard href={c.program.pdf} title={`${title}. Программа конгресса`} />}
+    {
+      days.map((day) => (
+        <>
+          <h3 class="ob-prog__day">{day.label}</h3>
+          <div class="ob-prog__grid">
+            {day.sessions.map((session) => (
+              <ProgramSession session={session} level="h4" />
             ))}
-          </ul>
-        )
-      }
-    </section>
+          </div>
+        </>
+      ))
+    }
+    {!c.program && <p class="ob-empty">{NO_DATA}</p>}
+  </div>
 
-    <section aria-labelledby="program-h">
-      <h2 id="program-h">Программа</h2>
-      {!c.program && <p>{NO_DATA}</p>}
-      {c.program?.pdf && <p><a href={c.program.pdf}>Программа (PDF)</a></p>}
-      {
-        c.program && c.program.sessions.length > 0 && (
-          <ol>
-            {c.program.sessions.map((s) => (
-              <li>
-                <h3>{s.title}</h3>
-                <p>
-                  {s.date ? s.date.toISOString().slice(0, 10) : NO_DATA} · {s.time ?? NO_DATA} ·{' '}
-                  {s.hall ?? NO_DATA}
-                </p>
-                {s.moderators.length > 0 && <p>Модераторы: {s.moderators.join(', ')}</p>}
-                {s.talks.length > 0 && (
-                  <ul>
-                    {s.talks.map((t) => (
-                      <li>
-                        {t.title}
-                        {t.speakers.length > 0 && ` — ${t.speakers.join(', ')}`}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
+  <div class="ob-container ob-section">
+    <SectionHeading title="Фотоотчёт" />
+    {
+      c.photos.length > 0 ? (
+        <PhotoGrid photos={c.photos} year={c.year} />
+      ) : (
+        <p class="ob-empty">{NO_DATA}</p>
+      )
+    }
+  </div>
+
+  {
+    c.videos.length > 0 && (
+      <div class="ob-container ob-section">
+        <SectionHeading title="Видео" />
+        <div class="ob-cards">
+          {c.videos.map((v) => (
+            <VideoCard url={v.url} title={v.title} year={c.year} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  <div class="ob-container ob-section">
+    <SectionHeading title="Сборник тезисов" />
+    {
+      c.theses ? (
+        <DocCard href={c.theses.pdf} title={c.theses.title ?? `Сборник тезисов ${c.year}`} />
+      ) : (
+        <p class="ob-empty">{NO_DATA}</p>
+      )
+    }
+  </div>
+
+  {
+    c.posters.length > 0 && (
+      <div class="ob-container ob-section">
+        <SectionHeading title="Постеры" />
+        {posterDocs.map((p) => (
+          <DocCard href={p.url} title={p.title ?? `Постер конгресса ${c.year}`} />
+        ))}
+        {posterImages.length > 0 && (
+          <div class="ob-pg">
+            {posterImages.map((p) => (
+              <img
+                src={mediaUrl(p.url)}
+                alt={p.title ?? `Постер конгресса ${c.year}`}
+                width={p.width}
+                height={p.height}
+                loading="lazy"
+                decoding="async"
+              />
             ))}
-          </ol>
-        )
-      }
-    </section>
+          </div>
+        )}
+      </div>
+    )
+  }
 
-    <section aria-labelledby="photos-h">
-      <h2 id="photos-h">Фотогалерея</h2>
-      {c.photos.length === 0 && <p>{NO_DATA}</p>}
-      {
-        c.photos.length > 0 && (
-          <ul>
-            {c.photos.map((p) => (
-              <li>
-                <img
-                  src={p.url}
-                  alt={p.alt ?? `Фото конгресса ${c.year}`}
-                  loading="lazy"
-                  width={p.width}
-                  height={p.height}
-                />
-              </li>
-            ))}
-          </ul>
-        )
-      }
-    </section>
-
-    <section aria-labelledby="posters-h">
-      <h2 id="posters-h">Постеры</h2>
-      {c.posters.length === 0 && <p>{NO_DATA}</p>}
-      {
-        c.posters.length > 0 && (
-          <ul>
-            {c.posters.map((p) => (
-              <li>
-                {p.width && p.height ? (
-                  <img
-                    src={p.url}
-                    alt={p.title ?? `Постер конгресса ${c.year}`}
-                    loading="lazy"
-                    width={p.width}
-                    height={p.height}
-                  />
-                ) : (
-                  <a href={p.url}>{p.title ?? `Постер конгресса ${c.year} (PDF)`}</a>
-                )}
-              </li>
-            ))}
-          </ul>
-        )
-      }
-    </section>
-
-    <section aria-labelledby="videos-h">
-      <h2 id="videos-h">Видеоотчёт</h2>
-      {c.videos.length === 0 && <p>{NO_DATA}</p>}
-      {
-        c.videos.length > 0 && (
-          <ul>
-            {c.videos.map((v) => (
-              <li>
-                <a href={v.url}>{v.title ?? `Видео конгресса ${c.year}`}</a>
-              </li>
-            ))}
-          </ul>
-        )
-      }
-    </section>
-
-    <section aria-labelledby="theses-h">
-      <h2 id="theses-h">Сборник тезисов</h2>
-      {
-        c.theses ? (
-          <p>
-            <a href={c.theses.pdf}>{c.theses.title ?? `Сборник тезисов ${c.year} (PDF)`}</a>
-          </p>
-        ) : (
-          <p>{NO_DATA}</p>
-        )
-      }
-    </section>
-
-    <section aria-labelledby="partners-h">
-      <h2 id="partners-h">Партнёры и организаторы</h2>
-      {partnerGroups.length === 0 && <p>{NO_DATA}</p>}
-      {
-        partnerGroups.map((group) => (
-          <section>
-            <h3>{group.label}</h3>
-            <ul>
-              {group.items.map((p) => (
-                <li>
-                  {p.logo && <img src={p.logo} alt={`Логотип: ${p.name}`} width="120" height="60" />}
-                  {p.url ? <a href={p.url}>{p.name}</a> : p.name}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
-      }
-    </section>
-  </body>
-</html>
+  {
+    partnerGroups.length > 0 && (
+      <div class="ob-container ob-section">
+        <SectionHeading title={`Партнёры конгресса ${c.year}`} />
+        {partnerGroups.map((group) => (
+          <PartnerTier tier={group.tier} label={group.label} partners={group.items} />
+        ))}
+      </div>
+    )
+  }
+</BaseLayout>

@@ -1,0 +1,9 @@
+---
+/** /nmo — ТЗ §4: общий принцип; детали 2027 честно помечены как «будут объявлены». */
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('nmo');
+---
+
+<SectionLayout page={page} />

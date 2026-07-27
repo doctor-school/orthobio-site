@@ -1,0 +1,9 @@
+---
+/** /faq — ТЗ §4: сжатый FAQ без регистрационных вопросов; нативный <details>, без JS. */
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('faq');
+---
+
+<SectionLayout page={page} />

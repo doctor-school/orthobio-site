@@ -1,0 +1,53 @@
+---
+/**
+ * /orgs — ТЗ §4: оргкомитет + организаторы.
+ *
+ * The 2027 composition is not confirmed, so the page renders the VERIFIED 2026
+ * data from the content collection under headings that name the year — 2026
+ * content is never presented as 2027 (ТЗ §4 principle 2). When a 2027 edition
+ * file appears, this page switches to it by changing one constant.
+ */
+import CommitteeList from '@/components/CommitteeList.astro';
+import PartnerTier from '@/components/PartnerTier.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import { getCongressYear, getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+import { groupPartners } from '@/lib/congress';
+
+/** The most recent congress whose composition is verified from recon. */
+const REFERENCE_YEAR = 2026;
+
+const { data: page } = await getPage('orgs');
+const reference = await getCongressYear(REFERENCE_YEAR);
+const committee = reference?.data.committee ?? [];
+// Organizing bodies only — sponsors live on /partners.
+const organizers = groupPartners(reference?.data.partners ?? []).filter(
+  (g) => g.tier === 'organizer' || g.tier === 'co-organizer',
+);
+---
+
+<SectionLayout page={page}>
+  <div class="ob-container ob-section">
+    <SectionHeading title={`Оргкомитет конгресса ${REFERENCE_YEAR}`} />
+    {
+      committee.length > 0 ? (
+        <CommitteeList members={committee} />
+      ) : (
+        <p class="ob-empty">нет данных</p>
+      )
+    }
+  </div>
+
+  <div class="ob-container ob-section">
+    <SectionHeading title={`Организаторы конгресса ${REFERENCE_YEAR}`} />
+    {
+      organizers.length > 0 ? (
+        organizers.map((group) => (
+          <PartnerTier tier={group.tier} label={group.label} partners={group.items} />
+        ))
+      ) : (
+        <p class="ob-empty">нет данных</p>
+      )
+    }
+  </div>
+</SectionLayout>

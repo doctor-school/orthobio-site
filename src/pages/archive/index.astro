@@ -1,0 +1,17 @@
+---
+/** /archive/ — ТЗ §4: хаб-карточки всех сохранённых лет (2021-2026). */
+import ArchiveYearCard from '@/components/ArchiveYearCard.astro';
+import { getCongressYears, getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('archive');
+const years = await getCongressYears();
+---
+
+<SectionLayout page={page}>
+  <div class="ob-container ob-section">
+    <div class="ob-cards">
+      {years.map((entry) => <ArchiveYearCard entry={entry} level="h2" />)}
+    </div>
+  </div>
+</SectionLayout>

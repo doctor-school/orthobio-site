@@ -53,6 +53,12 @@ Env var names used by upload tooling (values host-side / secret store only):
 `TIMEWEB_S3_REGION` defaults to `ru-1`. Read sensitive values with
 `terraform output -raw <name>` — they will not print in the plain table.
 
+> `media_s3_hostname` already **includes the scheme** (the live value is
+> `https://s3.twcstorage.ru`) — pass it to `--endpoint-url` as-is, do not
+> prepend another `https://`. `media_bucket_full_name` equals the requested
+> name for this bucket (`orthobio-media`; Timeweb applied no account prefix),
+> but always read it from the output rather than assuming.
+
 ## Uploading the archive
 
 The staging tree (see `docs/assets-manifest.yaml` → `meta.staging_root`) maps
@@ -60,7 +66,7 @@ The staging tree (see `docs/assets-manifest.yaml` → `meta.staging_root`) maps
 
 ```sh
 aws s3 sync <staging_root> "s3://$TIMEWEB_S3_BUCKET/" \
-  --endpoint-url "https://$TIMEWEB_S3_ENDPOINT" \
+  --endpoint-url "$TIMEWEB_S3_ENDPOINT" \
   --exclude "2021/previews/*" \
   --cache-control "public, max-age=31536000, immutable"
 ```
@@ -73,8 +79,9 @@ aws s3 sync <staging_root> "s3://$TIMEWEB_S3_BUCKET/" \
 - Verify after upload: object count vs manifest, spot SHA-256 checks against
   `docs/assets-checksums.txt`.
 
-Public object URL (path-style):
-`https://<media_s3_hostname>/<media_bucket_full_name>/<key>`
+Public object URL (path-style; hostname output already carries `https://`):
+`<media_s3_hostname>/<media_bucket_full_name>/<key>`
+(live: `https://s3.twcstorage.ru/orthobio-media/<key>`)
 
 ## State
 

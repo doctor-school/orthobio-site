@@ -11,6 +11,10 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+# Terraform state — contains live S3 keys; defence-in-depth on top of
+# infra/terraform/.gitignore (which only protects once merged/checked out)
+*.tfstate
+*.tfstate.*
 # OS / editor junk
 .DS_Store
 Thumbs.db

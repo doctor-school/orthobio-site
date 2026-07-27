@@ -8,7 +8,7 @@ output "media_bucket_name" {
 }
 
 output "media_bucket_full_name" {
-  description = "Account-prefixed real bucket name. → TIMEWEB_S3_BUCKET (sync target / path-style bucket segment)."
+  description = "Canonical bucket name (equals var.media_bucket_name for this bucket — no account prefix was applied). → TIMEWEB_S3_BUCKET (sync target / path-style bucket segment)."
   value       = twc_s3_bucket.media.full_name
 }
 

@@ -134,6 +134,24 @@ export function renderNginxRedirects(entries) {
     const bare = canonicalSource(from);
     const slashed = bare === '/' ? '/' : `${bare}/`;
 
+    if (match === 'prefix' && bare === '/') {
+      // Whole-site move — the November end state. `location ^~ /` would be a
+      // second prefix location for `/`, which collides with the vhost's own
+      // `location /` and makes `nginx -t` fail (PR #15 review). A REGEX
+      // location has no such conflict and still outranks that catch-all, and
+      // `return` carries the capture, so any of the four status codes works
+      // here (unlike `rewrite`, which only knows permanent/redirect).
+      //
+      // The lookahead spares anything under a dot-directory: `/.well-known/`
+      // must keep reaching certbot for renewals, and the vhost's dotfile
+      // `deny` must keep winning for the rest.
+      const target = to.endsWith('/') ? to : `${to}/`;
+      return [
+        `location = / { return ${status} ${target}; }`,
+        `location ~ ^/(?!\\.)(.*)$ { return ${status} ${target}$1; }`,
+      ];
+    }
+
     if (match === 'prefix') {
       const target = to.endsWith('/') ? to : `${to}/`;
       return [
@@ -197,6 +215,9 @@ function redirectFlag(status) {
  */
 export function assertRenderable(entries) {
   for (const [i, e] of entries.entries()) {
+    // The root prefix renders through `return`, not `rewrite`, so it carries
+    // any status code — the restriction below is about `rewrite`'s two flags.
+    if (e.from === '/') continue;
     if (e.match === 'prefix' && (e.status === 307 || e.status === 308)) {
       throw new Error(
         `redirects[${i}]: match "prefix" supports status 301 or 302 only (nginx rewrite flags); ` +

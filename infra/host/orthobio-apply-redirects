@@ -34,7 +34,7 @@ cat "$SRC" > "$STAGED"
 # The character classes mirror SAFE_PATH in scripts/redirects.mjs and exclude
 # every nginx metacharacter: no `;` (a second directive), no `#` (a comment
 # swallowing our own `;` and `}`), no quotes, no `$`, no whitespace.
-if grep -nvE '^[[:space:]]*(#.*)?$|^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$|^location \^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ rewrite \^[A-Za-z0-9._~/%!&()*+,=:@\\-]+\(\.\*\)\$ [A-Za-z0-9._~/%!&()*+,=:@?-]+\$1 (permanent|redirect); \}$' "$STAGED"; then
+if grep -nvE '^[[:space:]]*(#.*)?$|^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$|^location \^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ rewrite \^[A-Za-z0-9._~/%!&()*+,=:@\\-]+\(\.\*\)\$ [A-Za-z0-9._~/%!&()*+,=:@?-]+\$1 (permanent|redirect); \}$|^location ~ \^/\(\?!\\\.\)\(\.\*\)\$ \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+\$1; \}$' "$STAGED"; then
     echo "orthobio-apply-redirects: refused — line(s) above are not generator output" >&2
     exit 1
 fi

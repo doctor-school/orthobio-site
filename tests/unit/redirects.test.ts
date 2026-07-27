@@ -120,6 +120,46 @@ describe('renderNginxRedirects', () => {
     }
   });
 
+  describe('whole-site move (`from: /`, `match: prefix`) — the November end state', () => {
+    const conf = renderNginxRedirects(
+      assertRenderable(
+        parseRedirects(
+          yaml('  - from: /\n    to: https://doctor.school/orthobio-2027\n    match: prefix\n'),
+        ),
+      ),
+    );
+
+    it('never emits `location ^~ /`, which collides with the vhost catch-all', () => {
+      // `location ^~ /` is a second prefix location for `/` next to the vhost's
+      // own `location /` — nginx -t fails and the host rolls the deploy back.
+      expect(conf).not.toContain('location ^~ /');
+    });
+
+    it('uses a regex location, which outranks the vhost catch-all without conflicting', () => {
+      expect(conf).toContain(
+        'location ~ ^/(?!\\.)(.*)$ { return 301 https://doctor.school/orthobio-2027/$1; }',
+      );
+    });
+
+    it('redirects the root itself', () => {
+      expect(conf).toContain('location = / { return 301 https://doctor.school/orthobio-2027/; }');
+    });
+
+    it('spares dot-paths so ACME renewal and the dotfile deny keep working', () => {
+      expect(conf).toContain('(?!\\.)');
+    });
+
+    it('accepts a method-preserving status, unlike a non-root prefix', () => {
+      // The root case renders through `return`, which takes a code; `rewrite`
+      // has only permanent/redirect, hence the restriction elsewhere.
+      const entries = parseRedirects(
+        yaml('  - from: /\n    to: https://doctor.school/x\n    status: 308\n    match: prefix\n'),
+      );
+      expect(() => assertRenderable(entries)).not.toThrow();
+      expect(renderNginxRedirects(entries)).toContain('return 308 https://doctor.school/x/$1;');
+    });
+  });
+
   it('never emits the same exact location twice', () => {
     // nginx refuses a config with a duplicated `location =`, so the two-form
     // rendering must not collide with itself.

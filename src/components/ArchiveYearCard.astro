@@ -8,9 +8,11 @@
  *
  * Media URLs go through `mediaUrl()` — the single S3-base seam (config/site.ts).
  */
+import { Image } from 'astro:assets';
+
 import { mediaUrl } from '@/config/site';
 import type { CongressEntry } from '@/content';
-import { ordinalLabel, roman, yearHighlights } from '@/lib/congress';
+import { displaySize, ordinalLabel, roman, yearHighlights } from '@/lib/congress';
 
 interface Props {
   entry: CongressEntry;
@@ -26,17 +28,26 @@ const c = entry.data;
 const href = `/archive/${c.year}`;
 const highlights = yearHighlights(c);
 const meta = [c.dates ?? 'даты не сохранились', c.place].filter(Boolean).join(' — ');
+
+// A card is ~390px wide at most (1200px container, three columns); 640 covers
+// it at 1.6x. Originals are 2500–5800px — see displaySize().
+const COVER_WIDTHS = [320, 480, 640];
+const COVER_MAX = 640;
+const COVER_SIZES = '(min-width: 1024px) 390px, (min-width: 640px) 45vw, 92vw';
+const cover = c.cover ? displaySize(c.cover.width, c.cover.height, COVER_MAX) : null;
 ---
 
 <a class="ob-yc" href={href}>
   {
-    c.cover ? (
-      <img
+    c.cover && cover ? (
+      <Image
         class="ob-yc__cover"
         src={mediaUrl(c.cover.url)}
         alt={c.cover.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${c.year}`}
-        width={c.cover.width}
-        height={c.cover.height}
+        width={cover.width}
+        height={cover.height}
+        widths={COVER_WIDTHS}
+        sizes={COVER_SIZES}
         loading="lazy"
         decoding="async"
       />

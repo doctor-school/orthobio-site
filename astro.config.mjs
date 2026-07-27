@@ -16,7 +16,12 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  // TODO(#4): when galleries move to <Image> (astro:assets), add
-  // `image.remotePatterns` for the S3 host(s) in ALLOWED_MEDIA_HOSTS
-  // (src/content/schemas.ts) — remote images are rejected by <Image> otherwise.
+  // Galleries render through <Image> (astro:assets), which refuses a remote
+  // source unless its host is allowed here. The archive lives in our own
+  // Timeweb bucket (s3.twcstorage.ru/orthobio-media, Issue #2); originals are
+  // 5000px JPEGs, so build-time resizing is what keeps an archive year page
+  // from shipping tens of megabytes to a phone on mobile data.
+  image: {
+    remotePatterns: [{ protocol: 'https', hostname: 's3.twcstorage.ru' }],
+  },
 });

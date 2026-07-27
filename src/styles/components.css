@@ -99,6 +99,31 @@
   color: var(--ob-sky);
 }
 
+/* ── Skip link ───────────────────────────────────────────────────────────── */
+
+/* The nav is a wrapping row of 8 items (3 rows at 360px) repeated on every
+   page, so a keyboard user pays for it on every navigation. Off-screen until
+   focused, then a normal button-sized target. */
+.ob-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 20;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+  padding: 10px 18px;
+  border-radius: var(--r-md);
+}
+
+.ob-skip:focus-visible {
+  left: var(--container-pad);
+  top: var(--sp-2);
+  color: var(--btn-primary-fg);
+}
+
 /* ── Site chrome: header ─────────────────────────────────────────────────── */
 
 .ob-head {
@@ -134,8 +159,12 @@
   border-radius: var(--r-sm);
 }
 
-.ob-head__logo:hover {
-  color: var(--text-body);
+.ob-head__logo:hover .ob-head__name {
+  color: var(--text-link);
+}
+
+.ob-head__logo:active .ob-head__name {
+  color: var(--text-link-hover);
 }
 
 .ob-head__logo svg {
@@ -149,6 +178,7 @@
   font-weight: var(--fw-bold);
   letter-spacing: 0.04em;
   display: block;
+  transition: color var(--t-state);
 }
 
 .ob-head__sub {
@@ -250,6 +280,13 @@
   padding: 0;
   display: grid;
   gap: 4px;
+}
+
+/* Footer link rows are 19px tall from the small type alone — padded to clear
+   the 24px pointer-target floor (WCAG 2.2 §2.5.8) without changing the look. */
+.ob-foot__map a {
+  display: inline-block;
+  padding-block: 3px;
 }
 
 /* ── Button ──────────────────────────────────────────────────────────────── */
@@ -371,6 +408,18 @@
 
 .ob-sh__link {
   font-size: var(--fs-small);
+}
+
+/* Text links carry a hover from base.css; the pressed state must be visible
+   too (AGENTS.md: hover / active / focus-visible on every interactive
+   element). Card-shaped links have their own :active — see .ob-yc / .ob-vc /
+   .ob-pt__card — so this rule stays scoped to the text-link family. */
+.ob-sh__link:active,
+.ob-stub__link:active,
+.ob-foot__col a:active,
+.ob-list a:active,
+.ob-prose a:active {
+  color: var(--ob-sky-text);
 }
 
 /* ── Stat ────────────────────────────────────────────────────────────────── */
@@ -501,7 +550,13 @@
 }
 
 .ob-hero__title {
-  font-size: var(--fs-display);
+  /* The brand's own word «ОРТОБИОЛОГИЯ» is 332px wide at the 40px display
+     size, which does not fit the 313px content column of a 360px phone with a
+     classic scrollbar. `overflow-wrap` would then hard-break the congress name
+     mid-word («ОРТОБИОЛОГИ / Я») — no page overflow, but a broken headline.
+     Stepping the size down by viewport width keeps the word whole; the token
+     stays the desktop ceiling. */
+  font-size: min(var(--fs-display), 10vw);
   line-height: var(--lh-display);
   font-weight: var(--fw-bold);
   margin: 0 0 var(--sp-3);
@@ -883,6 +938,14 @@ a.ob-pt__card:active {
   background: var(--surface);
 }
 
+/* The rescued portraits are 16:9 stills, not square headshots: a centred crop
+   cuts the face out. Biasing the crop upward keeps the head in frame for the
+   whole set. Proper square crops belong to the media pipeline (Issue #2), not
+   to CSS — see the TODO in PersonCard.astro. */
+.ob-pc__photo {
+  object-position: 50% 28%;
+}
+
 .ob-pc__initial {
   background: var(--ob-sky-tint);
   color: var(--ob-sky-text);
@@ -1148,9 +1211,12 @@ details[open] > .ob-faq__q::after {
   content: '−';
 }
 
-.ob-faq__q:hover,
-.ob-faq__q:active {
+.ob-faq__q:hover {
   color: var(--text-link);
+}
+
+.ob-faq__q:active {
+  color: var(--ob-sky-text);
 }
 
 .ob-faq__a {

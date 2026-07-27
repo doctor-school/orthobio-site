@@ -2,13 +2,18 @@
 /**
  * PhotoGrid — фотоотчёт года (bundle components/archive/PhotoGrid).
  *
- * Photos are remote objects on our S3, so intrinsic `width`/`height` come from
- * the content model (the schema requires them) — that is what reserves layout
- * space and keeps CLS at zero. `loading="lazy"` on every tile: some years ship
- * a dozen 5811×3874 originals.
+ * The originals in the bucket are camera JPEGs up to 5811px wide while a tile
+ * is at most ~400px, so `<Image>` resizes them at BUILD time and emits a
+ * `srcset`: a phone on mobile data downloads a tile, not a 3MB original. The
+ * intrinsic ratio comes from the content model (the schema requires
+ * width/height), which is what reserves layout space and keeps CLS at zero;
+ * `displaySize()` caps the largest variant we ask sharp to produce.
  */
+import { Image } from 'astro:assets';
+
 import { mediaUrl } from '@/config/site';
 import type { CongressEntry } from '@/content';
+import { displaySize } from '@/lib/congress';
 
 interface Props {
   photos: CongressEntry['data']['photos'];
@@ -16,21 +21,31 @@ interface Props {
 }
 
 const { photos, year } = Astro.props;
+
+/** Tile widths across the ladder: one column at 360 → four at 1280. */
+const TILE_WIDTHS = [320, 480, 640];
+const TILE_MAX = 640;
+const TILE_SIZES = '(min-width: 1024px) 300px, (min-width: 640px) 45vw, 92vw';
 ---
 
 {
   photos.length > 0 && (
     <div class="ob-pg">
-      {photos.map((p, i) => (
-        <img
-          src={mediaUrl(p.url)}
-          alt={p.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${year}, фото ${i + 1}`}
-          width={p.width}
-          height={p.height}
-          loading="lazy"
-          decoding="async"
-        />
-      ))}
+      {photos.map((p, i) => {
+        const size = displaySize(p.width, p.height, TILE_MAX);
+        return (
+          <Image
+            src={mediaUrl(p.url)}
+            alt={p.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${year}, фото ${i + 1}`}
+            width={size.width}
+            height={size.height}
+            widths={TILE_WIDTHS}
+            sizes={TILE_SIZES}
+            loading="lazy"
+            decoding="async"
+          />
+        );
+      })}
     </div>
   )
 }

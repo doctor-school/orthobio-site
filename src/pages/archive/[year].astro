@@ -9,6 +9,8 @@
  * blocks (оргкомитет, видео, постеры) appear only when the year has them.
  * Nothing is ever borrowed from a neighbouring year.
  */
+import { Image } from 'astro:assets';
+
 import CommitteeList from '@/components/CommitteeList.astro';
 import DocCard from '@/components/DocCard.astro';
 import PartnerTier from '@/components/PartnerTier.astro';
@@ -156,11 +158,12 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
         {posterImages.length > 0 && (
           <div class="ob-pg">
             {posterImages.map((p) => (
-              <img
+              <Image
                 src={mediaUrl(p.url)}
                 alt={p.title ?? `Постер конгресса ${c.year}`}
-                width={p.width}
-                height={p.height}
+                inferSize
+                widths={[320, 480, 640]}
+                sizes="(min-width: 1024px) 300px, 92vw"
                 loading="lazy"
                 decoding="async"
               />

@@ -36,7 +36,7 @@ const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
       <div class="ob-pt__grid">
         {partners.map((p) =>
           p.url ? (
-            <a class="ob-pt__card" href={p.url} rel="noopener">
+            <a class="ob-pt__card" href={p.url}>
               {p.logo ? <img src={mediaUrl(p.logo)} alt={p.name} loading="lazy" /> : p.name}
             </a>
           ) : (

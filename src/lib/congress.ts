@@ -133,5 +133,22 @@ export const yearHighlights = (c: Congress): string[] => {
   return tags;
 };
 
+/**
+ * Scale an intrinsic size down to a display width, preserving the ratio.
+ *
+ * The bucket holds camera originals (up to 5811px). Passing those dimensions to
+ * `<Image>` makes it emit a full-size variant nobody needs; passing the display
+ * size caps the largest generated file while `widths` still produces the
+ * srcset. Never upscales.
+ */
+export const displaySize = (
+  width: number,
+  height: number,
+  target: number,
+): { width: number; height: number } => {
+  if (width <= target) return { width, height };
+  return { width: target, height: Math.round((height * target) / width) };
+};
+
 /** Video host label for the facade badge; the schema allows only these hosts. */
 export const videoHost = (url: string): string => (/rutube\./.test(url) ? 'Rutube' : 'YouTube');

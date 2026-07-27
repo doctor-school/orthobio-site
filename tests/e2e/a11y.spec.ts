@@ -8,6 +8,17 @@ import { ROUTES } from './_routes';
  * the critical/serious filter alone would never catch a broken outline
  * (donor lesson, bbm#83).
  */
+test('the skip link is the first tab stop and jumps to the content', async ({ page }) => {
+  // The primary nav is 8 wrapping items on every page; without this, a keyboard
+  // user walks all of them before reaching the content on every navigation.
+  await page.goto('/archive/2025');
+  await page.keyboard.press('Tab');
+  const focused = page.locator(':focus');
+  await expect(focused).toHaveAttribute('href', '#main');
+  await expect(focused).toBeVisible();
+  await expect(page.locator('main#main')).toBeAttached();
+});
+
 test.describe('a11y: axe per route', () => {
   for (const path of ROUTES) {
     test(`${path} has no critical/serious violations`, async ({ page }) => {

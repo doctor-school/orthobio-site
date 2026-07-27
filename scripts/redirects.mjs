@@ -21,12 +21,20 @@ const DEFAULT_STATUS = 301;
 const ALLOWED_STATUS = new Set([301, 302, 307, 308]);
 const ALLOWED_MATCH = new Set(['exact', 'prefix']);
 
-// Deliberately narrow: unreserved URL characters plus the sub-delims that
-// actually appear in real paths. Anything outside it — quotes, braces,
-// semicolons, whitespace, `$` (an nginx variable!), control characters — is a
-// config-injection vector in a file that ends up inside a `server {}` block.
-const SAFE_PATH = /^\/[A-Za-z0-9\-._~/%!&'()*+,;=:@]*$/;
-const SAFE_ABSOLUTE_URL = /^https:\/\/[A-Za-z0-9\-._~%!&'()*+,;=:@/?#]+$/;
+// Deliberately narrow. Every character nginx treats as syntax inside a
+// `server {}` block is excluded, because that is where the generated file ends
+// up: `;` (statement terminator — `to: /new;internal` would smuggle a second
+// directive past both this check and the host-side allowlist, PR #15 review),
+// `#` (comment — it would swallow the closing `;` and `}` of our own block),
+// `{` `}`, `$` (variable sigil), quotes of both kinds, whitespace, and
+// control characters. What remains is unreserved URL characters plus the
+// sub-delims that occur in paths we would actually author.
+//
+// A `#` fragment in a redirect target is the one legitimate URL construct this
+// rejects: nginx cannot carry it in a `return` value unquoted, and the failure
+// mode would be a broken config rather than a wrong redirect.
+const SAFE_PATH = /^\/[A-Za-z0-9\-._~/%!&()*+,=:@]*$/;
+const SAFE_ABSOLUTE_URL = /^https:\/\/[A-Za-z0-9\-._~%!&()*+,=:@/?]+$/;
 
 /**
  * Parse and validate the redirect map. Throws on the first offending entry —
@@ -70,14 +78,22 @@ export function parseRedirects(yamlText) {
     if (!ALLOWED_MATCH.has(match)) {
       throw new Error(`${at}.match: must be "exact" or "prefix", got ${JSON.stringify(match)}`);
     }
-    // A redirect to itself is a loop nginx will happily serve forever.
-    if (from === to) {
-      throw new Error(`${at}: redirects to itself (${from})`);
+    // A redirect to itself is a loop nginx will happily serve forever. Compared
+    // slash-insensitively: since both forms of the source are emitted,
+    // `/a` -> `/a/` would produce `location = /a/ { return 301 /a/; }`.
+    if (canonicalSource(from) === canonicalSource(to)) {
+      throw new Error(`${at}: redirects to itself (${from} -> ${to})`);
     }
-    if (seen.has(from)) {
-      throw new Error(`${at}.from: duplicate source path ${from} — the second entry would never match`);
+    // Duplicates are compared slash-insensitively because rendering covers both
+    // forms of every source: `/a` and `/a/` produce overlapping `location`
+    // blocks, and nginx refuses a config with a duplicated exact location.
+    const key = canonicalSource(from);
+    if (seen.has(key)) {
+      throw new Error(
+        `${at}.from: duplicate source path ${from} — /x and /x/ are the same entry here, and the second would never match`,
+      );
     }
-    seen.add(from);
+    seen.add(key);
 
     return { from, to, status, match };
   });
@@ -87,12 +103,18 @@ export function parseRedirects(yamlText) {
  * Render validated entries as an nginx snippet for inclusion in a `server {}`
  * block.
  *
- * `exact` becomes `location = /x`, which nginx resolves before any prefix or
- * regex location — so a redirect always wins over `try_files`, even when a
- * file of that name still exists in the build.
+ * BOTH slash forms of every source are emitted. The site serves `/program` and
+ * `/program/` alike (Astro's directory build plus `try_files $uri $uri/`), so
+ * both are live, linkable and indexable — and a November map written from the
+ * page list would otherwise 404 half the published URL space (PR #15 review).
  *
- * `prefix` becomes `location ^~ /x/`, and appends the untouched remainder of
- * the request to the target so a whole subtree moves in one entry.
+ * `exact` becomes `location = /x` and `location = /x/`. An exact location is
+ * resolved before any prefix or regex location, so a redirect always wins over
+ * `try_files`, even while the file of that name is still in the build.
+ *
+ * `prefix` becomes `location ^~ /x/`, which appends the untouched remainder of
+ * the request to the target so a whole subtree moves in one entry, plus an
+ * exact block for the bare `/x` that sends it to the target root.
  *
  * @param {Redirect[]} entries
  * @returns {string} nginx configuration text, newline-terminated.
@@ -108,19 +130,43 @@ export function renderNginxRedirects(entries) {
     return [...header, '# No redirects are active.', ''].join('\n');
   }
 
-  const blocks = entries.map(({ from, to, status, match }) => {
+  const blocks = entries.flatMap(({ from, to, status, match }) => {
+    const bare = canonicalSource(from);
+    const slashed = bare === '/' ? '/' : `${bare}/`;
+
     if (match === 'prefix') {
-      const source = from.endsWith('/') ? from : `${from}/`;
       const target = to.endsWith('/') ? to : `${to}/`;
-      // The `rewrite` pattern is a regex, and SAFE_PATH deliberately admits
-      // `.`, `+`, `(`, `*` — legal in a URL, metacharacters in a regex. Escape
-      // them or `/a+b/` would silently match something else entirely.
-      return `location ^~ ${source} { rewrite ^${escapeRegex(source)}(.*)$ ${target}$1 ${redirectFlag(status)}; }`;
+      return [
+        // The `rewrite` pattern is a regex, and SAFE_PATH deliberately admits
+        // `.`, `+`, `(`, `*` — legal in a URL, metacharacters in a regex.
+        // Escape them or `/a+b/` would silently match something else entirely.
+        `location ^~ ${slashed} { rewrite ^${escapeRegex(slashed)}(.*)$ ${target}$1 ${redirectFlag(status)}; }`,
+        // The subtree root without its trailing slash: `^~ /x/` does not match
+        // a bare `/x`, and that URL is just as published as the rest.
+        ...(bare === '/' ? [] : [`location = ${bare} { return ${status} ${target}; }`]),
+      ];
     }
-    return `location = ${from} { return ${status} ${to}; }`;
+
+    return bare === '/'
+      ? [`location = / { return ${status} ${to}; }`]
+      : [
+          `location = ${bare} { return ${status} ${to}; }`,
+          `location = ${slashed} { return ${status} ${to}; }`,
+        ];
   });
 
   return [...header, ...blocks, ''].join('\n');
+}
+
+/**
+ * The slash-insensitive identity of a source path: `/x/` and `/x` are the same
+ * URL to this map, and `/` is its own canonical form.
+ *
+ * @param {string} from
+ * @returns {string}
+ */
+function canonicalSource(from) {
+  return from !== '/' && from.endsWith('/') ? from.slice(0, -1) : from;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseRedirects, renderNginxRedirects, assertRenderable } from '../../scripts/redirects.mjs';
+import { ROUTES } from '../e2e/_routes';
 
 /**
  * The redirect map is the November migration plan in data form. The e2e suite
@@ -47,6 +48,10 @@ describe('parseRedirects', () => {
     ['an unknown match mode', '  - from: /old\n    to: /new\n    match: regex\n'],
     ['a self-redirect loop', '  - from: /same\n    to: /same\n'],
     ['a duplicate source', '  - from: /x\n    to: /a\n  - from: /x\n    to: /b\n'],
+    // Both forms of every source are emitted, so these would collide into a
+    // duplicated `location =` that nginx refuses, or into a redirect loop.
+    ['a slash-variant duplicate source', '  - from: /x\n    to: /a\n  - from: /x/\n    to: /b\n'],
+    ['a slash-variant self-redirect', '  - from: /x\n    to: /x/\n'],
   ])('rejects %s', (_label, body) => {
     expect(() => parseRedirects(yaml(body))).toThrow();
   });
@@ -58,6 +63,21 @@ describe('parseRedirects', () => {
     // `$` is an nginx variable sigil, not a URL character we ever emit.
     expect(() => parseRedirects(yaml('  - from: /old\n    to: /$document_root\n'))).toThrow();
   });
+
+  it.each([
+    ['a semicolon in the target', '  - from: /old\n    to: "/new;internal"\n'],
+    ['a semicolon in the source', '  - from: "/a;b"\n    to: /new\n'],
+    ['a comment character in the target', '  - from: /old\n    to: "/new#frag"\n'],
+    ['a comment character in an absolute target', '  - from: /old\n    to: "https://doctor.school/x#frag"\n'],
+    ['a quote in the target', "  - from: /old\n    to: \"/new'x\"\n"],
+    ['a semicolon in an absolute target', '  - from: /old\n    to: "https://doctor.school/x;y"\n'],
+  ])('rejects %s — it would smuggle a directive into the location block', (_label, body) => {
+    // `;` ends an nginx statement, so `to: /new;internal` used to render a
+    // SECOND directive inside our own block, passing `nginx -t` and silently
+    // 404-ing the route (PR #15 review). `#` would comment out the rest of the
+    // line, including our closing `;` and `}`.
+    expect(() => parseRedirects(yaml(body))).toThrow();
+  });
 });
 
 describe('renderNginxRedirects', () => {
@@ -66,11 +86,48 @@ describe('renderNginxRedirects', () => {
     expect(conf).toContain('location = /old { return 301 /new; }');
   });
 
+  it('covers both slash forms of an exact source, whichever form was written', () => {
+    // The site answers /program and /program/ alike, so a map that only caught
+    // one form would drop half the published URL space in November.
+    const bare = renderNginxRedirects(parseRedirects(yaml('  - from: /program\n    to: /p\n')));
+    const slashed = renderNginxRedirects(parseRedirects(yaml('  - from: /program/\n    to: /p\n')));
+    for (const conf of [bare, slashed]) {
+      expect(conf).toContain('location = /program { return 301 /p; }');
+      expect(conf).toContain('location = /program/ { return 301 /p; }');
+    }
+  });
+
+  it('does not emit a doubled slash for the root', () => {
+    const conf = renderNginxRedirects(parseRedirects(yaml('  - from: /\n    to: https://doctor.school/x\n')));
+    expect(conf).toContain('location = / { return 301 https://doctor.school/x; }');
+    expect(conf).not.toContain('location = //');
+  });
+
   it('renders a prefix redirect so the remainder of the path is carried over', () => {
     const conf = renderNginxRedirects(
       parseRedirects(yaml('  - from: /archive\n    to: /arhiv\n    match: prefix\n')),
     );
     expect(conf).toContain('location ^~ /archive/ { rewrite ^/archive/(.*)$ /arhiv/$1 permanent; }');
+  });
+
+  it('covers the bare subtree root, which `^~ /x/` does not match', () => {
+    for (const from of ['/archive', '/archive/']) {
+      const conf = renderNginxRedirects(
+        parseRedirects(yaml(`  - from: ${from}\n    to: /arhiv\n    match: prefix\n`)),
+      );
+      expect(conf).toContain('location ^~ /archive/ {');
+      expect(conf).toContain('location = /archive { return 301 /arhiv/; }');
+    }
+  });
+
+  it('never emits the same exact location twice', () => {
+    // nginx refuses a config with a duplicated `location =`, so the two-form
+    // rendering must not collide with itself.
+    const conf = renderNginxRedirects(
+      parseRedirects(yaml('  - from: /a\n    to: /x\n  - from: /a/b\n    to: /y\n')),
+    );
+    const locations = conf.match(/^location = \S+/gm) ?? [];
+    expect(new Set(locations).size).toBe(locations.length);
   });
 
   it('escapes regex metacharacters that are legal in a URL', () => {
@@ -110,6 +167,31 @@ describe('assertRenderable', () => {
   it('allows 308 on an exact redirect', () => {
     const entries = parseRedirects(yaml('  - from: /a\n    to: /b\n    status: 308\n'));
     expect(assertRenderable(entries)).toHaveLength(1);
+  });
+});
+
+describe('coverage of the real route list (the November migration case)', () => {
+  // ROUTES is the same list the e2e suite iterates, and it deliberately mixes
+  // the two slash forms (`/archive/` next to `/archive/2026`). A migration map
+  // written from it must catch every published URL in both forms.
+  const target = (route: string) => `https://doctor.school/orthobio-2027${route === '/' ? '' : route}`;
+
+  it.each(ROUTES.map((r) => [r]))('covers %s in both slash forms', (route) => {
+    const conf = renderNginxRedirects(
+      parseRedirects(yaml(`  - from: ${route}\n    to: ${target(route)}\n`)),
+    );
+    const bare = route !== '/' && route.endsWith('/') ? route.slice(0, -1) : route;
+    expect(conf).toContain(`location = ${bare} {`);
+    if (bare !== '/') expect(conf).toContain(`location = ${bare}/ {`);
+  });
+
+  it('renders the whole site map at once without a duplicate location', () => {
+    const body = ROUTES.map((r) => `  - from: ${r}\n    to: ${target(r)}\n`).join('');
+    const conf = renderNginxRedirects(assertRenderable(parseRedirects(yaml(body))));
+    const locations = conf.match(/^location \S+ \S+/gm) ?? [];
+    expect(new Set(locations).size).toBe(locations.length);
+    // Two blocks per non-root route, one for the root.
+    expect(locations).toHaveLength((ROUTES.length - 1) * 2 + 1);
   });
 });
 

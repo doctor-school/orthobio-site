@@ -16,11 +16,22 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 
-import { congressSchema } from './content/schemas';
+import { congressSchema, pageSchema } from './content/schemas';
 
 const congress = defineCollection({
   loader: glob({ pattern: '*.yaml', base: './src/content/congress' }),
   schema: congressSchema,
 });
 
-export const collections = { congress };
+/**
+ * `page` — editorial copy of the static ТЗ §4 sections, one YAML per route
+ * (entry id = route slug, e.g. `nmo` → /nmo). Same loader-swap seam as
+ * `congress`: the copy is data so RU typography runs at the schema boundary and
+ * the future CMS can serve it unchanged.
+ */
+const page = defineCollection({
+  loader: glob({ pattern: '*.yaml', base: './src/content/pages' }),
+  schema: pageSchema,
+});
+
+export const collections = { congress, page };

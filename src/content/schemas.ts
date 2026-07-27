@@ -136,6 +136,14 @@ const sessionSchema = z.object({
   /** Moderator names, verbatim. */
   moderators: z.array(z.string()).default([]),
   talks: z.array(talkSchema).default([]),
+  /**
+   * Session-level footnotes, verbatim from the source (PR #9 review): sponsor
+   * lines («Сателлитный симпозиум при поддержке компании X, не обеспечивается
+   * баллами НМО») — material for a physician audience because it says the
+   * session earns no NMO credits — and round-table agendas. Multiple footnote
+   * lines are joined with «; ». Null = the source prints no footnote.
+   */
+  note: proseOrNull(),
 });
 
 /**

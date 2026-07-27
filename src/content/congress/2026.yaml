@@ -35,6 +35,8 @@ committee:
     regalia: Заведующий кафедрой патологической анатомии СЗГМУ им. И.И. Мечникова, научный директор ПАО "Институт стволовых клеток человека", Главный редактор журнала "Гены и Клетки", доцент
   - name: Еремин Илья Игоревич
     regalia: К.м.н., заместитель директора по научной работе ФГБНУ «РНЦХ им. академика Б.В. Петровского»
+  # NB: /orgs prints «K.м.н.» with a Latin «K» homoglyph — normalized to
+  # Cyrillic «К», a deliberate glyph-level fix, not a content change (PR #9).
   - name: Ковалев Алексей Вячеславович
     regalia: К.м.н., профессор РАЕ, заведующий лаборатории клеточных технологий и медицинской генетики ФГБУ "НМИЦ ТО им. Н.Н. Приорова" МЗ РФ
   - name: Лазишвили Гурам Давидович
@@ -152,6 +154,8 @@ partners:
     tier: co-organizer
     logo: null
     url: null
+  # «Ивекскон» here vs «Ивексикон» in 2021.yaml — both spellings attested in
+  # the sources; kept verbatim per source (see note in 2021.yaml).
   - name: ООО «Ивекскон»
     tier: co-organizer
     logo: null

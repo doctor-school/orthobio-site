@@ -10,10 +10,16 @@ year: 2021
 number: 2
 # Verbatim H1 of the archive page; no fuller official title survived.
 title: ОРТОБИОЛОГИЯ 2021
-# Exact dates are not stated anywhere in the recon sources — нет данных.
-dates: null
-startDate: null
-endDate: null
+# No source page states the 2021 dates. Derived from EXIF DateTimeOriginal of
+# the staged album (2021/photos/, sampled: 22.04 ×18, 23.04 ×12, 24.04 ×15) —
+# the same technique the assets manifest used to pin the «15/16 апреля»
+# folders to 2022 (PR #9 review).
+# TODO(Антон): подтвердить даты — 2021 шёл совместно с IX «Приоровскими
+# чтениями», альбом может покрывать родительскую конференцию, а не только
+# конгресс.
+dates: 22-24 апреля 2021
+startDate: 2021-04-22
+endDate: 2021-04-24
 place: null
 
 # «ОБРАЩЕНИЕ К УЧАСТНИКАМ» — two co-president cards, page order. The greeting
@@ -45,15 +51,15 @@ cover:
 # photos/ copies which are the ones shipped to S3.
 photos:
   - url: /media/2021/photos/DSC07008.jpg
-    alt: null
+    alt: Конгресс ОРТОБИОЛОГИЯ 2021, фото 1
     width: 5811
     height: 3874
   - url: /media/2021/photos/DSC07253.jpg
-    alt: null
+    alt: Конгресс ОРТОБИОЛОГИЯ 2021, фото 2
     width: 5731
     height: 3821
   - url: /media/2021/photos/DSC07433.jpg
-    alt: null
+    alt: Конгресс ОРТОБИОЛОГИЯ 2021, фото 3
     width: 5808
     height: 3872
 
@@ -85,6 +91,9 @@ partners:
     tier: partner
     logo: null
     url: https://doctor.school
+  # «Ивексикон» here vs «Ивекскон» in 2026.yaml — BOTH spellings are attested
+  # (recon prints «Ивексикон» in the 2021 partner block and «Ивекскон» in the
+  # 2026 «при поддержке» list); kept verbatim per source, not a typo to fix.
   - name: ООО «Ивексикон»
     tier: partner
     logo: null

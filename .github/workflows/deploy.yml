@@ -1,0 +1,181 @@
+name: Deploy
+
+# Gating idiom borrowed from bbm-public-website: `workflow_run` on a successful
+# CI completion. It keeps the verify steps defined ONCE (in ci.yml) instead of
+# duplicating them behind a `needs:`, and the guards below mean a red CI never
+# ships and a PR/branch CI run never deploys.
+#
+# SECURITY — read before loosening any guard below (PR #15 review). This repo is
+# public, `ci.yml` runs on `pull_request`, and a `workflow_run` job gets secrets
+# even when the run it reacted to did not. `head_branch == 'main'` does NOT mean
+# "our main": for a fork PR it is the branch name inside the fork, and every
+# fresh fork's default branch is called `main`. Without the two extra guards a
+# stranger's PR would reach this job, and `pnpm install` + `pnpm build` would run
+# their `package.json` scripts with the deploy key in the environment.
+#
+# The four `if:` guards below are what actually closes that hole, and nothing
+# else does. The `production` environment is NOT a second lock on it: a
+# workflow_run job's ref is always the default branch, so a `main`-only
+# deployment-branch policy is satisfied no matter what triggered the run. Do not
+# delete a guard on the assumption that the environment covers it.
+#
+# workflow_dispatch is the manual break-glass arm and has no CI gate of its own.
+# There the branch policy DOES bite — a dispatch runs on the ref it was
+# dispatched against — so break-glass must be dispatched from `main`.
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+  workflow_dispatch:
+
+# rsync + nginx reload on a shared host: strictly one deploy at a time, and
+# never cancel one mid-flight — a half-synced document root is a broken site.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+# Only what checkout needs. The deploy itself authenticates to the host with an
+# SSH key, not with the GitHub token.
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and publish to tools-prod-tw
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # What this environment buys, precisely: the deploy credentials live on it
+    # rather than at repository level, so no other job or workflow in this repo
+    # can read them, and its `main`-only branch policy fences the
+    # workflow_dispatch arm. It does NOT gate the workflow_run arm — see the
+    # SECURITY note above — so the `if:` guards below carry that on their own.
+    environment:
+      name: production
+      url: https://${{ vars.SITE_HOST || 'new.orthobio.ru' }}/
+    # Four guards, all required (see the SECURITY note above):
+    #   event == 'push'                     — a pull_request CI run never qualifies
+    #   head_repository == this repository  — a fork's run never qualifies
+    #   conclusion == 'success'             — a red CI never ships
+    #   head_branch == 'main'               — our own feature branches never ship
+    # workflow_dispatch has no github.event.workflow_run at all and is admitted
+    # by its own arm, fenced by the environment above.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          # Deploy the exact commit CI verified, not whatever main's tip is by
+          # now — it may have advanced past the green commit, which would ship
+          # an unverified change. head_sha is null for workflow_dispatch, so
+          # that arm falls back to the dispatched ref.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Rebuilt here rather than carried over from CI as an artifact: the build
+      # is ~20 s, and a cross-workflow artifact download would need `actions:
+      # read` on the token plus a second code path for workflow_dispatch (which
+      # has no CI run to pull an artifact from).
+      - name: Build
+        run: pnpm build
+
+      - name: Render redirect snippet
+        run: pnpm redirects:build
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pinned host key: without it the first connection would trust
+          # whatever answers on that IP.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Publish to tools-prod-tw
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
+        run: |
+          set -euo pipefail
+          TARGET="${DEPLOY_USER}@${DEPLOY_HOST}"
+
+          # The key's forced command hands every rsync to rrsync, which maps
+          # "/" to /var/www/new.orthobio.ru and cannot address anything else on
+          # the host.
+          #
+          # --delete mirrors the build: a page deleted from the repo disappears
+          # from the site. --delete-delay defers the removals until after the
+          # new files are in place, so a visitor mid-deploy never hits a window
+          # where the old file is gone and the new one has not landed.
+          rsync -az --delete --delete-delay --checksum \
+            dist/ "${TARGET}:/public/"
+
+          # The snippet lives OUTSIDE public/ on purpose — inside the document
+          # root nginx would happily serve our own config to the internet.
+          rsync -az infra/nginx/redirects.generated.conf "${TARGET}:/redirects.conf"
+
+          # Validates the snippet host-side, installs it into /etc/nginx and
+          # reloads; rolls back and fails if nginx rejects the result.
+          ssh "${TARGET}" apply-redirects
+
+      - name: Verify the deploy is live
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          SITE_HOST: ${{ vars.SITE_HOST || 'new.orthobio.ru' }}
+          # The hard gate for the temporary noindex (PR #15 review). Unset or
+          # `false` while the URL is temporary: the deploy asserts the site IS
+          # marked noindex. Set it to `true` at the switchover and this step
+          # fails until the header is actually gone from the vhost — so the
+          # real launch cannot stay invisible to search because a prose TODO
+          # was missed.
+          SITE_INDEXABLE: ${{ vars.SITE_INDEXABLE || 'false' }}
+        run: |
+          set -euo pipefail
+          # Resolve-pinned so this passes both before and after the DNS record
+          # for SITE_HOST exists: we are checking OUR host, by name, not
+          # whatever DNS currently points at. Config-only "deploy succeeded"
+          # claims are what this step exists to prevent.
+          #
+          # -L plus a :443 override survives the certbot cutover: today plain
+          # HTTP answers 200, and once `certbot --nginx --redirect` installs the
+          # 80 -> 443 redirect the same request follows it to a real
+          # certificate for the same name. Without this the first deploy after
+          # TLS goes live would fail on a 301.
+          code=$(curl -sSL -o /tmp/home.html -D /tmp/home.headers -w '%{http_code}' \
+            --resolve "${SITE_HOST}:80:${DEPLOY_HOST}" \
+            --resolve "${SITE_HOST}:443:${DEPLOY_HOST}" \
+            "http://${SITE_HOST}/")
+          echo "GET / -> ${code}"
+          test "${code}" = "200"
+          grep -q 'ОРТОБИОЛОГИЯ' /tmp/home.html
+          echo "Homepage served and contains the expected content."
+
+          if grep -qi '^x-robots-tag:.*noindex' /tmp/home.headers; then
+            indexable=false
+          else
+            indexable=true
+          fi
+          echo "live indexable=${indexable}, expected=${SITE_INDEXABLE}"
+          if [ "${indexable}" != "${SITE_INDEXABLE}" ]; then
+            echo "::error::Indexing state mismatch. The vhost's X-Robots-Tag and the SITE_INDEXABLE variable disagree — see docs/infrastructure-decisions.md (switchover checklist)."
+            exit 1
+          fi

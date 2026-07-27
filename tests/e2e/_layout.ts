@@ -63,16 +63,39 @@ export async function expectNoHeadingSpill(page: Page, path: string): Promise<vo
   );
 }
 
-/** Cards inside the layout grids must never overlap each other. */
+/**
+ * No two siblings of ANY grid/flex container may overlap.
+ *
+ * The container list used to be hardcoded, which meant a new grid component got
+ * coverage only if someone remembered to extend it — and forgetting was
+ * invisible, because the test stayed green (PR #14 review). The sweep is now
+ * generic: every element whose COMPUTED display is grid/flex is checked, so new
+ * components are covered the moment they render.
+ *
+ * Out-of-flow children (`position: absolute/fixed`) are excluded by design —
+ * they are deliberately layered (the video facade's host badge over its play
+ * button, the hero's background pattern), and flagging them would report the
+ * design as a defect.
+ */
 export async function expectNoColumnOverlap(page: Page, path: string): Promise<void> {
   const overlaps = await page.evaluate(() => {
-    const CONTAINERS = '.ob-cards, .ob-cl, .ob-pt__grid, .ob-pg, .ob-prog__grid, .ob-foot__in';
+    const isLayout = (el: Element) => {
+      const display = getComputedStyle(el).display;
+      return display === 'grid' || display === 'flex';
+    };
+    const containers = [...document.querySelectorAll<HTMLElement>('body *')].filter(isLayout);
     const found: { container: string; a: string; b: string }[] = [];
-    for (const container of document.querySelectorAll<HTMLElement>(CONTAINERS)) {
-      const children = [...container.children].map((c) => ({
-        el: c,
-        box: c.getBoundingClientRect(),
-      }));
+    for (const container of containers) {
+      const children = [...container.children]
+        .filter((c) => {
+          const style = getComputedStyle(c);
+          // Out-of-flow children are layered on purpose; zero-size ones cannot
+          // overlap anything meaningfully.
+          if (style.position === 'absolute' || style.position === 'fixed') return false;
+          const box = c.getBoundingClientRect();
+          return box.width > 0 && box.height > 0;
+        })
+        .map((c) => ({ el: c, box: c.getBoundingClientRect() }));
       for (let i = 0; i < children.length; i++) {
         for (let j = i + 1; j < children.length; j++) {
           const a = children[i].box;

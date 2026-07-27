@@ -86,8 +86,11 @@ test('FAQ answers open without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
   await page.goto('/faq');
-  const firstSummary = page.locator('.ob-faq__q').first();
-  await firstSummary.click();
-  await expect(page.locator('details[open]').first()).toBeVisible();
+  const firstAnswer = page.locator('.ob-faq__a').first();
+  // The ANSWER is what must appear: a <details> element is visible while
+  // collapsed too, so asserting on it proved nothing (PR #14 review).
+  await expect(firstAnswer).toBeHidden();
+  await page.locator('.ob-faq__q').first().click();
+  await expect(firstAnswer).toBeVisible();
   await context.close();
 });

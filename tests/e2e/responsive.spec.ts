@@ -1,6 +1,7 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { ROUTES } from './_routes';
-import { expectNoOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
+import { expectNoOverflow, measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
 
 /**
@@ -23,5 +24,28 @@ test.describe('responsive', () => {
         await expectNoColumnOverlap(page, `${path} @${width}`);
       });
     }
+  }
+
+  // The FAQ answers are the longest running text on the site, and every guard
+  // above measures them COLLAPSED — the expanded state was untested (audit
+  // observation). Forcing every <details> open re-runs the same three checks
+  // plus axe on the state a reader actually sees.
+  for (const width of OVERFLOW_WIDTHS) {
+    test(`/faq with every answer expanded holds at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await page.goto('/faq');
+      await page.evaluate(() => {
+        document.querySelectorAll('details').forEach((d) => d.setAttribute('open', ''));
+      });
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+      await expectNoHeadingSpill(page, `/faq expanded @${width}`);
+      await expectNoColumnOverlap(page, `/faq expanded @${width}`);
+
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+      const blocking = results.violations.filter((v) =>
+        ['critical', 'serious'].includes(v.impact ?? ''),
+      );
+      expect(blocking, `axe violations on expanded /faq: ${JSON.stringify(blocking)}`).toEqual([]);
+    });
   }
 });

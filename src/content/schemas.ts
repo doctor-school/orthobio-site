@@ -72,6 +72,35 @@ const mediaLocation = () =>
     `media must be a root-relative /path or an https URL on our own storage (ТЗ §4): ${ALLOWED_MEDIA_HOSTS.join(', ')}`,
   );
 
+/**
+ * Video embed hosts, allowed for `videos[].url` ONLY (Issue #3). Congress
+ * video reports live on YouTube/Rutube as embeds — they are not self-hostable
+ * archive files, so the ТЗ §4 self-hosting rule does not apply to them the way
+ * it does to photos/PDFs. The photo/PDF `mediaLocation()` guard stays strict;
+ * this is a separate, deliberately narrow allowlist for player links.
+ */
+export const ALLOWED_VIDEO_HOSTS = [
+  'www.youtube.com',
+  'youtube.com',
+  'youtu.be',
+  'rutube.ru',
+] as const;
+
+/** Video link: our own media location OR an https URL on an allowed video host. */
+const videoLocation = () =>
+  z.string().refine(
+    (v) => {
+      if (v.startsWith('//')) return false; // protocol-relative = external
+      if (v.startsWith('/')) return true; // root-relative into public/
+      const u = URL.parse(v);
+      return (
+        u?.protocol === 'https:' &&
+        ([...ALLOWED_MEDIA_HOSTS, ...ALLOWED_VIDEO_HOSTS] as readonly string[]).includes(u.hostname)
+      );
+    },
+    `video must be a root-relative /path, our own storage, or an allowed video host: ${ALLOWED_VIDEO_HOSTS.join(', ')}`,
+  );
+
 /** Person addressing the congress (президиум / обращения, ТЗ §3 «Обращения»). */
 const greetingSchema = z.object({
   /** Full name, verbatim (not prose-routed — identity token). */
@@ -244,7 +273,8 @@ export const congressSchema = z.object({
   videos: z
     .array(
       z.object({
-        url: mediaLocation(),
+        /** Embed link — `videoLocation()`, NOT `mediaLocation()`: see ALLOWED_VIDEO_HOSTS. */
+        url: videoLocation(),
         title: proseOrNull(),
       }),
     )

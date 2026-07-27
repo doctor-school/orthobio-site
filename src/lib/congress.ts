@@ -8,8 +8,11 @@
  * count must not be orphaned from its noun on a 360px screen.
  */
 
-import type { CongressEntry, PartnerTier } from '@/content';
-import { PARTNER_TIERS, PARTNER_TIER_LABELS } from '@/content';
+import type { CongressEntry } from '@/content';
+// Imported from the schema module, not the `@/content` barrel: the barrel pulls
+// in `astro:content`, a virtual module that only exists inside an Astro build,
+// and that would make this pure module unloadable in the unit runner.
+import { PARTNER_TIERS, PARTNER_TIER_LABELS, type PartnerTier } from '@/content/schemas';
 
 type Congress = CongressEntry['data'];
 /** One program session as the schema emits it. */
@@ -124,11 +127,15 @@ export const yearHighlights = (c: Congress): string[] => {
     }
   }
   if (c.program?.pdf) tags.push('программа (PDF)');
-  if (c.photos.length > 0) tags.push(nbsp('фото', String(c.photos.length)));
-  if (c.videos.length > 0) tags.push(nbsp('видео', String(c.videos.length)));
+  // «фото»/«видео» are indeclinable here — a count plus the bare noun, in that
+  // order (the arguments used to be swapped, printing «фото 12»).
+  if (c.photos.length > 0) tags.push(nbsp(c.photos.length, 'фото'));
+  if (c.videos.length > 0) tags.push(nbsp(c.videos.length, 'видео'));
   if (c.theses) tags.push('тезисы');
   if (c.partners.length > 0) {
-    tags.push(nbsp(c.partners.length, plural(c.partners.length, ['партнёр', 'партнёра', 'партнёров'])));
+    tags.push(
+      nbsp(c.partners.length, plural(c.partners.length, ['партнёр', 'партнёра', 'партнёров'])),
+    );
   }
   return tags;
 };

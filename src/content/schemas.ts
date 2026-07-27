@@ -44,33 +44,33 @@ const prose = () => z.string().transform(typographize);
 const proseOrNull = () => prose().nullable().default(null);
 
 /**
- * Media location: either an absolute URL on OUR infrastructure (Timeweb S3)
- * or a root-relative path into `public/` (e.g. `/files/2024/theses.pdf`).
+ * Media location: either an https URL on OUR infrastructure (Timeweb S3) or a
+ * root-relative path into `public/` (e.g. `/files/2024/theses.pdf`).
  *
- * The refine enforces the ТЗ §4 principle «никаких внешних архивных ссылок» at
- * build time: links into the legacy clouds (Google Drive, Яндекс.Диск,
- * Creatium, Bitrix24, congress-ph CDNs) fail validation instead of silently
- * shipping a link that can die at any moment.
+ * Enforces the ТЗ §4 principle «никаких внешних архивных ссылок» at build time
+ * as an ALLOWLIST (PR #7 review): only hosts we own pass. A denylist provably
+ * leaks — `lh3.googleusercontent.com` (Drive's direct-image host), Tilda,
+ * protocol-relative `//cdn…` all slipped through the previous substring check.
+ * Protocol-relative `//host/path` is explicitly rejected: browsers resolve it
+ * as an EXTERNAL URL, not a root-relative path.
  */
-const FORBIDDEN_MEDIA_HOSTS = [
-  'drive.google.com',
-  'docs.google.com',
-  'disk.yandex',
-  'creatium.site',
-  'creatium.ru',
-  'bitrix24',
-  'congress-ph',
-  'c-ph.ru',
-] as const;
+// TODO(#2): replace the placeholder with the real Timeweb S3 bucket host once
+// provisioned (asset-rescue task). `s3.example-fixture.ru` exists only for the
+// 2099 draft fixture and must be removed together with it.
+export const ALLOWED_MEDIA_HOSTS = ['s3.orthobio.ru', 's3.example-fixture.ru'] as const;
 
 const mediaLocation = () =>
-  z
-    .string()
-    .regex(/^(https:\/\/|\/)/, 'must be an https:// URL (our S3) or a root-relative /path')
-    .refine(
-      (v) => !FORBIDDEN_MEDIA_HOSTS.some((host) => v.includes(host)),
-      'external cloud links are forbidden (ТЗ §4): media must live on our S3 or in public/',
-    );
+  z.string().refine(
+    (v) => {
+      if (v.startsWith('//')) return false; // protocol-relative = external
+      if (v.startsWith('/')) return true; // root-relative into public/
+      const u = URL.parse(v);
+      return (
+        u?.protocol === 'https:' && (ALLOWED_MEDIA_HOSTS as readonly string[]).includes(u.hostname)
+      );
+    },
+    `media must be a root-relative /path or an https URL on our own storage (ТЗ §4): ${ALLOWED_MEDIA_HOSTS.join(', ')}`,
+  );
 
 /** Person addressing the congress (президиум / обращения, ТЗ §3 «Обращения»). */
 const greetingSchema = z.object({
@@ -94,6 +94,12 @@ const talkSchema = z.object({
 /** One program session (2024: 34 сессии; 2025: ~30 сессий). */
 const sessionSchema = z.object({
   title: prose(),
+  /**
+   * Day of the session, ISO date (e.g. `2025-04-18`); null when the source
+   * does not attribute a day. Machine-usable so a two-day multi-hall program
+   * can be grouped «день 1 / день 2» without parsing free-text `time`.
+   */
+  date: z.coerce.date().nullable().default(null),
   /** Free-text time slot, e.g. «09:00–10:30»; null when unknown. */
   time: proseOrNull(),
   /** Hall / room; null when unknown. */
@@ -137,8 +143,12 @@ const partnerSchema = z.object({
   tier: z.enum(PARTNER_TIERS),
   /** Logo on our S3 / public path; null when we have no asset yet. */
   logo: mediaLocation().nullable().default(null),
-  /** Partner's own site. External here is fine — it is attribution, not media. */
-  url: z.url().nullable().default(null),
+  /**
+   * Partner's own site. External here is fine — it is attribution, not media.
+   * Protocol constrained to http(s): the schema is a trust boundary (also
+   * after the CMS loader swap) and bare `z.url()` accepts `javascript:`.
+   */
+  url: z.url({ protocol: /^https?$/ }).nullable().default(null),
 });
 
 /**
@@ -185,13 +195,48 @@ export const congressSchema = z.object({
     })
     .nullable()
     .default(null),
-  /** Фотогалерея: self-hosted S3 URLs only (never legacy clouds). */
+  /**
+   * Фотогалерея: self-hosted S3 URLs only (never legacy clouds).
+   * `width`/`height` are REQUIRED intrinsic pixel dimensions: `astro:assets`
+   * cannot infer them for remote images, and the no-CLS rule (AGENTS.md)
+   * needs them in the data model. The Issue #2 upload script knows both.
+   */
   photos: z
     .array(
       z.object({
         url: mediaLocation(),
         /** Alt text for a11y; null falls back to a generic year caption. */
         alt: proseOrNull(),
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      }),
+    )
+    .default([]),
+  /**
+   * Cover / preview image for the year card on the `/archive/` hub (§4:
+   * «карточки 2021–2026»). Explicit rather than `photos[0]` — some years have
+   * no gallery at all. Null → the hub falls back to a text-only card.
+   */
+  cover: z
+    .object({
+      url: mediaLocation(),
+      alt: proseOrNull(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+    .nullable()
+    .default(null),
+  /**
+   * Постеры года (§4: «4 постера» move to /archive/2026). Either images
+   * (width/height required for no-CLS) or PDFs (dimensions null).
+   */
+  posters: z
+    .array(
+      z.object({
+        url: mediaLocation(),
+        title: proseOrNull(),
+        width: z.number().int().positive().nullable().default(null),
+        height: z.number().int().positive().nullable().default(null),
       }),
     )
     .default([]),

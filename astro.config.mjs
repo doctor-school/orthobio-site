@@ -8,4 +8,7 @@ import { defineConfig } from 'astro/config';
 export default defineConfig({
   site: 'https://orthobio.ru',
   outDir: 'dist',
+  // TODO(#4): when galleries move to <Image> (astro:assets), add
+  // `image.remotePatterns` for the S3 host(s) in ALLOWED_MEDIA_HOSTS
+  // (src/content/schemas.ts) — remote images are rejected by <Image> otherwise.
 });

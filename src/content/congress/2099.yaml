@@ -54,6 +54,7 @@ program:
   pdf: /files/2099/program.pdf # local public/ path or our S3 URL; nullable
   sessions: # [] when only the PDF exists
     - title: Пленарное заседание. Открытие конгресса
+      date: 2099-04-01 # ISO day of the session; nullable (groups «день 1/2»)
       time: 09:00-10:30 # nullable free text
       hall: Зал 1 # nullable
       moderators: [Иванов Иван Иванович] # verbatim names
@@ -63,17 +64,42 @@ program:
         - title: Доклад без объявленных спикеров
           speakers: []
     - title: Секция без известного расписания
+      date: null
       time: null
       hall: null
       moderators: []
       talks: []
 
-# Фотогалерея: self-hosted S3 URLs only. Empty list = фото нет / не спасены.
+# Обложка-превью для карточки года на хабе /archive/; null = текстовая карточка.
+cover:
+  url: https://s3.example-fixture.ru/congress/2099/cover.jpg
+  alt: Зал конгресса 2099
+  width: 1200 # intrinsic px — required for images (no-CLS rule)
+  height: 630
+
+# Фотогалерея: self-hosted S3 URLs only (allowlist в schemas.ts). Empty = нет фото.
+# width/height ОБЯЗАТЕЛЬНЫ: astro:assets не может определить размеры remote-фото.
 photos:
   - url: https://s3.example-fixture.ru/congress/2099/photo-001.jpg
     alt: Открытие конгресса, президиум на сцене # nullable a11y text
+    width: 1600
+    height: 1067
   - url: https://s3.example-fixture.ru/congress/2099/photo-002.jpg
     alt: null
+    width: 1600
+    height: 1067
+
+# Постеры года (2026: 4 постера). Изображение (width/height обязательны)
+# или PDF (width/height: null). [] = нет постеров.
+posters:
+  - url: https://s3.example-fixture.ru/congress/2099/poster-1.jpg
+    title: Постер конгресса, вариант 1
+    width: 800
+    height: 1200
+  - url: /files/2099/poster-2.pdf
+    title: Постер конгресса (PDF)
+    width: null
+    height: null
 
 # Видеоотчёт (слоты из шаблона архива; почти всегда пустые). [] = нет видео.
 videos:

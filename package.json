@@ -8,6 +8,9 @@
     "pnpm": ">=9"
   },
   "packageManager": "pnpm@10.7.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp"]
+  },
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",

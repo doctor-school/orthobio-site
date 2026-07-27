@@ -14,17 +14,12 @@ import { getCongressYears, PARTNER_TIERS, PARTNER_TIER_LABELS } from '@/content'
 import type { CongressEntry } from '@/content';
 
 export async function getStaticPaths() {
+  // year↔filename integrity is enforced inside getCongressYears() (content
+  // layer), so it holds for every consumer, not just this page.
   const years = await getCongressYears();
   // Drafts (fixtures) are still built at this stage so the smoke page exists;
   // prod filtering of drafts arrives with the real pages (Issue #4).
-  return years.map((entry) => {
-    if (String(entry.data.year) !== entry.id) {
-      throw new Error(
-        `congress/${entry.id}.yaml declares year=${entry.data.year} — filename and year must match`,
-      );
-    }
-    return { params: { year: entry.id }, props: { entry } };
-  });
+  return years.map((entry) => ({ params: { year: entry.id }, props: { entry } }));
 }
 
 interface Props {
@@ -68,6 +63,16 @@ const pageTitle = `${c.title ?? `Конгресс ОРТОБИОЛОГИЯ`} —
         <dt>Место</dt>
         <dd>{c.place ?? NO_DATA}</dd>
       </dl>
+      {
+        c.cover && (
+          <img
+            src={c.cover.url}
+            alt={c.cover.alt ?? `Обложка конгресса ${c.year}`}
+            width={c.cover.width}
+            height={c.cover.height}
+          />
+        )
+      }
     </header>
 
     <section aria-labelledby="greetings-h">
@@ -113,7 +118,8 @@ const pageTitle = `${c.title ?? `Конгресс ОРТОБИОЛОГИЯ`} —
               <li>
                 <h3>{s.title}</h3>
                 <p>
-                  {s.time ?? NO_DATA} · {s.hall ?? NO_DATA}
+                  {s.date ? s.date.toISOString().slice(0, 10) : NO_DATA} · {s.time ?? NO_DATA} ·{' '}
+                  {s.hall ?? NO_DATA}
                 </p>
                 {s.moderators.length > 0 && <p>Модераторы: {s.moderators.join(', ')}</p>}
                 {s.talks.length > 0 && (
@@ -145,9 +151,35 @@ const pageTitle = `${c.title ?? `Конгресс ОРТОБИОЛОГИЯ`} —
                   src={p.url}
                   alt={p.alt ?? `Фото конгресса ${c.year}`}
                   loading="lazy"
-                  width="400"
-                  height="300"
+                  width={p.width}
+                  height={p.height}
                 />
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
+
+    <section aria-labelledby="posters-h">
+      <h2 id="posters-h">Постеры</h2>
+      {c.posters.length === 0 && <p>{NO_DATA}</p>}
+      {
+        c.posters.length > 0 && (
+          <ul>
+            {c.posters.map((p) => (
+              <li>
+                {p.width && p.height ? (
+                  <img
+                    src={p.url}
+                    alt={p.title ?? `Постер конгресса ${c.year}`}
+                    loading="lazy"
+                    width={p.width}
+                    height={p.height}
+                  />
+                ) : (
+                  <a href={p.url}>{p.title ?? `Постер конгресса ${c.year} (PDF)`}</a>
+                )}
               </li>
             ))}
           </ul>

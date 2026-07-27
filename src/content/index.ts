@@ -13,9 +13,10 @@
 import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 
 export type CongressEntry = CollectionEntry<'congress'>;
+export type PageEntry = CollectionEntry<'page'>;
 
 export { PARTNER_TIERS, PARTNER_TIER_LABELS } from './schemas';
-export type { PartnerTier } from './schemas';
+export type { PartnerTier, PageBlock } from './schemas';
 
 /**
  * Filename↔content invariant, enforced at the content layer so EVERY consumer
@@ -32,9 +33,16 @@ const assertYearMatchesId = (entry: CongressEntry): CongressEntry => {
   return entry;
 };
 
-/** All congress year editions, newest first. */
+/**
+ * All congress year editions, newest first.
+ *
+ * Draft entries (fixtures such as `2099.yaml`) are EXCLUDED — the public site
+ * must never route or link to them (Issue #1 deferred this filtering to the
+ * real pages, Issue #4). `getCongressYear()` still resolves a draft by id so a
+ * fixture stays inspectable through the content API in tests.
+ */
 export const getCongressYears = async (): Promise<CongressEntry[]> =>
-  (await getCollection('congress'))
+  (await getCollection('congress', ({ data }) => !data.draft))
     .map(assertYearMatchesId)
     .sort((a, b) => b.data.year - a.data.year);
 
@@ -50,4 +58,18 @@ export const getCongressYear = async (
 ): Promise<CongressEntry | undefined> => {
   const entry = await getEntry('congress', String(year));
   return entry === undefined ? undefined : assertYearMatchesId(entry);
+};
+
+/**
+ * Editorial copy of one static page by route slug (`nmo` → /nmo).
+ *
+ * Throws when the file is missing: a page whose copy vanished must fail the
+ * BUILD, not render an empty shell in production.
+ */
+export const getPage = async (slug: string): Promise<PageEntry> => {
+  const entry = await getEntry('page', slug);
+  if (entry === undefined) {
+    throw new Error(`Content Layer: missing src/content/pages/${slug}.yaml`);
+  }
+  return entry;
 };

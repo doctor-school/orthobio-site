@@ -4,15 +4,15 @@
 # Local staging: C:\Users\sidor\orthobio-assets\<year>\... (outside the repo;
 # binaries are NEVER committed to git).
 #
-# S3 status: pending-credentials.
-#   Survey result (reuse-before-provision): the only existing Timeweb S3 bucket
-#   on this account is the bbm-public-website CDN origin (see
-#   bbm-public-website/infra/terraform/). Its deploy workflow runs a nightly
-#   `aws s3 sync --delete` prune, so foreign objects uploaded there are wiped
-#   within 24h — it CANNOT host orthobio assets. A dedicated orthobio bucket is
-#   a paid resource (owner gate). Once the owner provisions it (Terraform
-#   pattern exists in bbm-public-website/infra/terraform), upload the staging
-#   tree as-is: local path <year>/... maps 1:1 to S3 key <year>/... .
+# S3 status: uploaded (2026-07-27, owner-authorized provisioning).
+#   Dedicated bucket `orthobio-media` provisioned via infra/terraform/ (Timeweb
+#   Cloud, ds-platform project, S3 Hot v2 10GB preset) — see
+#   infra/terraform/README.md for the apply/upload runbook. The earlier survey
+#   note stands: the bbm-public-website CDN-origin bucket runs a nightly
+#   `aws s3 sync --delete` prune and CANNOT host orthobio assets.
+#   Upload: staging tree synced 1:1 (local path <year>/... = S3 key
+#   <year>/...), skipping the 3 byte-duplicate 2021/previews files; all
+#   objects carry Cache-Control: public, max-age=31536000, immutable.
 #   Env var names (values host-side only): TIMEWEB_S3_ACCESS_KEY,
 #   TIMEWEB_S3_SECRET_KEY, TIMEWEB_S3_ENDPOINT, TIMEWEB_S3_BUCKET,
 #   TIMEWEB_S3_REGION.
@@ -26,8 +26,8 @@
 #   at-risk    — external asset outside this issue's scope, NOT yet rescued;
 #                listed so the manifest stays the single answer to "what is
 #                still hostage to external operators"
-# (s3_key values are the PLANNED keys; each item's s3 upload is
-# pending-credentials until the orthobio bucket exists.)
+# (s3_key values are the LIVE object keys in the orthobio-media bucket;
+# public URL = <s3_public_base_url><s3_key>.)
 #
 # Integrity: docs/assets-checksums.txt = SHA-256 of every staged file
 # (2222 lines, "hash  <relative path>", sorted). Verify tree or the future
@@ -42,7 +42,15 @@ meta:
   issue: 2
   rescued_at: '2026-07-27'
   staging_root: 'C:\Users\sidor\orthobio-assets'
-  s3_bucket: null # pending owner provisioning (see header)
+  s3_bucket: orthobio-media # provisioned via infra/terraform/ (Issue #2)
+  s3_endpoint: https://s3.twcstorage.ru
+  s3_region: ru-1
+  s3_public_base_url: https://s3.twcstorage.ru/orthobio-media/
+  s3_uploaded_at: '2026-07-27'
+  # 2219 objects = 2222 staged files minus the 3 byte-duplicate 2021/previews
+  # files (s3_key: null below); verified by post-upload object count + random
+  # SHA-256 spot-checks against docs/assets-checksums.txt.
+  s3_objects: 2219
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -72,7 +80,7 @@ years:
         status: downloaded
         local: '2021/photos/'
         s3_key: '2021/photos/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 531
       - id: 2021-page-previews
         source: https://orthobio2021.creatium.site/archive/2021
@@ -132,7 +140,7 @@ years:
         status: downloaded
         local: '2022/photos/april-15/'
         s3_key: '2022/photos/april-15/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 440
       - id: 2022-drive-april-16
         source: https://drive.google.com/drive/folders/1fJ5BoMr1Tc2jPPDFpNQ6jDk5eSzmryN1
@@ -142,7 +150,7 @@ years:
         status: downloaded
         local: '2022/photos/april-16/'
         s3_key: '2022/photos/april-16/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 405
       - id: 2022-page-previews
         source: https://orthobio2021.creatium.site/archive/2022
@@ -168,7 +176,7 @@ years:
         status: downloaded
         local: '2022/previews/'
         s3_key: '2022/previews/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 15
       - id: 2022-videos
         source: https://orthobio2021.creatium.site/archive/2022
@@ -199,7 +207,7 @@ years:
         status: downloaded
         local: '2023/photos/april-21/'
         s3_key: '2023/photos/april-21/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 424
       - id: 2023-drive-april-22
         source: https://drive.google.com/drive/folders/146KIsoBN-uf9QwC4HmzzH9w5Gw0bml_Q
@@ -209,7 +217,7 @@ years:
         status: downloaded
         local: '2023/photos/april-22/'
         s3_key: '2023/photos/april-22/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 372
       - id: 2023-page-previews
         source: https://orthobio2021.creatium.site/archive/2023
@@ -226,7 +234,7 @@ years:
         status: downloaded
         local: '2023/previews/'
         s3_key: '2023/previews/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 6
       - id: 2023-theses-bitrix
         source: https://b24-ieosll.bitrix24.ru/~bwfFy
@@ -265,7 +273,7 @@ years:
         status: downloaded
         local: '2024/docs/theses-2024.pdf'
         s3_key: '2024/docs/theses-2024.pdf'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 1
       - id: 2024-yandex-full-album
         source: 'https://disk.yandex.ru/d/-AKBeB9J1_8KmA (paths «19 апреля», «20 апреля»)'
@@ -298,7 +306,7 @@ years:
         status: downloaded
         local: '2024/previews/'
         s3_key: '2024/previews/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 9
       - id: 2024-program-subpage
         source: https://orthobio2021.creatium.site/archive/program2024
@@ -357,7 +365,7 @@ years:
         status: downloaded
         local: '2025/photos/gallery/'
         s3_key: '2025/photos/gallery/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 12
       - id: 2025-page-previews
         source: https://orthobio2021.creatium.site/archive/2025
@@ -370,7 +378,7 @@ years:
         status: downloaded
         local: '2025/previews/'
         s3_key: '2025/previews/'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 2
       - id: 2025-videos
         source: https://orthobio2021.creatium.site/archive/2025
@@ -399,7 +407,7 @@ years:
         status: downloaded
         local: '2026/docs/prog.pdf'
         s3_key: '2026/docs/prog.pdf'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 1
       - id: 2026-theses-pdf
         source: https://cdn.congress-ph.online/261/material.pdf
@@ -409,7 +417,7 @@ years:
         status: downloaded
         local: '2026/docs/material.pdf'
         s3_key: '2026/docs/material.pdf'
-        s3_status: pending-credentials
+        s3_status: uploaded
         files: 1
       - id: 2026-photos-cph
         source: https://photos.c-ph.ru

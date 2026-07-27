@@ -325,39 +325,10 @@
   color: var(--text-link-hover);
 }
 
-/* ── Tag ─────────────────────────────────────────────────────────────────── */
-
-.ob-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-sans);
-  font-size: var(--fs-caption);
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.02em;
-  padding: 4px 12px;
-  border-radius: var(--r-pill);
-}
-
-.ob-tag--sky {
-  background: var(--ob-sky-tint);
-  color: var(--ob-sky-text);
-}
-
-.ob-tag--green {
-  background: var(--ob-green-tint);
-  color: var(--ob-green-text);
-}
-
-.ob-tag--lime {
-  background: var(--ob-lime-tint);
-  color: var(--ob-lime-text);
-}
-
-.ob-tag--neutral {
-  background: var(--surface);
-  color: var(--muted);
-}
+/* NB: the bundle's standalone Tag component is not ported — nothing on the
+   current pages uses it (the archive card ships its own `.ob-yc__tag` pills),
+   and unused CSS is a maintenance liability. The spec stays in the design
+   bundle if a future section needs it. */
 
 /* ── SectionHeading ──────────────────────────────────────────────────────── */
 

@@ -12,11 +12,9 @@ interface Props {
   level?: 'h1' | 'h2';
   linkLabel?: string | null;
   linkHref?: string | null;
-  /** Anchor id for in-page navigation / tests. */
-  id?: string;
 }
 
-const { title, overline = null, level = 'h2', linkLabel = null, linkHref = null, id } = Astro.props;
+const { title, overline = null, level = 'h2', linkLabel = null, linkHref = null } = Astro.props;
 const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
 ---
 
@@ -24,15 +22,7 @@ const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
   <div class="ob-sh__box">
     {overline && <span class="ob-sh__overline">{overline}</span>}
     {
-      level === 'h1' ? (
-        <h1 class="ob-sh__title" id={id}>
-          {title}
-        </h1>
-      ) : (
-        <h2 class="ob-sh__title" id={id}>
-          {title}
-        </h2>
-      )
+      level === 'h1' ? <h1 class="ob-sh__title">{title}</h1> : <h2 class="ob-sh__title">{title}</h2>
     }
   </div>
   {linkHref && <a class="ob-sh__link" href={linkHref}>{linkLabel} →</a>}

@@ -17,9 +17,21 @@
 #   TIMEWEB_S3_SECRET_KEY, TIMEWEB_S3_ENDPOINT, TIMEWEB_S3_BUCKET,
 #   TIMEWEB_S3_REGION.
 #
-# Statuses: downloaded | not-found | owner-step | pending-credentials
+# Statuses:
+#   downloaded — files on disk under staging_root (local path set)
+#   recorded   — provenance-only item (URLs/content captured, nothing on disk;
+#                local is null by design)
+#   not-found  — the asset does not exist / source dead
+#   owner-step — blocked on the owner (auth, money, accounts)
+#   at-risk    — external asset outside this issue's scope, NOT yet rescued;
+#                listed so the manifest stays the single answer to "what is
+#                still hostage to external operators"
 # (s3_key values are the PLANNED keys; each item's s3 upload is
 # pending-credentials until the orthobio bucket exists.)
+#
+# Integrity: docs/assets-checksums.txt = SHA-256 of every staged file
+# (2222 lines, "hash  <relative path>", sorted). Verify tree or the future
+# S3 upload object-by-object against it.
 #
 # ⚠️ Year attribution: the Google Drive folders «15 апреля»/«16 апреля»
 # (1MaNlskHjkZpxm9XzYkgSky-Jfb2o3xGK / 1fJ5BoMr1Tc2jPPDFpNQ6jDk5eSzmryN1)
@@ -35,7 +47,11 @@ meta:
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
   # against downloaded files; every file passed a magic-bytes + size check.
+  # Unit: all "mb" values are MiB (1024^2 bytes, PowerShell's 1MB). Per-year
+  # values sum to 8910.3 vs total 8910.4 — both are correct roundings of the
+  # true total 8910.35, not a discrepancy.
   total: { files: 2222, mb: 8910.4 }
+  checksums: docs/assets-checksums.txt
   source_pages:
     - https://orthobio2021.creatium.site/archive/2021
     - https://orthobio2021.creatium.site/archive/2022
@@ -59,14 +75,22 @@ years:
         s3_status: pending-credentials
         files: 531
       - id: 2021-page-previews
-        source: img1.creatium.ru (3 high-res JPG anchors on /archive/2021)
-        description: DSC07008/DSC07253/DSC07433 — page preview photos, full-resolution originals
+        source: https://orthobio2021.creatium.site/archive/2021
+        source_urls:
+          - https://img1.creatium.ru/36/0d/54/188f87ea1f2149e88dd8f70ae1ca3b8834/DSC07008.jpg
+          - https://img1.creatium.ru/96/bc/eb/f7ef5b592f4dde23205704214c5c8f1a4a/DSC07253.jpg
+          - https://img1.creatium.ru/35/1d/0a/f5ce40c440991903724fcfecfd72069a8f/DSC07433.jpg
+        description: >-
+          Page preview photos, full-resolution originals. NOTE: all 3 are
+          byte-identical to the same-named files inside 2021/photos/ (the Drive
+          album) — kept on disk for provenance, but SKIP them in the S3 upload
+          to avoid duplicate objects. No other duplicates exist anywhere in the
+          staging tree (full-tree hash scan).
         actual_year: 2021
         type: photos
         status: downloaded
         local: '2021/previews/'
-        s3_key: '2021/previews/'
-        s3_status: pending-credentials
+        s3_key: null # deduplicated — same bytes ship as 2021/photos/DSC07008|07253|07433.jpg
         files: 3
       - id: 2021-pdf-report
         source: 'button «ОТЧЕТ КОНГРЕССА ОРТОБИОЛОГИЯ 2021» on /archive/2021 (JS modal)'
@@ -82,14 +106,17 @@ years:
         s3_key: null
       - id: 2021-videos
         source: https://orthobio2021.creatium.site/archive/2021
-        description: 'YouTube videos on page (URLs recorded, not downloaded per plan)'
+        description: >-
+          YouTube videos on page (URLs recorded, not downloaded per plan).
+          Titles are canonical YouTube oEmbed titles; slot = where the video
+          sits on the page.
         actual_year: 2021
         type: video-links
-        status: downloaded # URLs captured
+        status: recorded
         videos:
-          - { title: 'Отчётный ролик Ортобиология 2021', url: 'https://www.youtube.com/watch?v=c-RvCZ2GPKM' }
-          - { title: 'IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021 (обращение 1)', url: 'https://www.youtube.com/watch?v=IkDFPdYZbJw' }
-          - { title: 'IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021 (обращение 2)', url: 'https://www.youtube.com/watch?v=UArPFb4HjEY' }
+          - { title: 'Отчётный ролик Ортобиология 2021', slot: 'видеоотчет', url: 'https://www.youtube.com/watch?v=c-RvCZ2GPKM' }
+          - { title: 'IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021', slot: 'обращение, карточка 1', url: 'https://www.youtube.com/watch?v=IkDFPdYZbJw' }
+          - { title: 'IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021', slot: 'обращение, карточка 2', url: 'https://www.youtube.com/watch?v=UArPFb4HjEY' }
 
   2022:
     counters: { files: 860, mb: 3238.1 }
@@ -118,8 +145,24 @@ years:
         s3_status: pending-credentials
         files: 405
       - id: 2022-page-previews
-        source: img1.creatium.ru (gallery + speaker cards on /archive/2022)
-        description: '12 gallery PNG (izobrajenie_2022_04_25_*) + 3 speaker preview portraits'
+        source: https://orthobio2021.creatium.site/archive/2022
+        source_urls:
+          - https://img1.creatium.ru/4b/f7/55/a7d0c7eaba2e8e344f6ab39fdc66db82a8/prevyu_zagorodniy.png
+          - https://img1.creatium.ru/be/c2/5e/49b37ed9911280fb8ae6f471e5525280c8/gubin_prevyu.png
+          - https://img1.creatium.ru/29/a5/8d/e451cc4df6821e256022ea38fa382406f5/prevyu_strahov.png
+          - https://img1.creatium.ru/ea/74/29/81f09ddcfb662fc2c6a6c7ae5f04694e07/izobrajenie_2022_04_25_112156755.png
+          - https://img1.creatium.ru/35/14/1f/1c20e1cf9f799f8a1574e924b6cc8d13f8/izobrajenie_2022_04_25_112219278.png
+          - https://img1.creatium.ru/18/05/a7/bdd0c10897a1dc04c17d03c75f14f3f506/izobrajenie_2022_04_25_112233469.png
+          - https://img1.creatium.ru/01/a6/95/2b6f0cfc87dc40d763ef06aefad21cada6/izobrajenie_2022_04_25_112344189.png
+          - https://img1.creatium.ru/38/34/65/42d4007f7c4801aa12542711fad7e74827/izobrajenie_2022_04_25_112411866.png
+          - https://img1.creatium.ru/59/8e/2d/55b6ef52f486a2f30f833af5f3ba36b0c6/izobrajenie_2022_04_25_112509965.png
+          - https://img1.creatium.ru/79/bd/c9/6fbef7f3fda64c18aa9bf8c5f9fac2217c/izobrajenie_2022_04_25_113321190.png
+          - https://img1.creatium.ru/4b/15/e0/0cc126ea8cce0396f46e9f5ab19962f084/izobrajenie_2022_04_25_113331076.png
+          - https://img1.creatium.ru/98/54/07/53e673ac3f1c49fec774eb96ee31b1d65e/izobrajenie_2022_04_25_113520984.png
+          - https://img1.creatium.ru/23/fa/65/1459bc29308764c2e8d7021d5c72b98f10/izobrajenie_2022_04_25_113532345.png
+          - https://img1.creatium.ru/c7/2d/e1/aa872ffe67c8f1b4072e6bbf799785cd2f/izobrajenie_2022_04_25_113611550.png
+          - https://img1.creatium.ru/4d/45/42/efc96a02c39ca8d9264631b1ad64946816/izobrajenie_2022_04_25_113643560.png
+        description: '12 gallery PNG (izobrajenie_2022_04_25_*) + 3 speaker preview portraits; local filename = URL basename'
         actual_year: 2022
         type: photos
         status: downloaded
@@ -129,26 +172,28 @@ years:
         files: 15
       - id: 2022-videos
         source: https://orthobio2021.creatium.site/archive/2022
-        description: 'YouTube videos (5 hall recordings inline + 3 address videos in click-modals)'
+        description: >-
+          YouTube videos (5 hall recordings inline + 3 address videos in
+          click-modals). Titles are canonical YouTube oEmbed titles.
         actual_year: 2022
         type: video-links
-        status: downloaded # URLs captured
+        status: recorded
         videos:
           - { title: 'ОРТОБИОЛОГИЯ 2022 - 15 Апреля (1 зал)', url: 'https://www.youtube.com/watch?v=y-OqCEPDBxI' }
           - { title: 'ОРТОБИОЛОГИЯ 2022 - 15 Апреля (2 зал)', url: 'https://www.youtube.com/watch?v=ex2aSl8k_Jk' }
           - { title: 'ОРТОБИОЛОГИЯ 2022 - 15 Апреля (3 зал)', url: 'https://www.youtube.com/watch?v=EmXZXKUpxiY' }
           - { title: 'ОРТОБИОЛОГИЯ 2022 - 16 Апреля (1 зал)', url: 'https://www.youtube.com/watch?v=QTFWvUUVtJQ' }
           - { title: 'ОРТОБИОЛОГИЯ 2022 - 16 Апреля (2 зал)', url: 'https://www.youtube.com/watch?v=So19qQ172WM' }
-          - { title: 'Приглашение Президента конгресса | Загородний Н.В.', url: 'https://www.youtube.com/watch?v=gUVtmdKUrQ4' }
-          - { title: 'Приглашение Сопрезидента конгресса | Губин А.В.', url: 'https://www.youtube.com/watch?v=SW3QNj-TWoE' }
-          - { title: 'Приглашение члена оргкомитета | Страхов М.А.', url: 'https://www.youtube.com/watch?v=Q6qO3OOSQfE' }
+          - { title: 'Приглашение к участию от Президента конгресса ОРТОБИОЛОГИЯ | Загородний Н.В.', url: 'https://www.youtube.com/watch?v=gUVtmdKUrQ4' }
+          - { title: 'Приглашение к участию от Сопрезидента конгресса конгресса ОРТОБИОЛОГИЯ | Губин А. В.', url: 'https://www.youtube.com/watch?v=SW3QNj-TWoE' }
+          - { title: 'Приглашение к участию от члена оргкомитета конгресса ОРТОБИОЛОГИЯ | Страхов М. А.', url: 'https://www.youtube.com/watch?v=Q6qO3OOSQfE' }
 
   2023:
     counters: { files: 802, mb: 4521.2 }
     items:
       - id: 2023-drive-april-21
         source: https://drive.google.com/drive/folders/1vBm_oKZzCun3wXKYqYDXA6h8hZbPTmOF
-        description: '«Ортобиология 2023 — 21 апреля» (EGOR3126–3359)'
+        description: '«Ортобиология 2023 — 21 апреля» (EGOR3126–EGOR5107, non-contiguous, 424 files measured)'
         actual_year: 2023
         type: photos
         status: downloaded
@@ -158,7 +203,7 @@ years:
         files: 424
       - id: 2023-drive-april-22
         source: https://drive.google.com/drive/folders/146KIsoBN-uf9QwC4HmzzH9w5Gw0bml_Q
-        description: '«Ортобиология 2023 — 22 апреля» (EGOR5866–6073)'
+        description: '«Ортобиология 2023 — 22 апреля» (EGOR5866–EGOR7419, non-contiguous, 372 files measured)'
         actual_year: 2023
         type: photos
         status: downloaded
@@ -167,8 +212,15 @@ years:
         s3_status: pending-credentials
         files: 372
       - id: 2023-page-previews
-        source: img1.creatium.ru (page images on /archive/2023)
-        description: '4 gallery PNG (izobrajenie_2023_04_28_*) + video still + bezimyanniy.png'
+        source: https://orthobio2021.creatium.site/archive/2023
+        source_urls:
+          - https://img1.creatium.ru/2a/d4/b2/67855e104d8e7684985b74216ea56fa2b6/bezimyanniy.png
+          - https://img1.creatium.ru/a0/43/af/1d04d86c809173d97f902df8ca6ed3fb4c/sequence_01_00_06_29_05_still008.jpg
+          - https://img1.creatium.ru/9f/2d/68/f9deb257c17969dc767c00bfa50f62f7b4/izobrajenie_2023_04_28_161632347.png
+          - https://img1.creatium.ru/88/a9/79/488871370e043c8eeb19a5ef4b67013e44/izobrajenie_2023_04_28_161716930.png
+          - https://img1.creatium.ru/2c/09/8a/531cf1f13fbab789bbe4a181f337920d7d/izobrajenie_2023_04_28_161729700.png
+          - https://img1.creatium.ru/5e/64/10/f4c0a82c112ee06d196950bb00cbcbbc2e/izobrajenie_2023_04_28_161740344.png
+        description: '4 gallery PNG (izobrajenie_2023_04_28_*) + video still + bezimyanniy.png; local filename = URL basename'
         actual_year: 2023
         type: photos
         status: downloaded
@@ -189,16 +241,18 @@ years:
         s3_key: null
       - id: 2023-videos
         source: https://orthobio2021.creatium.site/archive/2023
-        description: 'YouTube videos (3 inline + 2 address videos in click-modals); other 4 видеоотчет slots are empty'
+        description: >-
+          YouTube videos (3 inline + 2 address videos in click-modals); other 4
+          видеоотчет slots are empty. Titles are canonical YouTube oEmbed titles.
         actual_year: 2023
         type: video-links
-        status: downloaded # URLs captured
+        status: recorded
         videos:
           - { title: 'Отчётное видео ОРТОБИОЛОГИЯ 2023', url: 'https://www.youtube.com/watch?v=r4fVPFAfk18' }
           - { title: 'ОРТОБИОЛОГИЯ 2023 / 21 АПРЕЛЯ - 1 ЗАЛ', url: 'https://www.youtube.com/watch?v=a0oU5_WYvSI' }
           - { title: 'ОРТОБИОЛОГИЯ 2023 / 22 АПРЕЛЯ - 1 ЗАЛ', url: 'https://www.youtube.com/watch?v=YMJQy8s-kTM' }
-          - { title: 'Президент Конгресса Н.В. Загородний приглашает к участию', url: 'https://www.youtube.com/watch?v=Me6ohmwqd7w' }
-          - { title: 'Член Оргкомитета М.А. Страхов приглашает к участию', url: 'https://www.youtube.com/watch?v=9XYaeBYyiYE' }
+          - { title: 'Президент Конгресса Ортобиология 2023 Н.В. Загородний приглашает к участию', url: 'https://www.youtube.com/watch?v=Me6ohmwqd7w' }
+          - { title: 'Член Оргкомитета Конгресса Ортобиология 2023 М. А. Страхов приглашает к участию', url: 'https://www.youtube.com/watch?v=9XYaeBYyiYE' }
 
   2024:
     counters: { files: 10, mb: 24.1 }
@@ -227,8 +281,18 @@ years:
         local: null
         s3_key: null
       - id: 2024-page-previews
-        source: img1.creatium.ru (page images on /archive/2024)
-        description: '6 WhatsApp gallery JPG + preview_orto.jpg + 2 speaker portraits — the only surviving 2024 photos'
+        source: https://orthobio2021.creatium.site/archive/2024
+        source_urls:
+          - https://img1.creatium.ru/disk2/20/25/31/33a472ffc51f1d3a9c26d768ddeed2ee4e/preview_orto.jpg
+          - https://img1.creatium.ru/disk2/9e/26/b2/74f213a24293b610ae0314452e0e5fac0e/zagorodniy.png
+          - https://img1.creatium.ru/disk2/fb/1a/c3/6e1d7b40448ba9d182fd9964a5e8355de8/strahov.png
+          - https://img1.creatium.ru/disk2/5b/38/44/4cf3363853e105296f64b9f8b6fe221e8c/whatsapp_image_2024_05_07_at_12_55_24.jpg
+          - https://img1.creatium.ru/disk2/49/62/8b/c24edf5e68639988281c0fce86e1dedff5/whatsapp_image_2024_05_07_at_12_55_25.jpg
+          - https://img1.creatium.ru/disk2/f0/cc/1f/bc76ec7506fd53ee9057b7b3ab40223afb/whatsapp_image_2024_05_07_at_12_55_25_1.jpg
+          - https://img1.creatium.ru/disk2/86/d0/0f/196350e86aba84af3261666a1e3f1b6689/whatsapp_image_2024_05_07_at_12_55_25_2.jpg
+          - https://img1.creatium.ru/disk2/03/ee/05/a9da8dbc41367b8a3d2fff3ecd6897ae6c/whatsapp_image_2024_05_07_at_12_55_25_3.jpg
+          - https://img1.creatium.ru/disk2/18/fe/fa/ed2f666fab213394f5380112a8b35ea874/whatsapp_image_2024_05_07_at_12_55_25_4.jpg
+        description: '6 WhatsApp gallery JPG + preview_orto.jpg + 2 speaker portraits — the only surviving 2024 photos; local filename = URL basename'
         actual_year: 2024
         type: photos
         status: downloaded
@@ -238,23 +302,25 @@ years:
         files: 9
       - id: 2024-program-subpage
         source: https://orthobio2021.creatium.site/archive/program2024
-        description: 'Full program 2024 as inline HTML (content for #1 content YAML, no binary asset)'
+        description: 'Full program 2024 as inline HTML (captured in docs/recon/archive-2024.md; content for the year YAML, no binary asset)'
         actual_year: 2024
         type: html-content
-        status: downloaded # captured in docs/recon/archive-2024.md
+        status: recorded
         local: null
         s3_key: null
       - id: 2024-videos
         source: https://orthobio2021.creatium.site/archive/2024
-        description: 'YouTube videos in click-modals (lazy slots verified with Playwright: 4 real, 3 empty)'
+        description: >-
+          YouTube videos in click-modals (lazy slots verified with Playwright:
+          4 real, 3 empty). Titles are canonical YouTube oEmbed titles.
         actual_year: 2024
         type: video-links
-        status: downloaded # URLs captured
+        status: recorded
         videos:
           - { title: 'Отчётный ролик с V Конгресса «Ортобиология» #2024', url: 'https://www.youtube.com/watch?v=nMNyfUS2buI' }
-          - { title: 'Отчётный ролик 2024 — глазами партнёров', url: 'https://www.youtube.com/watch?v=xspid1JTqv4' }
-          - { title: 'Приглашение Президента V Конгресса | Загородний Н.В.', url: 'https://www.youtube.com/watch?v=e7o0F-qBGbA' }
-          - { title: 'Приглашение члена оргкомитета V Конгресса | Страхов М.А.', url: 'https://www.youtube.com/watch?v=RRW4aKfXp44' }
+          - { title: 'Отчётный ролик о V конгрессе Ортобиология 2024 - глазами партнёров', url: 'https://www.youtube.com/watch?v=xspid1JTqv4' }
+          - { title: 'Приглашение к участию от Президента V Конгресса ОРТОБИОЛОГИЯ | Загородний Н.В.', url: 'https://www.youtube.com/watch?v=e7o0F-qBGbA' }
+          - { title: 'Приглашение к участию от члена оргкомитета V Конгресса ОРТОБИОЛОГИЯ | Страхов М. А.', url: 'https://www.youtube.com/watch?v=RRW4aKfXp44' }
 
   2025:
     counters: { files: 14, mb: 28.5 }
@@ -271,8 +337,21 @@ years:
         local: null
         s3_key: null
       - id: 2025-page-gallery
-        source: img1.creatium.ru (12 numbered JPG on /archive/2025)
-        description: '12 high-resolution gallery JPG (1.jpg–12.jpg) — the only surviving 2025 photos'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_urls:
+          - https://img1.creatium.ru/disk2/f5/5c/95/96f3a7226bf833e5db60a9dcee1c48725f/1.jpg
+          - https://img1.creatium.ru/disk2/2c/60/cc/f3f05bda63c22004b856034dc8127c4ed0/2.jpg
+          - https://img1.creatium.ru/disk2/3a/fa/58/ca6c36a3bc42e7d9ea3f6a91fa6fb23b37/3.jpg
+          - https://img1.creatium.ru/disk2/e1/05/1e/114416308af892b2bd8604f7f77672bb4d/4.jpg
+          - https://img1.creatium.ru/disk2/0c/70/60/8d380b5190c5f28d31a107fe76197a629e/5.jpg
+          - https://img1.creatium.ru/disk2/a8/f7/e1/ae813d3e352df15e5b287d7a5b49079cac/6.jpg
+          - https://img1.creatium.ru/disk2/71/f3/ce/21f7795071132a9a904361d1b0fb2826b0/7.jpg
+          - https://img1.creatium.ru/disk2/a1/bb/d1/f21b1a0f35a44eae0a2e9cf92ab439d133/8.jpg
+          - https://img1.creatium.ru/disk2/45/04/6a/d4d2972944384863da9d7e6013f2ca12c3/9.jpg
+          - https://img1.creatium.ru/disk2/16/9e/0f/4497e472b9fff91249229ed652729b730e/10.jpg
+          - https://img1.creatium.ru/disk2/74/1c/d3/9b455672c47b77e57b567760447ef6b351/11.jpg
+          - https://img1.creatium.ru/disk2/a9/a6/16/cd9f4eb1ef09f3a346301c4b1c00fd8f3c/12.jpg
+        description: '12 high-resolution gallery JPG (1.jpg–12.jpg) — the only surviving 2025 photos; local filename = URL basename'
         actual_year: 2025
         type: photos
         status: downloaded
@@ -281,8 +360,11 @@ years:
         s3_status: pending-credentials
         files: 12
       - id: 2025-page-previews
-        source: img1.creatium.ru (speaker cards on /archive/2025)
-        description: '2 speaker portraits (Загородний, Страхов) from обращения cards'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_urls:
+          - https://img1.creatium.ru/disk2/f9/e8/51/cca0054d592b4c0ca6c415e39a25b9bef8/zagorodniy_ortobio_2025_03280.jpg
+          - https://img1.creatium.ru/disk2/f4/f8/6b/cfffda8993df568b61edd18d87c2b065bc/strahov_ortobio_2025_03280_03280.jpg
+        description: '2 speaker portraits (Загородний, Страхов) from обращения cards; local filename = URL basename'
         actual_year: 2025
         type: photos
         status: downloaded
@@ -294,15 +376,17 @@ years:
         source: https://orthobio2021.creatium.site/archive/2025
         description: >-
           Rutube videos in click-modals (lazy slots verified with Playwright:
-          3 real, 1 empty — Страхов card). Rutube API returns 403 for titles;
-          embed URLs verified working in-page.
+          3 real, 1 empty — Страхов card ×2). Rutube API returns 403, so
+          canonical titles are unavailable: every title below is EDITORIAL
+          (title_source: editorial), derived from the page slot the modal
+          belongs to. Embed URLs verified working in-page.
         actual_year: 2025
         type: video-links
-        status: downloaded # URLs captured
+        status: recorded
         videos:
-          - { title: 'Отчетный ролик конгресса 2025', url: 'https://rutube.ru/video/15094348253029651341d677331f4515/' }
-          - { title: 'Обращение к участникам (Загородний Н.В.)', url: 'https://rutube.ru/video/938e909c140c9d918077ebcfa366e3d5/' }
-          - { title: 'Обращение к участникам (2)', url: 'https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/' }
+          - { title: 'Отчетный ролик конгресса 2025', title_source: editorial, slot: 'ОТЧЕТНЫЙ РОЛИК КОНГРЕССА', url: 'https://rutube.ru/video/15094348253029651341d677331f4515/' }
+          - { title: 'Обращение к участникам, карточка 1 (Загородний Н. В.)', title_source: editorial, slot: 'ОБРАЩЕНИЯ К УЧАСТНИКАМ', url: 'https://rutube.ru/video/938e909c140c9d918077ebcfa366e3d5/' }
+          - { title: 'Обращение к участникам, карточка 2', title_source: editorial, slot: 'ОБРАЩЕНИЯ К УЧАСТНИКАМ', url: 'https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/' }
 
   2026:
     counters: { files: 2, mb: 1.6 }
@@ -327,3 +411,30 @@ years:
         s3_key: '2026/docs/material.pdf'
         s3_status: pending-credentials
         files: 1
+      - id: 2026-photos-cph
+        source: https://photos.c-ph.ru
+        description: >-
+          Photo gallery of congress 2026 on the operator's photo hosting
+          (ТЗ §4: «фото — из photos.c-ph.ru когда появятся»). Outside Issue #2
+          scope (which enumerates the 2021–2025 clouds + the two 2026 PDFs) and
+          NOT yet rescued; listed so the manifest remains the single answer to
+          what is still hostage to the operator. Rescue when the gallery is
+          published/located.
+        actual_year: 2026
+        type: photos
+        status: at-risk
+        local: null
+        s3_key: null
+      - id: 2026-posters
+        source: https://orthobio.ru/posters
+        description: >-
+          4 принятых постера (electronic poster reports) listed on /posters —
+          ТЗ §4 includes them in the content to move to /archive/2026. Hosted
+          by the operator (congress-ph platform); outside Issue #2 scope and
+          NOT yet rescued. Poster files (if downloadable) live behind the
+          operator's platform — verify and rescue in the content task.
+        actual_year: 2026
+        type: pdf
+        status: at-risk
+        local: null
+        s3_key: null

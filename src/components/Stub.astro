@@ -40,5 +40,14 @@ const { title, text = null, linkLabel = null, linkHref = null, level = 'h2' } = 
     )
   }
   {text && <p class="ob-stub__text">{text}</p>}
-  {linkHref && <a class="ob-stub__link" href={linkHref}>{linkLabel} →</a>}
+  {
+    /* Both or neither: a link labelled only «→» has no accessible name. The
+       schema rejects the half-set pair at build (pageSchemaChecked); this is
+       the render-side half of the same rule. */
+    linkHref && linkLabel && (
+      <a class="ob-stub__link" href={linkHref}>
+        {linkLabel} →
+      </a>
+    )
+  }
 </div>

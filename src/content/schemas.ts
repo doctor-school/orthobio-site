@@ -45,7 +45,7 @@ const proseOrNull = () => prose().nullable().default(null);
 
 /**
  * Media location: either an https URL on OUR infrastructure (Timeweb S3) or a
- * root-relative path into `public/` (e.g. `/files/2024/theses.pdf`).
+ * root-relative path.
  *
  * Enforces the ТЗ §4 principle «никаких внешних архивных ссылок» at build time
  * as an ALLOWLIST (PR #7 review): only hosts we own pass. A denylist provably
@@ -53,17 +53,26 @@ const proseOrNull = () => prose().nullable().default(null);
  * protocol-relative `//cdn…` all slipped through the previous substring check.
  * Protocol-relative `//host/path` is explicitly rejected: browsers resolve it
  * as an EXTERNAL URL, not a root-relative path.
+ *
+ * ── Two meanings of a root-relative path (PR #14 review) ─────────────────────
+ * `/media/<key>` is a RESERVED prefix: it is not a file in `public/` (there is
+ * none) but a bucket key, rewritten to `MEDIA_BASE_URL + key` by `mediaUrl()`
+ * in `src/config/site.ts` — the single seam where the host is applied. Any
+ * other `/path` is served from the site itself. Both are ours, which is what
+ * this guard is about; the distinction is resolved at render, not here.
  */
-// TODO(#2): replace the placeholder with the real Timeweb S3 bucket host once
-// provisioned (asset-rescue task). `s3.example-fixture.ru` exists only for the
-// 2099 draft fixture and must be removed together with it.
-export const ALLOWED_MEDIA_HOSTS = ['s3.orthobio.ru', 's3.example-fixture.ru'] as const;
+// `s3.twcstorage.ru` is the live Timeweb bucket host (docs/assets-manifest.yaml
+// → meta.s3_public_base_url, provisioned in Issue #2), so an absolute URL of
+// our own storage validates instead of being rejected.
+// `s3.example-fixture.ru` exists only for the 2099 draft fixture and must be
+// removed together with it.
+export const ALLOWED_MEDIA_HOSTS = ['s3.twcstorage.ru', 's3.example-fixture.ru'] as const;
 
 const mediaLocation = () =>
   z.string().refine(
     (v) => {
       if (v.startsWith('//')) return false; // protocol-relative = external
-      if (v.startsWith('/')) return true; // root-relative into public/
+      if (v.startsWith('/')) return true; // root-relative: /media/<key> (bucket) or a site path
       const u = URL.parse(v);
       return (
         u?.protocol === 'https:' && (ALLOWED_MEDIA_HOSTS as readonly string[]).includes(u.hostname)
@@ -91,7 +100,7 @@ const videoLocation = () =>
   z.string().refine(
     (v) => {
       if (v.startsWith('//')) return false; // protocol-relative = external
-      if (v.startsWith('/')) return true; // root-relative into public/
+      if (v.startsWith('/')) return true; // root-relative: /media/<key> (bucket) or a site path
       const u = URL.parse(v);
       return (
         u?.protocol === 'https:' &&
@@ -331,7 +340,14 @@ const listBlockSchema = z.object({
   items: z.array(prose()).default([]),
 });
 
-/** Honest «в разработке» placeholder + where to go instead (ТЗ §4 principle 2). */
+/**
+ * Honest «в разработке» placeholder + where to go instead (ТЗ §4 principle 2).
+ *
+ * `linkHref` without `linkLabel` would render a focusable link whose accessible
+ * name is the bare «→» arrow, so the pair is validated as a unit: an incomplete
+ * link is a CONTENT error and must fail the build, not ship as a nameless link
+ * (PR #14 review).
+ */
 const stubBlockSchema = z.object({
   kind: z.literal('stub'),
   title: prose(),
@@ -377,6 +393,28 @@ export const pageSchema = z.object({
    */
   statsNote: proseOrNull(),
   blocks: z.array(pageBlockSchema).default([]),
+});
+
+/**
+ * A stub's `linkHref` and `linkLabel` are validated as a PAIR: an href without
+ * a label renders a focusable link whose accessible name is the bare «→»
+ * arrow. That is a content error and must fail the build rather than ship
+ * (PR #14 review). The check lives here, not on the block: Zod's
+ * `discriminatedUnion` accepts plain objects only, so a refined member cannot
+ * be a union option.
+ */
+export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
+  page.blocks.forEach((block, i) => {
+    if (block.kind !== 'stub') return;
+    if ((block.linkHref === null) !== (block.linkLabel === null)) {
+      ctx.addIssue({
+        // String literal, not the deprecated `z.ZodIssueCode` enum.
+        code: 'custom',
+        path: ['blocks', i, 'linkLabel'],
+        message: 'linkHref and linkLabel must be set together — a link needs a visible label',
+      });
+    }
+  });
 });
 
 export type Page = z.infer<typeof pageSchema>;

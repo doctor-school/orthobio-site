@@ -16,7 +16,7 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 
-import { congressSchema, pageSchema } from './content/schemas';
+import { congressSchema, pageSchemaChecked } from './content/schemas';
 
 const congress = defineCollection({
   loader: glob({ pattern: '*.yaml', base: './src/content/congress' }),
@@ -31,7 +31,7 @@ const congress = defineCollection({
  */
 const page = defineCollection({
   loader: glob({ pattern: '*.yaml', base: './src/content/pages' }),
-  schema: pageSchema,
+  schema: pageSchemaChecked,
 });
 
 export const collections = { congress, page };

@@ -22,7 +22,14 @@ import VideoCard from '@/components/VideoCard.astro';
 import { mediaUrl } from '@/config/site';
 import { getCongressYears, type CongressEntry } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { groupPartners, groupSessionsByDay, ordinalLabel, plural, nbsp } from '@/lib/congress';
+import {
+  displaySize,
+  groupPartners,
+  groupSessionsByDay,
+  nbsp,
+  ordinalLabel,
+  plural,
+} from '@/lib/congress';
 
 export async function getStaticPaths() {
   // Drafts are filtered inside getCongressYears() — a fixture must never get a
@@ -51,15 +58,33 @@ const programSummary =
       ].join(' · ')
     : null;
 
+// «Нет данных» must hang on structure, not luck: `c.program` can be a non-null
+// object with nothing in it (`{ pdf: null, sessions: [] }` is schema-valid), and
+// truthiness alone would then render an empty section instead of the honest
+// placeholder (PR #14 review).
+const hasProgram = Boolean(c.program?.pdf) || sessions.length > 0;
+
 const partnerGroups = groupPartners(c.partners);
-const posterImages = c.posters.filter((p) => p.width !== null && p.height !== null);
+const posterImages = c.posters.filter(
+  (p): p is typeof p & { width: number; height: number } => p.width !== null && p.height !== null,
+);
 const posterDocs = c.posters.filter((p) => p.width === null || p.height === null);
+const POSTER_WIDTHS = [320, 480, 640];
+const POSTER_MAX = 640;
 
 const meta = [c.dates ?? NO_DATA, c.place].filter(Boolean).join(' — ');
 const title = c.title ?? `ОРТОБИОЛОГИЯ ${c.year}`;
 const description = `${title}. ${meta}. Программа, фотоотчёт и материалы конгресса в архиве.`;
 ---
 
+{
+  /* `c.draft` is always false on this route today — getStaticPaths() takes its
+     years from getCongressYears(), which filters drafts out. The noindex flag
+     and the draft banner below are the belt to that braces: if the filter is
+     ever relaxed (e.g. to preview a fixture), a draft still cannot enter the
+     index or pass for a real congress. Deliberately kept, not dead by accident
+     (PR #14 review). */
+}
 <BaseLayout title={`${title} — архив`} description={description} noindex={c.draft}>
   <div class="ob-yh">
     <div class="ob-container ob-yh__in">
@@ -75,8 +100,14 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
     {
       c.greetings.length > 0 ? (
         <div class="ob-cards--narrow ob-cards">
-          {c.greetings.map((g) => (
-            <PersonCard name={g.name} role={g.role} photo={g.photo} text={g.text} />
+          {c.greetings.map((g, i) => (
+            <PersonCard
+              name={g.name}
+              role={g.role}
+              photo={g.photo}
+              text={g.text}
+              priority={i < 2}
+            />
           ))}
         </div>
       ) : (
@@ -110,7 +141,7 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
         </>
       ))
     }
-    {!c.program && <p class="ob-empty">{NO_DATA}</p>}
+    {!hasProgram && <p class="ob-empty">{NO_DATA}</p>}
   </div>
 
   <div class="ob-container ob-section">
@@ -157,17 +188,24 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
         ))}
         {posterImages.length > 0 && (
           <div class="ob-pg">
-            {posterImages.map((p) => (
-              <Image
-                src={mediaUrl(p.url)}
-                alt={p.title ?? `Постер конгресса ${c.year}`}
-                inferSize
-                widths={[320, 480, 640]}
-                sizes="(min-width: 1024px) 300px, 92vw"
-                loading="lazy"
-                decoding="async"
-              />
-            ))}
+            {posterImages.map((p) => {
+              // Dimensions are known here (that is what `posterImages` filters
+              // on), so no `inferSize` — it would make the build download every
+              // poster just to learn what the content model already states.
+              const size = displaySize(p.width, p.height, POSTER_MAX);
+              return (
+                <Image
+                  src={mediaUrl(p.url)}
+                  alt={p.title ?? `Постер конгресса ${c.year}`}
+                  width={size.width}
+                  height={size.height}
+                  widths={POSTER_WIDTHS}
+                  sizes="(min-width: 1024px) 300px, 92vw"
+                  loading="lazy"
+                  decoding="async"
+                />
+              );
+            })}
           </div>
         )}
       </div>

@@ -25,5 +25,12 @@ const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
       level === 'h1' ? <h1 class="ob-sh__title">{title}</h1> : <h2 class="ob-sh__title">{title}</h2>
     }
   </div>
-  {linkHref && <a class="ob-sh__link" href={linkHref}>{linkLabel} →</a>}
+  {
+    /* Both or neither — a link whose only text is «→» has no accessible name. */
+    linkHref && linkLabel && (
+      <a class="ob-sh__link" href={linkHref}>
+        {linkLabel} →
+      </a>
+    )
+  }
 </div>

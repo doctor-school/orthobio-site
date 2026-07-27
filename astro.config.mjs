@@ -1,8 +1,5 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-
-import tailwindcss from '@tailwindcss/vite';
-
 // Static output only (SSG) — the site is plain files served from our own
 // RF-accessible hosting (Timeweb); no adapters, no server runtime.
 // `site` is the canonical production domain; it will drive canonical URLs
@@ -10,12 +7,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   site: 'https://orthobio.ru',
   outDir: 'dist',
-  // Tailwind v4 ships as a Vite plugin (no @astrojs/tailwind integration on
-  // Astro 6). The theme is CSS-first: src/styles/tokens.css holds the design
-  // tokens and the @theme block; global.css is the single entry.
-  vite: {
-    plugins: [tailwindcss()],
-  },
+  // No CSS framework: styling is the `.ob-*` layer over the tokens in
+  // src/styles (AGENTS.md → Code style). Tailwind was removed at review of
+  // PR #14 — no utility class was ever used.
   // Galleries render through <Image> (astro:assets), which refuses a remote
   // source unless its host is allowed here. The archive lives in our own
   // Timeweb bucket (s3.twcstorage.ru/orthobio-media, Issue #2); originals are

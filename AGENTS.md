@@ -47,7 +47,7 @@ This repo follows the conventions of its ecosystem siblings `bbm-public-website`
 - **TypeScript strict** — no unjustified `any`.
 - **pnpm** (ecosystem standard), Node 22.
 - Prefer `.astro` components; **no client-side JS by default** — add `client:*` islands only when interactivity genuinely requires it.
-- Tailwind CSS, tokens only — no hardcoded hex, no inline `style=`.
+- **No CSS framework — tokens only.** Design tokens are CSS custom properties in `src/styles/tokens.css` (the ONLY file that may contain a literal colour/size); components style through `.ob-*` classes in `src/styles/components.css`. No hardcoded hex outside `tokens.css`, no inline `style=`. This deviates from `bbm-public-website`'s Tailwind convention and was accepted at review of PR #14: the design system arrived as a CSS component layer, not one utility class was ever written, and the site is temporary — token discipline is preserved either way. Do not add Tailwind back or mix utility classes into `.ob-*` markup.
 - Comments explain non-obvious WHY, never narrate WHAT.
 
 ## Frontend & responsive conventions (MANDATORY for UI work)
@@ -63,6 +63,7 @@ Adopted verbatim from `bbm-public-website` (learned from its real overflow incid
 ## Testing expectations
 
 - `pnpm build` green before any PR.
+- **`pnpm test` (vitest) for pure logic** — `src/lib/**` is unit-tested. The e2e suite asserts geometry and a11y, so a wrong VALUE passes it («фото 12» instead of «12 фото» shipped that way, PR #14): values belong in unit tests.
 - **Responsive verification for every UI-affecting PR:** check widths **360, 390, 768, 1024, 1280** and assert zero horizontal page overflow (`scrollWidth - clientWidth <= 0`), no heading spill, no column overlap. Codify as a parametrised Playwright regression (see `bbm-public-website/tests/e2e/home.spec.ts` for the pattern) — eyeballing one width is not verification.
 - **Accessibility:** axe pass (`@axe-core/playwright`) per page; no critical/serious violations.
 - Content integrity: every year page renders from YAML without build errors; unknown facts are explicit `null`/«нет данных», never copy-pasted from a neighbouring year.

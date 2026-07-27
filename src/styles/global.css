@@ -1,11 +1,11 @@
 /* Global stylesheet entry — the single import the layout pulls in. Order is
-   deliberate (Tailwind v4, CSS-first; donor pattern bbm-public-website):
-     1. tokens.css   — design tokens + the @theme block mapping utilities onto them
-     2. "tailwindcss" — preflight (reset) + utilities
-     3. base.css      — document defaults that must OVERRIDE preflight
-     4. components.css — the .ob-* component layer (plain CSS, no @apply)
-   No value is hardcoded outside tokens.css. */
+   deliberate:
+     1. tokens.css     — design tokens (the only file with literal values)
+     2. base.css       — minimal reset + document defaults
+     3. components.css — the .ob-* component layer
+   Tailwind was removed at review of PR #14: not one utility class was ever
+   used, so the framework contributed only a preflight that base.css now owns
+   explicitly. The convention is recorded in AGENTS.md → Code style. */
 @import './tokens.css';
-@import 'tailwindcss';
 @import './base.css';
 @import './components.css';

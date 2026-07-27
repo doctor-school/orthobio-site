@@ -1,7 +1,13 @@
 /* ============================================================================
-   Base layer — document defaults that intentionally override Tailwind preflight
-   (link underline, focus ring, selection). Ported from the design bundle
-   `tokens/base.css`.
+   Base layer — the site's own minimal reset plus document defaults.
+
+   This file previously leaned on Tailwind's preflight for the reset. Tailwind
+   was removed at review of PR #14 (not a single utility class was ever used —
+   the design system ships as the `.ob-*` layer in components.css), so the few
+   preflight behaviours the layer actually depends on are declared here
+   explicitly: border-box sizing, zeroed body margin, and headings/paragraphs
+   that inherit their type from the component classes rather than from the UA
+   stylesheet.
 
    Fonts: Inter is self-hosted via the `@fontsource/inter` npm package, imported
    in `src/layouts/BaseLayout.astro` (Vite emits the woff2 files into the build
@@ -10,13 +16,43 @@
    audience this site exists for.
    ============================================================================ */
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
+  margin: 0;
   font-family: var(--font-sans);
   font-size: var(--fs-body);
   line-height: var(--lh-body);
   color: var(--text-body);
   background: var(--surface-page);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Type comes from the `.ob-*` classes; the UA defaults must not leak in when a
+   heading or paragraph is rendered without one. */
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* Display headings must never spill their column (donor overflow incident). */
+h1,
+h2,
+h3 {
+  overflow-wrap: break-word;
 }
 
 a {
@@ -42,13 +78,25 @@ a:hover {
   background: var(--ob-sky-tint);
 }
 
-/* Display headings must never spill their column (donor overflow incident). */
-h1,
-h2,
-h3 {
-  overflow-wrap: break-word;
+img,
+svg {
+  max-width: 100%;
 }
 
-img {
-  max-width: 100%;
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* The system's only motion is 130ms colour/shadow state transitions, but the
+   escape hatch is not optional — a user who asks for less motion gets none. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

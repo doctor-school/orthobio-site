@@ -1,0 +1,93 @@
+# ОРТОБИОЛОГИЯ 2023 — IV конгресс, 21–22 апреля 2023.
+# Sources: docs/recon/archive-2023.md · docs/assets-manifest.yaml (year 2023).
+# Media: /media/<s3_key> — root-relative paths mapping 1:1 to the staged
+# assets tree / future S3 keys (base-host swap in Issues #4/#5).
+
+year: 2023
+# Ordinal not printed on the 2023 page; derived from attested anchors and the
+# unbroken annual sequence: 2021 = II and 2024 = V (canonical YouTube titles in
+# the manifest), 2026 = VII (orthobio.ru) ⇒ 2023 = IV.
+number: 4
+# Verbatim H1 of the archive page.
+title: ОРТОБИОЛОГИЯ 2023
+# Dates from the 2023 Drive folder names («Ортобиология 2023 — 21 апреля» /
+# «22 апреля») and hall-recording video titles («21 АПРЕЛЯ - 1 ЗАЛ»).
+dates: 21-22 апреля 2023
+startDate: 2023-04-21
+endDate: 2023-04-22
+place: null
+
+# «ОБРАЩЕНИЯ К УЧАСТНИКАМ» — 3 unique persons (recon: 5 cards with duplicates,
+# a Creatium markup artifact). Photos on the cards are placeholders — none
+# published; greeting texts not published (video addresses — see videos[]).
+greetings:
+  - name: Загородний Н.В.
+    role: Президент конгресса
+    photo: null
+    text: null
+  - name: Губин А.В.
+    role: Сопрезидент
+    photo: null
+    text: null
+  - name: Страхов М.А.
+    role: член Оргкомитета
+    photo: null
+    text: null
+
+committee: []
+
+# No program (sections/times/speakers) was ever published on the 2023 page.
+program: null
+
+cover:
+  url: /media/2023/previews/izobrajenie_2023_04_28_161632347.png
+  alt: Конгресс ОРТОБИОЛОГИЯ 2023
+  width: 1488
+  height: 987
+
+# Curated gallery = the 4 gallery PNG actually displayed on the page
+# («ФОТООТЧЕТ ОРТОБИОЛОГИЯ 2023», manifest item 2023-page-previews; the
+# ~796-photo Drive albums are the raw archive, not the page gallery).
+photos:
+  - url: /media/2023/previews/izobrajenie_2023_04_28_161632347.png
+    alt: null
+    width: 1488
+    height: 987
+  - url: /media/2023/previews/izobrajenie_2023_04_28_161716930.png
+    alt: null
+    width: 1480
+    height: 987
+  - url: /media/2023/previews/izobrajenie_2023_04_28_161729700.png
+    alt: null
+    width: 1482
+    height: 992
+  - url: /media/2023/previews/izobrajenie_2023_04_28_161740344.png
+    alt: null
+    width: 1481
+    height: 981
+
+posters: []
+
+# YouTube links + canonical oEmbed titles from the manifest (2023-videos):
+# 3 inline + 2 video addresses from click-modals (other видеоотчет slots empty).
+videos:
+  - url: https://www.youtube.com/watch?v=r4fVPFAfk18
+    title: Отчётное видео ОРТОБИОЛОГИЯ 2023
+  - url: https://www.youtube.com/watch?v=a0oU5_WYvSI
+    title: ОРТОБИОЛОГИЯ 2023 / 21 АПРЕЛЯ - 1 ЗАЛ
+  - url: https://www.youtube.com/watch?v=YMJQy8s-kTM
+    title: ОРТОБИОЛОГИЯ 2023 / 22 АПРЕЛЯ - 1 ЗАЛ
+  - url: https://www.youtube.com/watch?v=Me6ohmwqd7w
+    title: Президент Конгресса Ортобиология 2023 Н.В. Загородний приглашает к участию
+  - url: https://www.youtube.com/watch?v=9XYaeBYyiYE
+    title: Член Оргкомитета Конгресса Ортобиология 2023 М. А. Страхов приглашает к участию
+
+# TODO(Антон): сборник тезисов 2023 существует, но лежит на Bitrix24-диске
+# (https://b24-ieosll.bitrix24.ru/~bwfFy) за авторизацией — 403 без неё.
+# Owner-step (manifest item 2023-theses-bitrix): выгрузить файл из
+# авторизованной сессии Bitrix24, положить в staging 2023/docs/ и заменить
+# этот null на /media/2023/docs/<file>.
+theses: null
+
+# No partners/sponsors are shown on the 2023 archive page.
+partners: []

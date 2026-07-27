@@ -1,0 +1,288 @@
+# ОРТОБИОЛОГИЯ 2026 — VII конгресс, 24–25 апреля 2026, Москва.
+# Sources: docs/recon/orthobio-ru-main.md · docs/assets-manifest.yaml (2026) ·
+# staged prog.pdf (committee, стр. 3) · live orthobio.ru/orgs (regalia).
+# Media: /media/<s3_key> — root-relative paths mapping 1:1 to the staged
+# assets tree / future S3 keys (base-host swap in Issues #4/#5).
+# ТЗ §2 ⚠️: the 2026 site's internal contradictions (deadlines главная ≠ /event,
+# «8 направлений» НМО with 7 listed) are deliberately NOT carried over.
+
+year: 2026
+number: 7
+title: VII Конгресс ОРТОБИОЛОГИЯ "Будущее начинается здесь"
+dates: 24-25 апреля 2026
+startDate: 2026-04-24
+endDate: 2026-04-25
+place: Москва, отель "Холидей Инн Москва Сокольники" (Русаковская ул., 24, м. Сокольники)
+
+# No published greetings/обращения on orthobio.ru.
+greetings: []
+
+# Оргкомитет: 12 персон по PDF-программе (стр. 3, «ОРГАНИЗАТОРЫ», full names +
+# city; staged 2026/docs/prog.pdf), regalia verbatim from orthobio.ru/orgs.
+# TODO(Антон): расхождение источников — /orgs даёт 11 персон, PDF-программа 12
+# (+ Загородний Н.В., у которого на /orgs нет карточки, поэтому regalia: null).
+# Взят список из PDF как более полный; выверить состав у владельцев.
+committee:
+  - name: Загородний Николай Васильевич
+    regalia: null
+  - name: Котенко Константин Валентинович
+    regalia: Академик РАН, д.м.н., профессор, директор ФГБНУ «Российский научный центр хирургии имени академика Б.В. Петровского», заслуженный врач Российской Федерации
+  - name: Назаренко Антон Герасимович
+    regalia: Д.м.н., профессор РАН, директор Национального медицинского исследовательского центра травматологии и ортопедии им. Н.Н. Приорова
+  - name: Ахпашев Александр Анатольевич
+    regalia: К.м.н., заведующий кафедрой травматологии и ортопедии Академии постдипломного образования ФГБУ ФНКЦ ФМБА России, Главный внештатный специалист по травматологии и ортопедии ЦФО ФМБА России, врач-травматолог-ортопед, доцент ВАК
+  - name: Деев Роман Вадимович
+    regalia: Заведующий кафедрой патологической анатомии СЗГМУ им. И.И. Мечникова, научный директор ПАО "Институт стволовых клеток человека", Главный редактор журнала "Гены и Клетки", доцент
+  - name: Еремин Илья Игоревич
+    regalia: К.м.н., заместитель директора по научной работе ФГБНУ «РНЦХ им. академика Б.В. Петровского»
+  - name: Ковалев Алексей Вячеславович
+    regalia: К.м.н., профессор РАЕ, заведующий лаборатории клеточных технологий и медицинской генетики ФГБУ "НМИЦ ТО им. Н.Н. Приорова" МЗ РФ
+  - name: Лазишвили Гурам Давидович
+    regalia: Д.м.н., профессор кафедры травматологии, ортопедии и военно-полевой хирургии ПФ РНИМУ им. Н.И. Пирогова, Заслуженный врач Российской Федерации
+  - name: Маланин Дмитрий Александрович
+    regalia: Д.м.н., профессор, заведующий кафедрой травматологии, ортопедии и ВПХ с курсом травматологии и ортопедии ФУВ ФГБОУ ВО "ВолГМУ" МЗ РФ
+  - name: Очкуренко Александр Алексеевич
+    regalia: Д.м.н., профессор кафедры травматологии, ортопедии и реабилитации ГБОУ ДПО "Российская медицинская академия последипломного образования"
+  - name: Страхов Максим Алексеевич
+    regalia: Руководитель научного оргкомитета конгресса, к.м.н., доцент кафедры травматологии-ортопедии и военно-полевой хирургии РНИМУ им. Н.И. Пирогова, доцент кафедры травматологии и ортопедии АПО ФНКЦ ФМБА России
+  - name: Торгашин Александр Николаевич
+    regalia: К.м.н., врач-травматолог-ортопед, старший научный сотрудник ФГБУ "НМИЦ ТО им. Н.Н. Приорова" Минздрава России
+
+# The canonical 2026 program is the 47-page PDF (staged 2026/docs/prog.pdf);
+# /timeline on the site is an almost-empty HTML shell. Structured sessions are
+# intentionally not duplicated from the PDF here.
+program:
+  pdf: /media/2026/docs/prog.pdf
+  sessions: []
+
+# Photos of 2026 live on the operator's hosting (photos.c-ph.ru) and are not
+# yet rescued (manifest 2026-photos-cph: at-risk) — no gallery until then.
+cover: null
+photos: []
+
+# TODO(Антон): 4 принятых постера числятся на orthobio.ru/posters, но файлы
+# живут на платформе оператора (congress-ph) и не выгружены (manifest
+# 2026-posters: at-risk). Добавить сюда после спасения файлов.
+posters: []
+
+# No video report exists for 2026 in the manifest.
+videos: []
+
+theses:
+  pdf: /media/2026/docs/material.pdf
+  title: VII Конгресс ОРТОБИОЛОГИЯ 2026. Сборник тезисов
+
+partners:
+  # Организаторы-юрлица (orthobio.ru/orgs; same 5 in prog.pdf, стр. 3).
+  - name: МОО «Общество регенеративной травматологии и ортопедии» (ОРТО)
+    tier: organizer
+    logo: null
+    url: null
+  - name: Общероссийская общественная организация «Ассоциация травматологов-ортопедов России» (АТОР)
+    tier: organizer
+    logo: null
+    url: null
+  - name: «Медицинская ассоциация специалистов по лечению и изучению остеонекроза» (МАПО)
+    tier: organizer
+    logo: null
+    url: null
+  - name: НМИЦ ТО им. Н.Н. Приорова
+    tier: organizer
+    logo: null
+    url: null
+  - name: Кафедра травматологии и ортопедии ФНКЦ ФМБА России
+    tier: organizer
+    logo: null
+    url: null
+  # «ПРИ ПОДДЕРЖКЕ» — 16 организаций из PDF-программы (стр. 3), mapped to the
+  # co-organizer tier (same semantic slot as «СООРГАНИЗАТОРЫ» on the 2025 page).
+  - name: Министерство здравоохранения Российской Федерации
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: Федеральное медико-биологическое агентство России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБУ «НМИЦ ТО им. Р.Р. Вредена» Минздрава России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБНУ НИИР им. В.А. Насоновой
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: Российский университет дружбы народов им. Патриса Лумумбы
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБОУ ВО «МГУ имени М.В. Ломоносова»
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБНУ «РНЦХ им. акад. Б.В. Петровского»
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБОУ ВО «Российский университет медицины» Минздрава России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГАОУ ВО Первый МГМУ им. И.М. Сеченова Минздрава России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГАОУ ВО РНИМУ им. Н.И. Пирогова Минздрава России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБУ ФНКЦ ФМБА России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБОУ ДПО РМАНПО Минздрава России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ФГБВОУ ВО «Военно-медицинская академия имени С.М. Кирова» Минобороны России
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: СПбОО «Человек и его здоровье»
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: ООО «Ивекскон»
+    tier: co-organizer
+    logo: null
+    url: null
+  - name: АНО ДПО «Академия Доктор Скул (Школа)»
+    tier: co-organizer
+    logo: null
+    url: null
+  # Выставка (/exhibition): 22 экспонента в 4 уровнях.
+  - name: Dr. Reddy's
+    tier: strategic
+    logo: null
+    url: null
+  - name: ПРОМОМЕД
+    tier: strategic
+    logo: null
+    url: null
+  - name: Берлин-Хеми/А. Менарини
+    tier: general
+    logo: null
+    url: null
+  - name: Виатрис
+    tier: general
+    logo: null
+    url: null
+  - name: НИЖФАРМ
+    tier: general
+    logo: null
+    url: null
+  - name: ПанБио Фарм
+    tier: general
+    logo: null
+    url: null
+  - name: Хелеон Рус
+    tier: general
+    logo: null
+    url: null
+  - name: CSC Pharma Russia
+    tier: partner
+    logo: null
+    url: null
+  - name: БИОМИР сервис
+    tier: partner
+    logo: null
+    url: null
+  - name: ГЕНЕРИУМ
+    tier: partner
+    logo: null
+    url: null
+  - name: КЭМ
+    tier: partner
+    logo: null
+    url: null
+  - name: Ромфарма
+    tier: partner
+    logo: null
+    url: null
+  - name: Сервье
+    tier: partner
+    logo: null
+    url: null
+  - name: АРМ
+    tier: exhibition
+    logo: null
+    url: null
+  - name: БИОНОЛТРА ЭС ЭЙ
+    tier: exhibition
+    logo: null
+    url: null
+  - name: КардиоМед
+    tier: exhibition
+    logo: null
+    url: null
+  - name: Малти-Системс Текнолоджи
+    tier: exhibition
+    logo: null
+    url: null
+  - name: МТ Техника
+    tier: exhibition
+    logo: null
+    url: null
+  - name: ОКСИТЕРРА
+    tier: exhibition
+    logo: null
+    url: null
+  - name: Орфан групп
+    tier: exhibition
+    logo: null
+    url: null
+  - name: Северная звезда
+    tier: exhibition
+    logo: null
+    url: null
+  - name: ФБК
+    tier: exhibition
+    logo: null
+    url: null
+  # Информационные партнёры (/partners): 9.
+  - name: PMP Agency
+    tier: info
+    logo: null
+    url: null
+  - name: Helpinver
+    tier: info
+    logo: null
+    url: null
+  - name: OmniDoctor
+    tier: info
+    logo: null
+    url: null
+  - name: Space Health
+    tier: info
+    logo: null
+    url: https://healthglobal.ru
+  - name: ЛВрач
+    tier: info
+    logo: null
+    url: null
+  - name: РусВрач
+    tier: info
+    logo: null
+    url: null
+  - name: InnoFarma
+    tier: info
+    logo: null
+    url: null
+  - name: Eco-Vector
+    tier: info
+    logo: null
+    url: null
+  - name: Opinion Leader
+    tier: info
+    logo: null
+    url: null

@@ -78,6 +78,15 @@ export const CONTACT_EMAIL: string | null = null;
 export const CONTACT_PHONE: string | null = null;
 
 /**
+ * ⚠️ TODO(Антон): 20 из 23 архивных видео (2021-2024) лежат на YouTube, 3
+ * (2025) — на Rutube. Для врача из РФ YouTube с 2024 года — лотерея, а
+ * RF-доступность у нас жёсткое ограничение. Карточка видео честно показывает
+ * хост до клика, но вопрос владельческий: перезаливать ролики на Rutube (или в
+ * наш S3) — и тогда `ALLOWED_VIDEO_HOSTS` со временем схлопнется — или
+ * оставить как есть. Мердж сайта это не блокирует (PR #14, ревью).
+ */
+
+/**
  * Primary navigation. Covers the ТЗ §4 page map; the design mockup's 6-item nav
  * is extended with «Участникам» and «НМО» so no §4 route is reachable only from
  * the footer. The nav wraps (never scrolls) at 360px.

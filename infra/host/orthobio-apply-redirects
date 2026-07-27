@@ -1,0 +1,51 @@
+#!/bin/sh
+# Installs the deployed redirect snippet into nginx. Runs as root, invoked only
+# through /usr/local/bin/orthobio-deploy. Installed at
+# /usr/local/sbin/orthobio-apply-redirects.
+#
+# The snippet arrives in a directory the CI key can write, and it is `include`d
+# by a vhost on a host that also fronts Mattermost and Zitadel. So it is
+# line-by-line allowlisted before it is installed, and the previous version is
+# restored if `nginx -t` rejects the result. Without the restore, a bad snippet
+# would sit in /etc/nginx and take the whole host's nginx down at the next
+# unrelated reload (certbot renews on a timer).
+set -eu
+
+SRC=/var/www/new.orthobio.ru/redirects.conf
+DST=/etc/nginx/snippets/orthobio-redirects.conf
+BACKUP=/etc/nginx/snippets/.orthobio-redirects.conf.prev
+
+if [ ! -f "$SRC" ]; then
+    echo "orthobio-apply-redirects: $SRC missing — deploy the snippet first" >&2
+    exit 1
+fi
+
+# Allowlist: blank lines, comments, and the two block shapes the generator
+# emits. Any other line — a bare `}`, an `include`, a `root` — is a refusal.
+if grep -nvE '^[[:space:]]*(#.*)?$|^location = /[A-Za-z0-9._~/%!&'"'"'()*+,;=:@-]* \{ return 30[1278] [A-Za-z0-9._~/%!&'"'"'()*+,;=:@?#-]+; \}$|^location \^~ /[A-Za-z0-9._~/%!&'"'"'()*+,;=:@-]* \{ rewrite \^[^;]+ (permanent|redirect); \}$' "$SRC"; then
+    echo "orthobio-apply-redirects: refused — line(s) above are not generator output" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$DST")"
+# Not `[ -f "$DST" ] && cp …` — under `set -e` a false test would exit the
+# script on the very first (no-previous-version) run.
+if [ -f "$DST" ]; then
+    cp -p "$DST" "$BACKUP"
+fi
+
+install -o root -g root -m 0644 "$SRC" "$DST"
+
+if ! nginx -t; then
+    echo "orthobio-apply-redirects: nginx rejected the config — rolling back" >&2
+    if [ -f "$BACKUP" ]; then
+        install -o root -g root -m 0644 "$BACKUP" "$DST"
+    else
+        rm -f "$DST"
+    fi
+    nginx -t
+    exit 1
+fi
+
+systemctl reload nginx
+echo "orthobio-apply-redirects: installed and reloaded"

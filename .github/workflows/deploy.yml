@@ -1,0 +1,128 @@
+name: Deploy
+
+# Gating idiom borrowed from bbm-public-website: `workflow_run` on a successful
+# CI completion. It keeps the verify steps defined ONCE (in ci.yml) instead of
+# duplicating them behind a `needs:`, and the guards below mean a red CI never
+# ships and a PR/branch CI run never deploys.
+#
+# workflow_dispatch is the manual arm: it skips the conclusion guard because a
+# human chose to run it, and it deploys the ref it was dispatched against —
+# that is how the pre-merge live check on a feature branch is done.
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+  workflow_dispatch:
+
+# rsync + nginx reload on a shared host: strictly one deploy at a time, and
+# never cancel one mid-flight — a half-synced document root is a broken site.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+# Only what checkout needs. The deploy itself authenticates to the host with an
+# SSH key, not with the GitHub token.
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and publish to tools-prod-tw
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The workflow_run arm is double-gated: the CI run must have concluded
+    # `success` AND have been on main. workflow_dispatch has no
+    # github.event.workflow_run at all, so it is admitted by its own arm.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          # Deploy the exact commit CI verified, not whatever main's tip is by
+          # now — it may have advanced past the green commit, which would ship
+          # an unverified change. head_sha is null for workflow_dispatch, so
+          # that arm falls back to the dispatched ref.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Rebuilt here rather than carried over from CI as an artifact: the build
+      # is ~20 s, and a cross-workflow artifact download would need `actions:
+      # read` on the token plus a second code path for workflow_dispatch (which
+      # has no CI run to pull an artifact from).
+      - name: Build
+        run: pnpm build
+
+      - name: Render redirect snippet
+        run: pnpm redirects:build
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pinned host key: without it the first connection would trust
+          # whatever answers on that IP.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Publish to tools-prod-tw
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
+        run: |
+          set -euo pipefail
+          TARGET="${DEPLOY_USER}@${DEPLOY_HOST}"
+
+          # The key's forced command hands every rsync to rrsync, which maps
+          # "/" to /var/www/new.orthobio.ru and cannot address anything else on
+          # the host.
+          #
+          # --delete mirrors the build: a page deleted from the repo disappears
+          # from the site. --delete-delay defers the removals until after the
+          # new files are in place, so a visitor mid-deploy never hits a window
+          # where the old file is gone and the new one has not landed.
+          rsync -az --delete --delete-delay --checksum \
+            dist/ "${TARGET}:/public/"
+
+          # The snippet lives OUTSIDE public/ on purpose — inside the document
+          # root nginx would happily serve our own config to the internet.
+          rsync -az infra/nginx/redirects.generated.conf "${TARGET}:/redirects.conf"
+
+          # Validates the snippet host-side, installs it into /etc/nginx and
+          # reloads; rolls back and fails if nginx rejects the result.
+          ssh "${TARGET}" apply-redirects
+
+      - name: Verify the deploy is live
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          SITE_HOST: ${{ vars.SITE_HOST || 'new.orthobio.ru' }}
+        run: |
+          set -euo pipefail
+          # Resolve-pinned so this passes both before and after the DNS record
+          # for SITE_HOST exists: we are checking OUR host, by name, not
+          # whatever DNS currently points at. Config-only "deploy succeeded"
+          # claims are what this step exists to prevent.
+          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' \
+            --resolve "${SITE_HOST}:80:${DEPLOY_HOST}" \
+            "http://${SITE_HOST}/")
+          echo "GET / -> ${code}"
+          test "${code}" = "200"
+          grep -q 'ОРТОБИОЛОГИЯ' /tmp/home.html
+          echo "Homepage served and contains the expected content."

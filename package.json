@@ -25,6 +25,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "icons": "node scripts/generate-icons.mjs",
+    "redirects:build": "node scripts/generate-nginx-redirects.mjs",
     "assets:svgo": "svgo --folder src/assets --recursive --multipass"
   },
   "dependencies": {
@@ -40,6 +41,7 @@
     "sharp": "^0.35.3",
     "svgo": "^4.0.2",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "yaml": "^2.9.0"
   }
 }

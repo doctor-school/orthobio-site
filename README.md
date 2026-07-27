@@ -57,6 +57,38 @@ Terraform: [`infra/terraform/`](infra/terraform/) (runbook в его README);
 `TIMEWEB_S3_ENDPOINT`, `TIMEWEB_S3_BUCKET`, `TIMEWEB_S3_REGION`,
 токен провижининга — `TWC_TOKEN`.
 
+## Хостинг и деплой
+
+Сайт раздаёт **host-nginx на существующем VPS `tools-prod-tw`** (Timeweb, ru-3,
+зона РФ) из `/var/www/new.orthobio.ru/public`; HTTPS — Let's Encrypt (certbot).
+Новых платных ресурсов под сайт не заводилось: переиспользованы VPS, nginx +
+certbot и тот же приём «ключ, запертый forced-command», что у `kb.bbm.academy`.
+Решения и чеклист владельца: [`docs/infrastructure-decisions.md`](docs/infrastructure-decisions.md).
+
+```sh
+pnpm redirects:build   # infra/redirects.yaml → infra/nginx/redirects.generated.conf
+```
+
+Деплой автоматический: push в `main` → workflow `CI` (typecheck, unit, проверка
+актуальности сгенерированного сниппета, build, Playwright) → при зелёном CI
+workflow `Deploy` собирает, синхронизирует `dist/` на хост, применяет карту
+редиректов и **проверяет живую страницу** (200 + ожидаемый HTML). Ручной запуск —
+`workflow_dispatch`.
+
+**301-редиректы — данные:** [`infra/redirects.yaml`](infra/redirects.yaml).
+Переезд на платформу в ноябре 2026 = правка этого файла + деплой; вёрстка и
+конфиг nginx не трогаются. Генератор валидирует каждую запись, хост-скрипт
+перепроверяет результат и откатывается, если `nginx -t` не прошёл.
+
+Имена GitHub Secrets (значения — только в секрет-хранилище): `DEPLOY_SSH_KEY`,
+`DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`. Необязательные Variables с рабочими
+значениями по умолчанию: `DEPLOY_USER` (`deploy`), `SITE_HOST`
+(`new.orthobio.ru`).
+
+**Ждёт владельца:** одна A-запись в Beget (`new.orthobio.ru` → IP хоста) — после
+неё certbot выпускает сертификат, и временный URL открывается по HTTPS.
+Подробности — в `docs/infrastructure-decisions.md`.
+
 ## Вне scope
 
 Регистрация/ЛК, НМО-учёт, трансляции, бронирование отеля — появятся на платформе к открытию регистрации (ноябрь 2026).

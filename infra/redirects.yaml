@@ -1,0 +1,39 @@
+# Redirect map — DATA, not markup.
+#
+# Why this file exists: this site is temporary. Around November 2026 the
+# congress moves to the Doctor.School platform module, and every URL that was
+# ever published has to keep resolving. When that happens the migration is an
+# edit to THIS file plus a deploy — no nginx hand-editing, no page rewrites.
+#
+# `pnpm redirects:build` renders it to `infra/nginx/redirects.generated.conf`,
+# which the deploy ships to the host and installs as an nginx snippet included
+# by the vhost. Generation is validated (see `scripts/redirects.mjs`): a
+# malformed entry fails the build rather than the web server.
+#
+# Entry shape:
+#   from    required. Absolute path on THIS site. Leading `/`, no host, no
+#           query string (nginx matches the path only).
+#   to      required. Absolute path on this site, or a full `https://` URL when
+#           the target has already moved off this host.
+#   status  optional, default 301. One of 301 308 302 307. Use 301/308 for the
+#           platform migration — those are the permanent ones search engines
+#           and browsers cache. Use 302/307 only for genuinely temporary moves.
+#   match   optional, default `exact`. `exact` redirects the one path.
+#           `prefix` redirects the path and everything under it, appending the
+#           remainder to `to` (so `/archive/` -> `/arhiv/` sends
+#           `/archive/2025/` to `/arhiv/2025/`).
+#
+# The list is intentionally EMPTY today: nothing has moved yet, and inventing
+# speculative redirects would ship 301s to pages that do not exist. The
+# skeleton — schema, generator, tests, host wiring — is what Issue #5 needed in
+# place before November, and it is all live and exercised.
+
+redirects: []
+# Example of what a November entry will look like (keep commented until real):
+#   - from: /program
+#     to: https://doctor.school/orthobio-2027/program
+#     status: 301
+#   - from: /archive
+#     to: https://doctor.school/orthobio-2027/archive
+#     status: 301
+#     match: prefix

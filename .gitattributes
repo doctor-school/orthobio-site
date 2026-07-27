@@ -1,0 +1,5 @@
+# Shipped to a Linux host and executed there: a CRLF checkout on a Windows
+# workstation would turn the shebang into `#!/bin/sh\r` and the script would
+# fail with "no such file or directory".
+infra/host/* text eol=lf
+infra/nginx/* text eol=lf

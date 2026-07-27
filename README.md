@@ -32,6 +32,19 @@ pnpm typecheck      # astro check + tsc --noEmit (строгий TS)
 пример `src/content/congress/2099.yaml` (фикстура, `draft: true`).
 Смоук-страница года: `/archive/<year>`.
 
+## Инфраструктура (медиа-архив)
+
+Фото и PDF архива конгрессов живут в выделенном Timeweb S3-бакете
+**`orthobio-media`** (public-read, endpoint `https://s3.twcstorage.ru`,
+базовый URL объектов `https://s3.twcstorage.ru/orthobio-media/<key>`).
+Terraform: [`infra/terraform/`](infra/terraform/) (runbook в его README);
+реестр объектов — [`docs/assets-manifest.yaml`](docs/assets-manifest.yaml).
+
+Имена env-переменных для доступа (значения — только в секрет-хранилище,
+никогда в репо): `TIMEWEB_S3_ACCESS_KEY`, `TIMEWEB_S3_SECRET_KEY`,
+`TIMEWEB_S3_ENDPOINT`, `TIMEWEB_S3_BUCKET`, `TIMEWEB_S3_REGION`,
+токен провижининга — `TWC_TOKEN`.
+
 ## Вне scope
 
 Регистрация/ЛК, НМО-учёт, трансляции, бронирование отеля — появятся на платформе к открытию регистрации (ноябрь 2026).

@@ -1,0 +1,6 @@
+# Local state and variable files may contain S3 secret keys — never commit.
+terraform.tfstate
+terraform.tfstate.*
+*.tfvars
+.terraform/
+.env

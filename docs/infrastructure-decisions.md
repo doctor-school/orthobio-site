@@ -32,14 +32,21 @@ would gain, for a 4.4 MB / 15-page site whose heavy media is on S3 anyway.
 cross-repo edits to another repository's proxy config plus a restart of the
 production CMS proxy.
 
-### 2. TLS: Let's Encrypt via certbot on the host
+### 2. TLS: Let's Encrypt via certbot on the host — **live**
 
-`certbot --nginx` issues and renews the certificate; the renewal timer is
-already active on the host and covers four sibling certificates. TLS directives
-live in certbot's own section of the vhost, **not** in
-`infra/nginx/new.orthobio.ru.conf`, so a renewal never has to be reconciled
-against a repo file. Issuance is blocked on exactly one thing — the DNS record
-in the owner checklist below.
+The owner added the `new.orthobio.ru` A-record on 2026-07-27 and
+`certbot --nginx -d new.orthobio.ru --redirect` issued the certificate the same
+day: **ECDSA, expires 2026-10-25**, renewed by the host's existing
+`certbot.timer` (active; a `certbot renew --dry-run` for this certificate
+succeeds). `https://new.orthobio.ru/` serves the site and `http://` answers
+`301` to it.
+
+`certbot --nginx` rewrote the vhost in place — it moved the site onto 443 and
+appended the port-80 redirect server. Those lines are **reproduced verbatim in
+`infra/nginx/new.orthobio.ru.conf`**, each keeping its `# managed by Certbot`
+marker, so the repo and the host do not drift and a re-provision cannot silently
+downgrade the live site to HTTP. Renewals do not touch the vhost; only a re-run
+of `certbot --nginx` does, and that means reconciling the repo copy again.
 
 ### 3. Media: Timeweb S3 `orthobio-media`
 
@@ -105,47 +112,46 @@ In this order:
 2. Delete the `add_header X-Robots-Tag …` line from
    `infra/nginx/new.orthobio.ru.conf`, re-run `sh infra/host/provision.sh …`.
    The deploy goes green again.
-3. Add `Strict-Transport-Security` (see below) at the same time.
-4. Fill `infra/redirects.yaml` with the map from the old URLs and deploy.
+3. Fill `infra/redirects.yaml` with the map from the old URLs and deploy. For a
+   wholesale move, one entry does it: `from: /`, `match: prefix`, `to:` the new
+   home. That case renders as a regex location rather than `location ^~ /`,
+   which would collide with the vhost's own catch-all, and it spares `/.well-known/`
+   so certbot renewals keep working.
+4. Review the HSTS `max-age` (below) against whatever the new host serves, so a
+   pin set here cannot outlive this hostname.
 
-### 8. No HSTS yet — deliberate, revisit with TLS
-
-`certbot --nginx --redirect` does not add `Strict-Transport-Security`, and this
-vhost is HTTP-only until certbot runs — an HSTS header served over plain HTTP is
-ignored by browsers, so adding it now would be decoration. Add it with the
-certificate:
+### 8. HSTS — added with the certificate
 
 ```nginx
 add_header Strict-Transport-Security "max-age=86400" always;
 ```
 
-A short `max-age` and **never** `preload`: this hostname is retired in November,
-and a preloaded or year-long HSTS pin outlives the site that set it.
+Deliberately one day, and deliberately never `preload`. This hostname is retired
+at the November migration, and a preloaded or year-long pin outlives the site
+that set it — browsers would go on forcing HTTPS for a name we no longer control.
+A day is still long enough to protect a returning visitor.
+
+It was not added before the certificate existed: an HSTS header sent over plain
+HTTP is ignored by browsers, so it would have been decoration.
 
 ## Needs Anton (owner)
 
-### A. One DNS A-record — the only thing between this and a public HTTPS URL
+### A. ~~One DNS A-record~~ — **DONE 2026-07-27**
 
-`orthobio.ru` is delegated to Beget, and we have no Beget API access (records
-are added through the UI by the owner — `bbm-kb/ssot/facts/services.yaml`).
+`orthobio.ru` is delegated to Beget and we have no Beget API access, so the
+`new.orthobio.ru` A-record was the owner's to add — and it is added and
+resolving globally. TLS followed immediately (see decision 2), so
+**`https://new.orthobio.ru/` is the live temporary URL**. The apex `orthobio.ru`
+was not touched; the previous site keeps serving until the switchover.
 
-- **Action:** in Beget DNS for the `orthobio.ru` zone, add an `A` record
-  `new.orthobio.ru.` → the IPv4 address of `tools-prod-tw`. The address is in
-  the password manager and in the Timeweb Cloud panel; this repo is public, so
-  it is deliberately not written down here (see the `DEPLOY_HOST` row below).
-- **Cost:** none. The apex `orthobio.ru` is **not** touched — the current site
-  keeps serving until the switchover.
-- **After it resolves,** run once on the host:
-  `sudo certbot --nginx -d new.orthobio.ru --redirect`
-  Certbot adds the 443 listener, the certificate, and the 80 → 443 redirect;
-  renewal is picked up by the existing timer. Nothing in this repo changes.
-- **Until then** the site is reachable, and is verified in CI, by name with a
-  resolver override (`curl --resolve new.orthobio.ru:80:<host>`) — the same
-  pre-DNS-flip idiom the ecosystem used for the Plane migration (DSO-17).
+Nothing is outstanding for the temporary URL. The CI live check still uses a
+resolver override rather than plain DNS, deliberately: it verifies *our* host by
+name, so it cannot be fooled by a DNS change made elsewhere.
 
-If the owner prefers a different temporary hostname, it is a one-line change:
-`server_name` in `infra/nginx/new.orthobio.ru.conf` and the `SITE_HOST` repo
-Variable.
+If a different temporary hostname is ever wanted, it is `server_name` in
+`infra/nginx/new.orthobio.ru.conf`, the `SITE_HOST` repo Variable, a re-run of
+`provision.sh`, and a fresh `certbot --nginx` (after which reconcile the vhost
+copy in this repo again).
 
 ### B. Domain switchover — Issue #6, deliberately out of scope here
 
@@ -164,12 +170,18 @@ manager and are never printed, committed, or echoed in CI logs.
 | `DEPLOY_HOST` | Address of `tools-prod-tw`. Not a cryptographic secret — it becomes public the moment the A-record exists — but this repository is public, and there is no reason to hand out the origin address of a host that also fronts Mattermost and Zitadel next to a file describing its vhosts, its deploy account and its forced-command layout. Keeping it in the secret store also keeps it out of workflow logs. |
 | `DEPLOY_KNOWN_HOSTS` | Pinned host key. Without it the first CI connection would trust whatever answers on that address. |
 
-The `production` environment carries a deployment-branch policy admitting `main`
-only. That is the second, independent line of defence behind the `workflow_run`
-guards: GitHub will not release these secrets to a run on any other ref,
-including a fork's. `main` also has branch protection (PR required, force-push
-and deletion blocked, `verify` required), because the deploy trusts "green CI on
-main" as its authority.
+What the `production` environment does and does not do — worth stating exactly,
+so nobody removes a guard believing it is covered here. It **does** keep these
+secrets off every other job and workflow in the repo, and its `main`-only
+deployment-branch policy **does** fence the manual `workflow_dispatch` arm,
+which has no CI gate of its own. It does **not** gate the `workflow_run` arm: a
+`workflow_run` job's ref is always the default branch, so a `main`-only policy
+passes there regardless of what triggered the run. The fork path is closed by
+the four `if:` guards in `deploy.yml` alone.
+
+`main` also has branch protection (PR required, force-push and deletion blocked,
+`verify` required), because the deploy trusts "green CI on main" as its
+authority.
 
 **Variables** — non-secret, optional, all have working defaults:
 
@@ -191,7 +203,7 @@ check the host still matches the repo.
 | --- | --- | --- |
 | `/usr/local/bin/orthobio-deploy` | `infra/host/orthobio-deploy` | `provision.sh` — forced command for the CI key: routes to `rrsync` or to the redirect-apply step, refuses everything else. |
 | `/usr/local/sbin/orthobio-apply-redirects` | `infra/host/orthobio-apply-redirects` | `provision.sh` — validates the deployed snippet, installs it, reloads nginx, rolls back on `nginx -t` failure. |
-| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh` (+ certbot's TLS section once the certificate exists; `provision.sh` refuses to overwrite the file after certbot has touched it). |
+| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh`. The repo copy includes certbot's TLS lines verbatim, so overwriting is safe; `provision.sh` refuses only the drift case — host has TLS lines the repo copy lacks — and rolls back the vhost and the `sites-enabled` symlink if `nginx -t` rejects the result. |
 | `deploy@…:~/.ssh/authorized_keys` | public half of `DEPLOY_SSH_KEY` | **by hand, once** — one line: `command="/usr/local/bin/orthobio-deploy",restrict ssh-ed25519 … orthobio-ci-deploy`. |
 | `/etc/nginx/snippets/orthobio-redirects.conf` | generated from `infra/redirects.yaml` | the deploy, every run. |
 | `/var/www/new.orthobio.ru/public` | `dist/` | the deploy, every run. |

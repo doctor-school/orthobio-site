@@ -13,9 +13,15 @@ name: Deploy
 # stranger's PR would reach this job, and `pnpm install` + `pnpm build` would run
 # their `package.json` scripts with the deploy key in the environment.
 #
-# workflow_dispatch is the manual break-glass arm. It has no CI gate of its own,
-# so the `production` environment below — whose deployment-branch policy admits
-# `main` only — is what keeps it from shipping an arbitrary ref.
+# The four `if:` guards below are what actually closes that hole, and nothing
+# else does. The `production` environment is NOT a second lock on it: a
+# workflow_run job's ref is always the default branch, so a `main`-only
+# deployment-branch policy is satisfied no matter what triggered the run. Do not
+# delete a guard on the assumption that the environment covers it.
+#
+# workflow_dispatch is the manual break-glass arm and has no CI gate of its own.
+# There the branch policy DOES bite — a dispatch runs on the ref it was
+# dispatched against — so break-glass must be dispatched from `main`.
 
 on:
   workflow_run:
@@ -39,11 +45,11 @@ jobs:
     name: Build and publish to tools-prod-tw
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Second, independent line of defence: the `production` environment admits
-    # `main` only, so GitHub refuses to release its secrets to a run on any
-    # other ref — including a fork's. The deploy credentials live in this
-    # environment rather than at repository level, so no other job in this repo
-    # can see them either.
+    # What this environment buys, precisely: the deploy credentials live on it
+    # rather than at repository level, so no other job or workflow in this repo
+    # can read them, and its `main`-only branch policy fences the
+    # workflow_dispatch arm. It does NOT gate the workflow_run arm — see the
+    # SECURITY note above — so the `if:` guards below carry that on their own.
     environment:
       name: production
       url: https://${{ vars.SITE_HOST || 'new.orthobio.ru' }}/

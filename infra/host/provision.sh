@@ -40,19 +40,50 @@ ssh "$TARGET" "set -eu
     # by a re-provision. Updating it is the deploy's job.
     [ -f /etc/nginx/snippets/orthobio-redirects.conf ] ||
         sudo -n install -o root -g root -m 0644 /tmp/redirects.generated.conf /etc/nginx/snippets/orthobio-redirects.conf
-    # certbot writes its TLS directives into sites-available; overwriting the
-    # file after certbot has run would drop them. Refuse instead of breaking TLS.
-    # Anchored and un-indented: the repo file's own header comment mentions
-    # ssl_certificate, and a bare substring match would see itself.
-    if sudo -n grep -qE '^[[:space:]]*ssl_certificate' /etc/nginx/sites-available/$SITE 2>/dev/null; then
-        echo 'provision: vhost already carries certbot TLS directives — merge by hand, not overwriting' >&2
-    else
-        sudo -n install -o root -g root -m 0644 /tmp/$SITE.conf /etc/nginx/sites-available/$SITE
+    # The committed vhost carries certbot's TLS lines verbatim (reconciled after
+    # issuance), so overwriting it is safe and is how a vhost edit reaches the
+    # host. Refuse only the drift case — host has TLS, the repo copy does not —
+    # which would silently downgrade a live site to HTTP-only. Both greps are
+    # anchored: the file's own header comment mentions ssl_certificate, and a
+    # substring match would see itself.
+    if sudo -n grep -qE '^[[:space:]]*ssl_certificate' /etc/nginx/sites-available/$SITE 2>/dev/null &&
+       ! grep -qE '^[[:space:]]*ssl_certificate' /tmp/$SITE.conf; then
+        echo 'provision: the host vhost has TLS directives the repo copy lacks.' >&2
+        echo 'Reconcile infra/nginx/$SITE.conf against the host first — refusing to downgrade it to HTTP.' >&2
+        exit 1
     fi
+
+    # Remember what to undo if nginx rejects the result: a half-applied vhost
+    # left enabled would take the whole host's nginx down at the next unrelated
+    # reload (certbot renews on a timer), and this box also fronts Mattermost
+    # and Zitadel.
+    # if/fi, not \`[ … ] && VAR=1\`: under \`set -e\` a false test ends the script.
+    HAD_VHOST=0
+    if [ -f /etc/nginx/sites-available/$SITE ]; then
+        HAD_VHOST=1
+        sudo -n cp -p /etc/nginx/sites-available/$SITE /tmp/$SITE.conf.prev
+    fi
+    HAD_LINK=0
+    if [ -L /etc/nginx/sites-enabled/$SITE ]; then HAD_LINK=1; fi
+
+    sudo -n install -o root -g root -m 0644 /tmp/$SITE.conf /etc/nginx/sites-available/$SITE
     sudo -n ln -sfn /etc/nginx/sites-available/$SITE /etc/nginx/sites-enabled/$SITE
-    sudo -n nginx -t
+
+    if ! sudo -n nginx -t; then
+        echo 'provision: nginx rejected the config — rolling back' >&2
+        if [ \$HAD_LINK = 0 ]; then sudo -n rm -f /etc/nginx/sites-enabled/$SITE; fi
+        if [ \$HAD_VHOST = 1 ]; then
+            sudo -n install -o root -g root -m 0644 /tmp/$SITE.conf.prev /etc/nginx/sites-available/$SITE
+        else
+            sudo -n rm -f /etc/nginx/sites-available/$SITE
+        fi
+        sudo -n nginx -t
+        exit 1
+    fi
+
     sudo -n systemctl reload nginx
     rm -f /tmp/orthobio-deploy /tmp/orthobio-apply-redirects /tmp/$SITE.conf /tmp/redirects.generated.conf
+    sudo -n rm -f /tmp/$SITE.conf.prev
 "
 
 cat <<EOF

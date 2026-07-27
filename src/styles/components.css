@@ -1,0 +1,1231 @@
+/* ============================================================================
+   Component layer — plain CSS (`.ob-*`), ported from the Claude.design bundle
+   component specs (`components/<group>/<Name>.jsx`). One class block per
+   `.astro` component; values come from tokens only.
+
+   Authoring rules (AGENTS.md «Frontend & responsive conventions»):
+   • MOBILE-FIRST: base rules target 360px; growth happens in `min-width`
+     queries on the canonical ladder (sm 640 · md 768 · lg 1024 · xl 1280).
+     The bundle's `max-width:900px` desktop-first block is deliberately NOT
+     ported — its intent (one column on phones, three on desktop) is expressed
+     here as an auto-fill grid instead.
+   • Text-bearing grid/flex tracks use `minmax(0, …)` / `min(100%, floor)` so a
+     long unbreakable Russian token can never push the page wider than the
+     viewport (donor overflow incident bbm#47).
+   • Every interactive element carries :hover / :active / :focus-visible.
+   ============================================================================ */
+
+/* ── Layout primitives ───────────────────────────────────────────────────── */
+
+.ob-container {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--container-pad);
+}
+
+.ob-section {
+  padding-top: var(--sp-7);
+}
+
+@media (min-width: 768px) {
+  .ob-section {
+    padding-top: var(--sp-8);
+  }
+}
+
+/* Alternating faintly tinted band (design: «секции чередуются подложкой»). */
+.ob-band {
+  background: var(--surface-section);
+  margin-top: var(--sp-7);
+  padding-bottom: var(--sp-7);
+}
+
+@media (min-width: 768px) {
+  .ob-band {
+    margin-top: var(--sp-8);
+    padding-bottom: var(--sp-8);
+  }
+}
+
+/* Card grid: reflows by available width, never by hardcoded breakpoints.
+   `min(100%, floor)` keeps a single column from exceeding a 360px viewport. */
+.ob-cards {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.ob-cards--narrow {
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+
+/* Prose column: measure-limited running text under a section heading. */
+.ob-prose {
+  max-width: 68ch;
+  color: var(--text-muted);
+}
+
+.ob-prose p {
+  margin: 0 0 var(--sp-4);
+}
+
+.ob-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.ob-note {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 0 0 var(--sp-4);
+}
+
+/* Explicit «нет данных» — an honest empty state, never a fabricated value. */
+.ob-empty {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ob-list {
+  margin: 0;
+  padding-left: var(--sp-5);
+  color: var(--text-muted);
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.ob-list li::marker {
+  color: var(--ob-sky);
+}
+
+/* ── Site chrome: header ─────────────────────────────────────────────────── */
+
+.ob-head {
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-page);
+}
+
+/* Sticky only where there is vertical room to spare: on a 360px phone a
+   sticky header + wrapped nav would eat a third of the viewport. */
+@media (min-width: 1024px) {
+  .ob-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+}
+
+.ob-head__in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-5);
+  padding-block: var(--sp-3);
+}
+
+.ob-head__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  text-decoration: none;
+  color: var(--text-body);
+  margin-right: auto;
+  border-radius: var(--r-sm);
+}
+
+.ob-head__logo:hover {
+  color: var(--text-body);
+}
+
+.ob-head__logo svg {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
+.ob-head__name {
+  font-size: 15px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  display: block;
+}
+
+.ob-head__sub {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.ob-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+
+.ob-nav a {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-body);
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  transition:
+    background var(--t-state),
+    color var(--t-state);
+}
+
+.ob-nav a:hover {
+  background: var(--surface-faint);
+  color: var(--text-link);
+}
+
+.ob-nav a:active {
+  background: var(--surface);
+}
+
+.ob-nav a[aria-current='page'] {
+  color: var(--ds-blue-dark);
+  background: var(--ob-sky-tint);
+}
+
+/* ── Site chrome: footer ─────────────────────────────────────────────────── */
+
+.ob-foot {
+  border-top: 1px solid var(--hairline);
+  background: var(--surface-faint);
+  margin-top: var(--sp-8);
+}
+
+.ob-foot__in {
+  display: grid;
+  gap: var(--sp-6);
+  padding-block: var(--sp-7);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+
+.ob-foot__col {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.ob-foot__col p {
+  margin: 0 0 6px;
+}
+
+.ob-foot__title {
+  color: var(--text-body);
+  font-weight: var(--fw-semibold);
+}
+
+.ob-foot__mark {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.ob-foot__mark svg {
+  height: 44px;
+  width: 44px;
+  flex: none;
+}
+
+.ob-foot__mark b {
+  font-size: 15px;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+}
+
+.ob-foot__ds {
+  height: 40px;
+  width: auto;
+}
+
+.ob-foot__map {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+/* ── Button ──────────────────────────────────────────────────────────────── */
+
+.ob-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition:
+    background var(--t-state),
+    color var(--t-state),
+    border-color var(--t-state);
+  /* A long RU CTA («Регистрация откроется… — узнать первым») must wrap inside
+     the button, not push the layout wider than a 360px viewport. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.ob-btn--md {
+  font-size: var(--fs-small);
+  padding: 10px 18px;
+}
+
+.ob-btn--lg {
+  font-size: var(--fs-body);
+  padding: 14px 24px;
+}
+
+.ob-btn--primary {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+}
+
+.ob-btn--primary:hover {
+  background: var(--btn-primary-bg-hover);
+  color: var(--btn-primary-fg);
+}
+
+.ob-btn--primary:active {
+  background: var(--btn-primary-bg-active);
+}
+
+.ob-btn--secondary {
+  background: var(--surface-card);
+  color: var(--ds-blue-dark);
+  border-color: var(--hairline);
+}
+
+.ob-btn--secondary:hover {
+  background: var(--surface-faint);
+  border-color: var(--hairline-strong);
+  color: var(--ds-blue-pressed);
+}
+
+.ob-btn--secondary:active {
+  background: var(--surface);
+}
+
+.ob-btn--ghost {
+  background: transparent;
+  color: var(--text-link);
+  padding-inline: 0;
+  border-radius: var(--r-sm);
+}
+
+.ob-btn--ghost:hover {
+  color: var(--text-link-hover);
+}
+
+/* ── Tag ─────────────────────────────────────────────────────────────────── */
+
+.ob-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+}
+
+.ob-tag--sky {
+  background: var(--ob-sky-tint);
+  color: var(--ob-sky-text);
+}
+
+.ob-tag--green {
+  background: var(--ob-green-tint);
+  color: var(--ob-green-text);
+}
+
+.ob-tag--lime {
+  background: var(--ob-lime-tint);
+  color: var(--ob-lime-text);
+}
+
+.ob-tag--neutral {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+/* ── SectionHeading ──────────────────────────────────────────────────────── */
+
+.ob-sh {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin: 0 0 var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.ob-sh__box {
+  min-width: 0;
+}
+
+.ob-sh__overline {
+  display: block;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-sky-text);
+  margin-bottom: 6px;
+}
+
+.ob-sh__title {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  font-weight: var(--fw-semibold);
+  margin: 0;
+  color: var(--text-body);
+}
+
+.ob-sh--h1 .ob-sh__title {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-bold);
+}
+
+.ob-sh__link {
+  font-size: var(--fs-small);
+}
+
+/* ── Stat ────────────────────────────────────────────────────────────────── */
+
+.ob-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ob-stat__v {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-bold);
+  color: var(--ob-sky-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ob-stat__l {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+/* ── Stub (honest «в разработке» placeholder) ────────────────────────────── */
+
+.ob-stub {
+  background: var(--surface-faint);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6) var(--sp-5);
+  text-align: center;
+  max-width: 640px;
+}
+
+.ob-stub__icon {
+  width: 36px;
+  height: 36px;
+  color: var(--ob-sky-text);
+  margin: 0 auto var(--sp-3);
+  display: block;
+}
+
+.ob-stub__title {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 6px;
+  color: var(--text-body);
+}
+
+.ob-stub__text {
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+  margin: 0 0 var(--sp-4);
+}
+
+.ob-stub__link {
+  font-size: var(--fs-body);
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+
+.ob-hero {
+  position: relative;
+  /* The metaball pattern bleeds past the edges by design — clipping it here is
+     also what keeps it from creating horizontal page scroll. */
+  overflow: hidden;
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ob-hero__in {
+  position: relative;
+  padding-block: var(--sp-7);
+}
+
+@media (min-width: 768px) {
+  .ob-hero__in {
+    padding-block: var(--sp-8);
+  }
+}
+
+/* Brand pattern — decorative only; hidden on phones where there is no white
+   air to place it in (design: «не подкладывать под плотный текст»). */
+.ob-hero__pattern {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  /* The source SVG carries width/height attributes; height must follow the
+     CSS width or the artwork letterboxes inside its own box. */
+  height: auto;
+}
+
+@media (min-width: 1024px) {
+  .ob-hero__pattern {
+    display: block;
+  }
+
+  /* The bundle places the artwork at full saturation. At hero scale on a white
+     page that reads as a graphic block rather than the design's «тональные
+     слои», so both instances render as tonal layers — same placement, same
+     shapes, lower presence. */
+  .ob-hero__pattern--a {
+    width: 320px;
+    top: -90px;
+    right: -70px;
+    opacity: 0.22;
+  }
+
+  .ob-hero__pattern--b {
+    width: 240px;
+    bottom: -120px;
+    right: 220px;
+    transform: rotate(150deg);
+    opacity: 0.12;
+  }
+}
+
+.ob-hero__overline {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-green-text);
+  margin: 0 0 var(--sp-4);
+}
+
+.ob-hero__title {
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  font-weight: var(--fw-bold);
+  margin: 0 0 var(--sp-3);
+  max-width: 16em;
+}
+
+@media (min-width: 1024px) {
+  .ob-hero__title {
+    font-size: var(--fs-display-lg);
+  }
+}
+
+.ob-hero__dates {
+  font-size: var(--fs-h3);
+  color: var(--ob-sky-text);
+  font-weight: var(--fw-medium);
+  margin: 0 0 var(--sp-5);
+}
+
+.ob-hero__lead {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-muted);
+  max-width: 640px;
+  margin: 0 0 var(--sp-6);
+}
+
+.ob-hero__lead p {
+  margin: 0 0 10px;
+}
+
+.ob-hero__lead p:last-child {
+  margin-bottom: 0;
+}
+
+/* CTA channel not decided yet (Issue #4 ⚠️): with no link configured the block
+   still ships — as a static, honest statement instead of a dead button. */
+.ob-hero__cta-pending {
+  display: inline-block;
+  background: var(--ob-sky-tint);
+  color: var(--ob-sky-text);
+  font-weight: var(--fw-semibold);
+  border-radius: var(--r-md);
+  padding: 14px 24px;
+  max-width: 100%;
+}
+
+.ob-hero__cta-note {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: var(--sp-3) 0 0;
+  max-width: 640px;
+}
+
+.ob-hero__stats {
+  display: flex;
+  gap: var(--sp-5) var(--sp-7);
+  flex-wrap: wrap;
+  margin-top: var(--sp-7);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--hairline);
+}
+
+/* ── ArchiveYearCard ─────────────────────────────────────────────────────── */
+
+.ob-yc {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text-body);
+  transition:
+    box-shadow var(--t-state),
+    border-color var(--t-state);
+}
+
+a.ob-yc:hover {
+  box-shadow: var(--shadow-lift);
+  border-color: var(--hairline-strong);
+  color: var(--text-body);
+}
+
+a.ob-yc:active {
+  border-color: var(--ob-sky);
+}
+
+.ob-yc__cover {
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+/* Text-only card (2026: no gallery published yet) — a first-class state. */
+.ob-yc__nocover {
+  aspect-ratio: 16 / 9;
+  background: var(--ob-sky-tint);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.ob-yc__nocover b {
+  font-size: 2.6rem;
+  font-weight: var(--fw-bold);
+  /* --ob-sky on the tint measures 2.52:1 — below the 3:1 large-text floor;
+     the deep sky keeps the light-blue reading of the design at 3.6:1. */
+  color: var(--ob-sky-deep);
+  line-height: 1;
+}
+
+.ob-yc__nocover span {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  color: var(--ob-sky-text);
+  text-transform: uppercase;
+}
+
+.ob-yc__body {
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ob-yc__num {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-sky-text);
+}
+
+.ob-yc__title {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ob-yc__meta {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+.ob-yc__tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: var(--sp-2);
+}
+
+.ob-yc__tag {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: var(--r-pill);
+  padding: 2px 10px;
+}
+
+/* ── ProgramSession ──────────────────────────────────────────────────────── */
+
+.ob-ps {
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+  min-width: 0;
+}
+
+.ob-ps__meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--ob-sky-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.ob-ps__title {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.ob-ps__mods {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 0 0 var(--sp-3);
+  overflow-wrap: anywhere;
+}
+
+.ob-ps__note {
+  font-size: var(--fs-small);
+  color: var(--warn-text);
+  background: var(--warn-wash);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  margin: 0 0 var(--sp-3);
+  overflow-wrap: anywhere;
+}
+
+.ob-ps__talks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ob-ps__talk {
+  padding: 10px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.ob-ps__talk-t {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  margin: 0;
+  /* Real content peaks at a 464-character talk title — it must wrap, never
+     widen the grid track. */
+  overflow-wrap: anywhere;
+}
+
+.ob-ps__talk-s {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* Program day grouping: one column on phones, two from lg. */
+.ob-prog__day {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-semibold);
+  margin: var(--sp-5) 0 var(--sp-3);
+}
+
+.ob-prog__grid {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .ob-prog__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ── PartnerTier ─────────────────────────────────────────────────────────── */
+
+.ob-pt {
+  margin-bottom: var(--sp-6);
+}
+
+.ob-pt__h {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.ob-pt__title {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  margin: 0;
+}
+
+.ob-pt__count {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+.ob-pt__grid {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.ob-pt--major .ob-pt__grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+
+.ob-pt--minor .ob-pt__grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: var(--sp-2);
+}
+
+.ob-pt__card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  min-height: 76px;
+  min-width: 0;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-body);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    box-shadow var(--t-state),
+    border-color var(--t-state);
+}
+
+.ob-pt--major .ob-pt__card {
+  min-height: 96px;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+}
+
+.ob-pt--minor .ob-pt__card {
+  min-height: 56px;
+  padding: var(--sp-3);
+  color: var(--muted);
+}
+
+a.ob-pt__card:hover {
+  box-shadow: var(--shadow-lift);
+  border-color: var(--hairline-strong);
+  color: var(--text-link);
+}
+
+a.ob-pt__card:active {
+  border-color: var(--ob-sky);
+}
+
+.ob-pt__card img {
+  max-height: 44px;
+  max-width: 80%;
+  object-fit: contain;
+}
+
+/* ── PersonCard / CommitteeList ──────────────────────────────────────────── */
+
+.ob-pc {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  min-width: 0;
+}
+
+.ob-pc__photo,
+.ob-pc__initial {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-pill);
+  object-fit: cover;
+  background: var(--surface);
+}
+
+.ob-pc__initial {
+  background: var(--ob-sky-tint);
+  color: var(--ob-sky-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-semibold);
+}
+
+.ob-pc__box {
+  min-width: 0;
+}
+
+.ob-pc__name {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+
+.ob-pc__role {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ob-pc__text {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  margin: var(--sp-2) 0 0;
+}
+
+.ob-cl {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+.ob-cl__item {
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  min-width: 0;
+}
+
+.ob-cl__name {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+
+.ob-cl__regalia {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--text-muted);
+  margin: 0;
+  /* Regalia run to 238 characters — wrap anywhere rather than overflow. */
+  overflow-wrap: anywhere;
+}
+
+/* ── PhotoGrid ───────────────────────────────────────────────────────────── */
+
+.ob-pg {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--sp-3);
+}
+
+.ob-pg img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  display: block;
+}
+
+/* ── VideoCard ───────────────────────────────────────────────────────────── */
+
+.ob-vc {
+  display: block;
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface-card);
+  min-width: 0;
+  text-decoration: none;
+  color: var(--text-body);
+  transition:
+    box-shadow var(--t-state),
+    border-color var(--t-state);
+}
+
+a.ob-vc:hover {
+  box-shadow: var(--shadow-lift);
+  border-color: var(--hairline-strong);
+  color: var(--text-body);
+}
+
+a.ob-vc:active {
+  border-color: var(--ob-sky);
+}
+
+.ob-vc__facade {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  transition: background var(--t-state);
+}
+
+.ob-vc:hover .ob-vc__play,
+.ob-vc:focus-visible .ob-vc__play {
+  background: var(--ds-blue-dark);
+}
+
+.ob-vc__play {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-pill);
+  background: var(--scrim-play);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--t-state);
+}
+
+.ob-vc__play svg {
+  width: 24px;
+  height: 24px;
+  fill: var(--on-dark);
+  margin-left: 3px;
+}
+
+.ob-vc__host {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  color: var(--on-dark);
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.ob-vc__title {
+  padding: 10px 14px;
+  font-size: var(--fs-small);
+  color: var(--text-body);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ── DocCard ─────────────────────────────────────────────────────────────── */
+
+.ob-dc {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-5);
+  text-decoration: none;
+  color: var(--text-body);
+  transition:
+    box-shadow var(--t-state),
+    border-color var(--t-state);
+  max-width: 560px;
+  min-width: 0;
+}
+
+a.ob-dc:hover {
+  box-shadow: var(--shadow-lift);
+  border-color: var(--hairline-strong);
+  color: var(--text-body);
+}
+
+a.ob-dc:active {
+  border-color: var(--ob-sky);
+}
+
+.ob-dc__icon {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-md);
+  background: var(--ob-sky-tint);
+  color: var(--ob-sky-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ob-dc__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.ob-dc__title {
+  display: block;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  margin: 0 0 2px;
+  overflow-wrap: anywhere;
+}
+
+.ob-dc__meta {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+}
+
+/* ── FAQ (native <details>, zero client JS) ──────────────────────────────── */
+
+.ob-faq {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+}
+
+.ob-faq__item {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ob-faq__q {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  padding: var(--sp-4) 0;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  align-items: baseline;
+  border-radius: var(--r-sm);
+  transition: color var(--t-state);
+}
+
+.ob-faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.ob-faq__q::after {
+  content: '+';
+  color: var(--ob-sky-text);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-h3);
+}
+
+details[open] > .ob-faq__q::after {
+  content: '−';
+}
+
+.ob-faq__q:hover,
+.ob-faq__q:active {
+  color: var(--text-link);
+}
+
+.ob-faq__a {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-muted);
+  margin: 0;
+  padding: 0 0 var(--sp-4);
+}
+
+/* ── Year page header band ───────────────────────────────────────────────── */
+
+.ob-yh {
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-faint);
+}
+
+.ob-yh__in {
+  padding-block: var(--sp-7);
+}
+
+.ob-yh__num {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-sky-text);
+  margin: 0 0 var(--sp-2);
+}
+
+.ob-yh__title {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-bold);
+  margin: 0 0 var(--sp-2);
+}
+
+.ob-yh__meta {
+  font-size: var(--fs-h3);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.ob-yh__draft {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--error);
+  margin: 0 0 var(--sp-3);
+}

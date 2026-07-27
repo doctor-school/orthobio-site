@@ -1,0 +1,28 @@
+---
+/**
+ * CommitteeList — оргкомитет с регалиями (bundle
+ * components/people/CommitteeList). Regalia run to ~240 characters in the real
+ * content; the card wraps them (`overflow-wrap: anywhere`) instead of widening.
+ * A member with `regalia: null` renders the name alone — never an invented title.
+ */
+import type { CongressEntry } from '@/content';
+
+interface Props {
+  members: CongressEntry['data']['committee'];
+}
+
+const { members } = Astro.props;
+---
+
+{
+  members.length > 0 && (
+    <ul class="ob-cl">
+      {members.map((m) => (
+        <li class="ob-cl__item">
+          <p class="ob-cl__name">{m.name}</p>
+          {m.regalia && <p class="ob-cl__regalia">{m.regalia}</p>}
+        </li>
+      ))}
+    </ul>
+  )
+}

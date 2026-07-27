@@ -1,0 +1,36 @@
+---
+/**
+ * PhotoGrid — фотоотчёт года (bundle components/archive/PhotoGrid).
+ *
+ * Photos are remote objects on our S3, so intrinsic `width`/`height` come from
+ * the content model (the schema requires them) — that is what reserves layout
+ * space and keeps CLS at zero. `loading="lazy"` on every tile: some years ship
+ * a dozen 5811×3874 originals.
+ */
+import { mediaUrl } from '@/config/site';
+import type { CongressEntry } from '@/content';
+
+interface Props {
+  photos: CongressEntry['data']['photos'];
+  year: number;
+}
+
+const { photos, year } = Astro.props;
+---
+
+{
+  photos.length > 0 && (
+    <div class="ob-pg">
+      {photos.map((p, i) => (
+        <img
+          src={mediaUrl(p.url)}
+          alt={p.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${year}, фото ${i + 1}`}
+          width={p.width}
+          height={p.height}
+          loading="lazy"
+          decoding="async"
+        />
+      ))}
+    </div>
+  )
+}

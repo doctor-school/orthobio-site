@@ -1,0 +1,33 @@
+---
+/**
+ * VideoCard — видеоотчёт года.
+ *
+ * DEVIATION from the design bundle (components/archive/VideoCard), deliberate:
+ * the mockup swaps the facade for a click-loaded <iframe>, which needs a client
+ * island. Here the facade is a plain link to the video on its host, so the page
+ * ships ZERO client JS (AGENTS.md default) and no third-party player frame is
+ * embedded for RF users. Visual facade — dark plate, host badge, play glyph —
+ * is unchanged; the link text is the video title, so the target is announced.
+ */
+import { videoHost } from '@/lib/congress';
+
+interface Props {
+  url: string;
+  title?: string | null;
+  year: number;
+}
+
+const { url, title = null, year } = Astro.props;
+const host = videoHost(url);
+const label = title ?? `Видео конгресса ${year}`;
+---
+
+<a class="ob-vc" href={url} rel="noopener">
+  <span class="ob-vc__facade">
+    <span class="ob-vc__host">{host}</span>
+    <span class="ob-vc__play">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"></path></svg>
+    </span>
+  </span>
+  <span class="ob-vc__title">{label}</span>
+</a>

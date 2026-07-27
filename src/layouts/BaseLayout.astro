@@ -1,0 +1,63 @@
+---
+/**
+ * BaseLayout — the single HTML shell: <head>, self-hosted fonts, site chrome.
+ *
+ * Fonts: `@fontsource/inter` is imported here, so Vite emits the woff2 files
+ * into the build and the CSS references them locally. Only the weights the
+ * design uses (400/500/600/700) and only the Cyrillic + Latin subsets — the
+ * unicode-range split means a page fetches just what it renders. NO webfont CDN:
+ * the audience is RF physicians and an unreachable CDN would strip the site's
+ * typography (AGENTS.md hard constraint).
+ */
+import '@fontsource/inter/cyrillic-400.css';
+import '@fontsource/inter/cyrillic-500.css';
+import '@fontsource/inter/cyrillic-600.css';
+import '@fontsource/inter/cyrillic-700.css';
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-500.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@/styles/global.css';
+
+import SiteFooter from '@/components/SiteFooter.astro';
+import SiteHeader from '@/components/SiteHeader.astro';
+import { SITE } from '@/config/site';
+
+interface Props {
+  /** Page title without the site-name suffix. */
+  title: string;
+  description?: string | null;
+  /** Keep the page out of the index (draft fixtures). */
+  noindex?: boolean;
+}
+
+const { title, description = null, noindex = false } = Astro.props;
+
+const pageTitle = title === SITE.title ? title : `${title} — ${SITE.title}`;
+// `site` is set in astro.config.mjs, so Astro.site is always defined here.
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    {description && <meta name="description" content={description} />}
+    {noindex && <meta name="robots" content="noindex" />}
+    {!noindex && <link rel="canonical" href={canonical} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:site_name" content={SITE.title} />
+    {!noindex && <meta property="og:url" content={canonical} />}
+  </head>
+  <body>
+    <SiteHeader path={Astro.url.pathname} />
+    <main>
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

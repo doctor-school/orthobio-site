@@ -1,0 +1,42 @@
+---
+/**
+ * PersonCard — президиум / обращения (bundle components/people/PersonCard).
+ * No portrait → an initial plate (decorative: the name is right next to it).
+ * Greeting texts were never published for any year, so `text` is usually null.
+ */
+import { mediaUrl } from '@/config/site';
+
+interface Props {
+  name: string;
+  role?: string | null;
+  photo?: string | null;
+  text?: string | null;
+}
+
+const { name, role = null, photo = null, text = null } = Astro.props;
+---
+
+<div class="ob-pc">
+  {
+    photo ? (
+      <img
+        class="ob-pc__photo"
+        src={mediaUrl(photo)}
+        alt={`Фото: ${name}`}
+        width="72"
+        height="72"
+        loading="lazy"
+        decoding="async"
+      />
+    ) : (
+      <span class="ob-pc__initial" aria-hidden="true">
+        {name.trim()[0]}
+      </span>
+    )
+  }
+  <div class="ob-pc__box">
+    <p class="ob-pc__name">{name}</p>
+    {role && <p class="ob-pc__role">{role}</p>}
+    {text && <p class="ob-pc__text">{text}</p>}
+  </div>
+</div>

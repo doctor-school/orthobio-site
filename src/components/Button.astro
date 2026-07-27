@@ -1,0 +1,37 @@
+---
+/**
+ * Button — renders <a> when `href` is set, else <button>.
+ *
+ * Design contract (bundle components/core/Button): at most ONE primary per page
+ * (the «узнать первым» CTA); `ghost` + `arrow` is the standard «Посмотрите … →»
+ * invitation link. Label comes from the default slot.
+ */
+type Variant = 'primary' | 'secondary' | 'ghost';
+type Size = 'md' | 'lg';
+
+interface Props {
+  variant?: Variant;
+  size?: Size;
+  href?: string;
+  /** Appends the decorative «→» used by invitation links. */
+  arrow?: boolean;
+  type?: 'button' | 'submit';
+}
+
+const { variant = 'primary', size = 'md', href, arrow = false, type = 'button' } = Astro.props;
+const cls = `ob-btn ob-btn--${variant} ob-btn--${size}`;
+---
+
+{
+  href ? (
+    <a class={cls} href={href}>
+      <slot />
+      {arrow && <span aria-hidden="true">→</span>}
+    </a>
+  ) : (
+    <button class={cls} type={type}>
+      <slot />
+      {arrow && <span aria-hidden="true">→</span>}
+    </button>
+  )
+}

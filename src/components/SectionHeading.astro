@@ -1,0 +1,39 @@
+---
+/**
+ * SectionHeading — nominative section/page heading with an optional overline and
+ * a right-side invitation link (bundle components/core/SectionHeading).
+ *
+ * `level` picks the heading tag; the outline is always h1 → h2 → h3, so pages
+ * pass `level="h1"` exactly once (axe `heading-order` is asserted in e2e).
+ */
+interface Props {
+  title: string;
+  overline?: string | null;
+  level?: 'h1' | 'h2';
+  linkLabel?: string | null;
+  linkHref?: string | null;
+  /** Anchor id for in-page navigation / tests. */
+  id?: string;
+}
+
+const { title, overline = null, level = 'h2', linkLabel = null, linkHref = null, id } = Astro.props;
+const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
+---
+
+<div class={cls}>
+  <div class="ob-sh__box">
+    {overline && <span class="ob-sh__overline">{overline}</span>}
+    {
+      level === 'h1' ? (
+        <h1 class="ob-sh__title" id={id}>
+          {title}
+        </h1>
+      ) : (
+        <h2 class="ob-sh__title" id={id}>
+          {title}
+        </h2>
+      )
+    }
+  </div>
+  {linkHref && <a class="ob-sh__link" href={linkHref}>{linkLabel} →</a>}
+</div>

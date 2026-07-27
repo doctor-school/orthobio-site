@@ -1,0 +1,66 @@
+---
+/**
+ * PageBlocks — renders the editorial blocks of a static page (`page`
+ * collection). One renderer for every §4 section page, so adding copy is a YAML
+ * change, never new markup — the same shape the future «конструктор
+ * мероприятий» module will emit.
+ *
+ * Blocks always sit under the page <h1>, so their headings are <h2> and the
+ * outline stays h1 → h2 → h3 (axe `heading-order`).
+ */
+import Faq from '@/components/Faq.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import Stub from '@/components/Stub.astro';
+import type { PageBlock } from '@/content';
+
+interface Props {
+  blocks: PageBlock[];
+}
+
+const { blocks } = Astro.props;
+---
+
+{
+  blocks.map((block) => (
+    <div class="ob-section">
+      {block.kind === 'text' && (
+        <>
+          {block.heading && <SectionHeading title={block.heading} />}
+          <div class="ob-prose">
+            {block.paragraphs.map((p) => (
+              <p>{p}</p>
+            ))}
+          </div>
+        </>
+      )}
+
+      {block.kind === 'list' && (
+        <>
+          {block.heading && <SectionHeading title={block.heading} />}
+          {block.intro && <p class="ob-note">{block.intro}</p>}
+          <ul class="ob-list">
+            {block.items.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {block.kind === 'stub' && (
+        <Stub
+          title={block.title}
+          text={block.text}
+          linkLabel={block.linkLabel}
+          linkHref={block.linkHref}
+        />
+      )}
+
+      {block.kind === 'faq' && (
+        <>
+          {block.heading && <SectionHeading title={block.heading} />}
+          <Faq items={block.items} />
+        </>
+      )}
+    </div>
+  ))
+}

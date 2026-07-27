@@ -1,0 +1,57 @@
+---
+/**
+ * SiteFooter — brand blurb, contacts, full sitemap, Doctor.School attribution
+ * (bundle ui_kits/…/Chrome).
+ *
+ * The contacts column is driven by `CONTACT_EMAIL` in config/site.ts: while it
+ * is `null` (⚠️ TODO(Антон)) the column states honestly that contacts will be
+ * published, and NEVER the operator's welcome@congress-ph.ru.
+ */
+import DsLogo from '@/assets/ds-logo-with-slogan-color.svg';
+import Mark from '@/assets/orto-mark-green.svg';
+import { CONTACT_EMAIL, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
+---
+
+<footer class="ob-foot">
+  <div class="ob-container ob-foot__in">
+    <div class="ob-foot__col">
+      <div class="ob-foot__mark">
+        <Mark width={44} height={44} aria-hidden="true" />
+        <b>{SITE.name}</b>
+      </div>
+      <p>{FOOTER.about}</p>
+    </div>
+
+    <div class="ob-foot__col">
+      <p class="ob-foot__title">Контакты</p>
+      {
+        CONTACT_EMAIL ? (
+          <p>
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          </p>
+        ) : (
+          <p>{FOOTER.contactsPending}</p>
+        )
+      }
+      <p><a href="/contacts">Контакты →</a></p>
+    </div>
+
+    <nav class="ob-foot__col" aria-label="Карта сайта">
+      <p class="ob-foot__title">Разделы</p>
+      <ul class="ob-foot__map">
+        {
+          FOOTER_LINKS.map((item) => (
+            <li>
+              <a href={item.href}>{item.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="ob-foot__col">
+      <DsLogo class="ob-foot__ds" role="img" aria-label="Doctor.School" />
+      <p>{FOOTER.copyright}</p>
+    </div>
+  </div>
+</footer>

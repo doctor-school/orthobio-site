@@ -1,0 +1,11 @@
+/* Global stylesheet entry — the single import the layout pulls in. Order is
+   deliberate (Tailwind v4, CSS-first; donor pattern bbm-public-website):
+     1. tokens.css   — design tokens + the @theme block mapping utilities onto them
+     2. "tailwindcss" — preflight (reset) + utilities
+     3. base.css      — document defaults that must OVERRIDE preflight
+     4. components.css — the .ob-* component layer (plain CSS, no @apply)
+   No value is hardcoded outside tokens.css. */
+@import './tokens.css';
+@import 'tailwindcss';
+@import './base.css';
+@import './components.css';

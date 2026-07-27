@@ -1,0 +1,34 @@
+---
+/**
+ * Hero — home page header (bundle components/hero/Hero).
+ *
+ * The metaball element is the brand's background motif: inline SVG (no CDN),
+ * decorative, and rendered from lg upwards only — on a phone there is no white
+ * air to place it in, and the design forbids laying it under dense text.
+ * Slots: default = lead paragraphs, `cta`, `stats`, `statsNote` (the caption
+ * that keeps the figures readable as PAST results, not 2027 promises).
+ */
+import Metaball from '@/assets/metaball-element.svg';
+
+interface Props {
+  overline?: string | null;
+  title: string;
+  dates?: string | null;
+}
+
+const { overline = null, title, dates = null } = Astro.props;
+---
+
+<header class="ob-hero">
+  <Metaball class="ob-hero__pattern ob-hero__pattern--a" aria-hidden="true" />
+  <Metaball class="ob-hero__pattern ob-hero__pattern--b" aria-hidden="true" />
+  <div class="ob-container ob-hero__in">
+    {overline && <p class="ob-hero__overline">{overline}</p>}
+    <h1 class="ob-hero__title">{title}</h1>
+    {dates && <p class="ob-hero__dates">{dates}</p>}
+    <div class="ob-hero__lead"><slot /></div>
+    <slot name="cta" />
+    <div class="ob-hero__stats"><slot name="stats" /></div>
+    <slot name="statsNote" />
+  </div>
+</header>

@@ -1,0 +1,51 @@
+---
+/**
+ * PartnerTier — one tier of partners/organizers (bundle
+ * components/partners/PartnerTier). Nobody has a logo asset yet (`logo: null`
+ * everywhere): the TEXT card is the primary, finished state, not a fallback.
+ *
+ * Major tiers (organizers / strategic / general) get the larger card grid.
+ */
+import { mediaUrl } from '@/config/site';
+import type { CongressEntry, PartnerTier } from '@/content';
+import { MAJOR_TIERS } from '@/lib/congress';
+
+interface Props {
+  tier: PartnerTier;
+  label: string;
+  partners: CongressEntry['data']['partners'];
+  /** Heading level — h3 inside a section, h2 when the tier IS the section. */
+  level?: 'h2' | 'h3';
+}
+
+const { tier, label, partners, level = 'h3' } = Astro.props;
+const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
+---
+
+{
+  partners.length > 0 && (
+    <div class={cls}>
+      <div class="ob-pt__h">
+        {level === 'h2' ? (
+          <h2 class="ob-pt__title">{label}</h2>
+        ) : (
+          <h3 class="ob-pt__title">{label}</h3>
+        )}
+        <span class="ob-pt__count">{partners.length}</span>
+      </div>
+      <div class="ob-pt__grid">
+        {partners.map((p) =>
+          p.url ? (
+            <a class="ob-pt__card" href={p.url} rel="noopener">
+              {p.logo ? <img src={mediaUrl(p.logo)} alt={p.name} loading="lazy" /> : p.name}
+            </a>
+          ) : (
+            <span class="ob-pt__card">
+              {p.logo ? <img src={mediaUrl(p.logo)} alt={p.name} loading="lazy" /> : p.name}
+            </span>
+          ),
+        )}
+      </div>
+    </div>
+  )
+}

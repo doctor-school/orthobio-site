@@ -1,0 +1,54 @@
+/* ============================================================================
+   Base layer — document defaults that intentionally override Tailwind preflight
+   (link underline, focus ring, selection). Ported from the design bundle
+   `tokens/base.css`.
+
+   Fonts: Inter is self-hosted via the `@fontsource/inter` npm package, imported
+   in `src/layouts/BaseLayout.astro` (Vite emits the woff2 files into the build
+   output). NO webfont CDN anywhere — RF accessibility is a hard constraint
+   (AGENTS.md), a fonts.googleapis.com link would break the page for the
+   audience this site exists for.
+   ============================================================================ */
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-body);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: color var(--t-state);
+}
+
+a:hover {
+  color: var(--text-link-hover);
+}
+
+/* Visible focus ring on EVERY interactive element (AGENTS.md hard rule). */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-shadow);
+  border-radius: var(--r-sm);
+}
+
+::selection {
+  background: var(--ob-sky-tint);
+}
+
+/* Display headings must never spill their column (donor overflow incident). */
+h1,
+h2,
+h3 {
+  overflow-wrap: break-word;
+}
+
+img {
+  max-width: 100%;
+}

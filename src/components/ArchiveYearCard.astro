@@ -1,0 +1,70 @@
+---
+/**
+ * ArchiveYearCard — one congress year on the archive hub / home teaser.
+ *
+ * Two first-class states (bundle components/archive/ArchiveYearCard): with a
+ * cover photo (2021–2025) and text-only (2026 — the gallery is still hostage to
+ * the operator's hosting). The text-only card is NOT a broken state.
+ *
+ * Media URLs go through `mediaUrl()` — the single S3-base seam (config/site.ts).
+ */
+import { mediaUrl } from '@/config/site';
+import type { CongressEntry } from '@/content';
+import { ordinalLabel, roman, yearHighlights } from '@/lib/congress';
+
+interface Props {
+  entry: CongressEntry;
+  /**
+   * Heading level of the card title. h2 on the archive hub (cards follow the
+   * page h1 directly), h3 in a teaser that already has a section heading.
+   */
+  level?: 'h2' | 'h3';
+}
+
+const { entry, level = 'h3' } = Astro.props;
+const c = entry.data;
+const href = `/archive/${c.year}`;
+const highlights = yearHighlights(c);
+const meta = [c.dates ?? 'даты не сохранились', c.place].filter(Boolean).join(' — ');
+---
+
+<a class="ob-yc" href={href}>
+  {
+    c.cover ? (
+      <img
+        class="ob-yc__cover"
+        src={mediaUrl(c.cover.url)}
+        alt={c.cover.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${c.year}`}
+        width={c.cover.width}
+        height={c.cover.height}
+        loading="lazy"
+        decoding="async"
+      />
+    ) : (
+      <div class="ob-yc__nocover" aria-hidden="true">
+        <b>{c.number === null ? c.year : roman(c.number)}</b>
+        <span>конгресс</span>
+      </div>
+    )
+  }
+  <div class="ob-yc__body">
+    <span class="ob-yc__num">{ordinalLabel(c.number)} · {c.year}</span>
+    {
+      level === 'h2' ? (
+        <h2 class="ob-yc__title">{c.title ?? `ОРТОБИОЛОГИЯ ${c.year}`}</h2>
+      ) : (
+        <h3 class="ob-yc__title">{c.title ?? `ОРТОБИОЛОГИЯ ${c.year}`}</h3>
+      )
+    }
+    <span class="ob-yc__meta">{meta}</span>
+    {
+      highlights.length > 0 && (
+        <span class="ob-yc__tags">
+          {highlights.map((tag) => (
+            <span class="ob-yc__tag">{tag}</span>
+          ))}
+        </span>
+      )
+    }
+  </div>
+</a>

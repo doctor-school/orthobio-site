@@ -1,0 +1,25 @@
+---
+/**
+ * Faq — native <details>/<summary> accordion (bundle components/faq/Faq).
+ *
+ * Zero client JS by construction: the disclosure behaviour, keyboard operation
+ * and the expanded/collapsed semantics all come from the browser. The «+/−»
+ * affordance is a CSS `::after` on the summary.
+ */
+interface Props {
+  items: { q: string; a: string }[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="ob-faq">
+  {
+    items.map((item) => (
+      <details class="ob-faq__item">
+        <summary class="ob-faq__q">{item.q}</summary>
+        <p class="ob-faq__a">{item.a}</p>
+      </details>
+    ))
+  }
+</div>

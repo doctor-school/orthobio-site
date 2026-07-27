@@ -86,11 +86,41 @@ deploys without cancelling one mid-rsync. The deploy ends by fetching the live
 homepage and asserting `200` plus expected content — a config-only "deploy
 succeeded" cannot pass.
 
-### 7. Not indexed while temporary
+### 7. Not indexed while temporary — with a mechanical gate
 
 The vhost sends `X-Robots-Tag: noindex, nofollow`. `orthobio.ru` still serves
 the previous site, and two near-identical sites in the index would split it.
-**Remove that line at the domain switchover** (Issue #6).
+
+This is **not** guarded by prose alone. The deploy's live check reads the header
+off the real response and compares it to the `SITE_INDEXABLE` repo Variable, so
+the two can never drift silently: forgetting to remove the header at launch
+fails every deploy, and so does removing it without flipping the Variable.
+
+### Switchover checklist (Issue #6)
+
+In this order:
+
+1. Set the `SITE_INDEXABLE` repo Variable to `true`. The next deploy fails —
+   that is the gate proving the header is still there.
+2. Delete the `add_header X-Robots-Tag …` line from
+   `infra/nginx/new.orthobio.ru.conf`, re-run `sh infra/host/provision.sh …`.
+   The deploy goes green again.
+3. Add `Strict-Transport-Security` (see below) at the same time.
+4. Fill `infra/redirects.yaml` with the map from the old URLs and deploy.
+
+### 8. No HSTS yet — deliberate, revisit with TLS
+
+`certbot --nginx --redirect` does not add `Strict-Transport-Security`, and this
+vhost is HTTP-only until certbot runs — an HSTS header served over plain HTTP is
+ignored by browsers, so adding it now would be decoration. Add it with the
+certificate:
+
+```nginx
+add_header Strict-Transport-Security "max-age=86400" always;
+```
+
+A short `max-age` and **never** `preload`: this hostname is retired in November,
+and a preloaded or year-long HSTS pin outlives the site that set it.
 
 ## Needs Anton (owner)
 
@@ -99,8 +129,10 @@ the previous site, and two near-identical sites in the index would split it.
 `orthobio.ru` is delegated to Beget, and we have no Beget API access (records
 are added through the UI by the owner — `bbm-kb/ssot/facts/services.yaml`).
 
-- **Action:** in Beget DNS for the `orthobio.ru` zone, add
-  `new.orthobio.ru.  A  5.42.108.242`.
+- **Action:** in Beget DNS for the `orthobio.ru` zone, add an `A` record
+  `new.orthobio.ru.` → the IPv4 address of `tools-prod-tw`. The address is in
+  the password manager and in the Timeweb Cloud panel; this repo is public, so
+  it is deliberately not written down here (see the `DEPLOY_HOST` row below).
 - **Cost:** none. The apex `orthobio.ru` is **not** touched — the current site
   keeps serving until the switchover.
 - **After it resolves,** run once on the host:
@@ -122,31 +154,56 @@ issue and its own owner decision.
 
 ## GitHub configuration consumed by the deploy
 
-**Secrets** — set on this repository; values live in the owner's password
+**Secrets** — set on the **`production` environment**, not at repository level,
+so no other job in this repo can read them. Values live in the owner's password
 manager and are never printed, committed, or echoed in CI logs.
 
 | Secret | What it is |
 | --- | --- |
 | `DEPLOY_SSH_KEY` | Private half of the `orthobio-ci-deploy` ed25519 key. Its public half is in `deploy@tools-prod-tw`'s `authorized_keys` behind `command="/usr/local/bin/orthobio-deploy",restrict`, so the key can do exactly two things: rsync into the site directory, and apply the redirect snippet. Verified: an interactive shell and an arbitrary command are both refused. |
-| `DEPLOY_HOST` | Address of `tools-prod-tw`. Kept a secret so the origin coordinates do not show up in workflow logs. |
+| `DEPLOY_HOST` | Address of `tools-prod-tw`. Not a cryptographic secret — it becomes public the moment the A-record exists — but this repository is public, and there is no reason to hand out the origin address of a host that also fronts Mattermost and Zitadel next to a file describing its vhosts, its deploy account and its forced-command layout. Keeping it in the secret store also keeps it out of workflow logs. |
 | `DEPLOY_KNOWN_HOSTS` | Pinned host key. Without it the first CI connection would trust whatever answers on that address. |
 
-**Variables** — non-secret, optional, both have working defaults:
+The `production` environment carries a deployment-branch policy admitting `main`
+only. That is the second, independent line of defence behind the `workflow_run`
+guards: GitHub will not release these secrets to a run on any other ref,
+including a fork's. `main` also has branch protection (PR required, force-push
+and deletion blocked, `verify` required), because the deploy trusts "green CI on
+main" as its authority.
+
+**Variables** — non-secret, optional, all have working defaults:
 
 | Variable | Default | What it is |
 | --- | --- | --- |
 | `DEPLOY_USER` | `deploy` | Host account the key belongs to. |
 | `SITE_HOST` | `new.orthobio.ru` | Hostname the post-deploy live check requests. |
+| `SITE_INDEXABLE` | `false` | Whether the site is supposed to be indexable. The deploy compares it against the live `X-Robots-Tag` and fails on a mismatch — see the switchover checklist. |
 
-## Host-side objects (installed from this repo, `infra/host/`)
+## Host-side objects
 
-| Path on `tools-prod-tw` | Source | Purpose |
+**Only the two bottom rows are shipped by the deploy.** Everything above them is
+host state that a repo edit does **not** propagate: after changing any of those
+files, re-run `sh infra/host/provision.sh <ssh-target>` from a workstation whose
+key has sudo on the host. That script is idempotent — it is also the way to
+check the host still matches the repo.
+
+| Path on `tools-prod-tw` | Source | Installed by |
 | --- | --- | --- |
-| `/usr/local/bin/orthobio-deploy` | `infra/host/orthobio-deploy` | Forced command for the CI key: routes to `rrsync` or to the redirect-apply step, refuses everything else. |
-| `/usr/local/sbin/orthobio-apply-redirects` | `infra/host/orthobio-apply-redirects` | Validates the deployed snippet, installs it, reloads nginx, rolls back on `nginx -t` failure. |
-| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | The vhost (+ certbot's TLS section once the certificate exists). |
-| `/etc/nginx/snippets/orthobio-redirects.conf` | generated | The active redirect map. |
-| `/var/www/new.orthobio.ru/public` | `dist/` | Document root, mirrored by the deploy. |
+| `/usr/local/bin/orthobio-deploy` | `infra/host/orthobio-deploy` | `provision.sh` — forced command for the CI key: routes to `rrsync` or to the redirect-apply step, refuses everything else. |
+| `/usr/local/sbin/orthobio-apply-redirects` | `infra/host/orthobio-apply-redirects` | `provision.sh` — validates the deployed snippet, installs it, reloads nginx, rolls back on `nginx -t` failure. |
+| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh` (+ certbot's TLS section once the certificate exists; `provision.sh` refuses to overwrite the file after certbot has touched it). |
+| `deploy@…:~/.ssh/authorized_keys` | public half of `DEPLOY_SSH_KEY` | **by hand, once** — one line: `command="/usr/local/bin/orthobio-deploy",restrict ssh-ed25519 … orthobio-ci-deploy`. |
+| `/etc/nginx/snippets/orthobio-redirects.conf` | generated from `infra/redirects.yaml` | the deploy, every run. |
+| `/var/www/new.orthobio.ru/public` | `dist/` | the deploy, every run. |
+
+**Sudo posture.** `orthobio-apply-redirects` runs via `sudo -n` from the forced
+command. No sudoers entry of ours makes that work: the `deploy` account on this
+host already carries blanket `NOPASSWD: ALL`, pre-existing and shared with the
+other services on the box. A scoped `NOPASSWD` line for this one command would
+not tighten anything while the blanket rule stands, so none was added — the
+boundary for the CI key is the forced command, not the account. Narrowing the
+blanket rule is a host-wide change that belongs to the `bbm` infra repo, not
+here.
 
 ## Deferred (not needed for a temporary site)
 

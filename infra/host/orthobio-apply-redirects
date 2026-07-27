@@ -20,9 +20,21 @@ if [ ! -f "$SRC" ]; then
     exit 1
 fi
 
+# Snapshot before validating. $SRC sits inside the rrsync jail, so the same key
+# that can invoke this script can also rewrite it — validating $SRC and then
+# installing $SRC is a TOCTOU against exactly the actor this allowlist defends
+# against (PR #15 review). Everything below reads the snapshot, so the bytes
+# that are checked are the bytes that land in /etc/nginx.
+STAGED=$(mktemp /tmp/orthobio-redirects.XXXXXX)
+trap 'rm -f "$STAGED"' EXIT INT TERM
+cat "$SRC" > "$STAGED"
+
 # Allowlist: blank lines, comments, and the two block shapes the generator
 # emits. Any other line — a bare `}`, an `include`, a `root` — is a refusal.
-if grep -nvE '^[[:space:]]*(#.*)?$|^location = /[A-Za-z0-9._~/%!&'"'"'()*+,;=:@-]* \{ return 30[1278] [A-Za-z0-9._~/%!&'"'"'()*+,;=:@?#-]+; \}$|^location \^~ /[A-Za-z0-9._~/%!&'"'"'()*+,;=:@-]* \{ rewrite \^[^;]+ (permanent|redirect); \}$' "$SRC"; then
+# The character classes mirror SAFE_PATH in scripts/redirects.mjs and exclude
+# every nginx metacharacter: no `;` (a second directive), no `#` (a comment
+# swallowing our own `;` and `}`), no quotes, no `$`, no whitespace.
+if grep -nvE '^[[:space:]]*(#.*)?$|^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$|^location \^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ rewrite \^[A-Za-z0-9._~/%!&()*+,=:@\\-]+\(\.\*\)\$ [A-Za-z0-9._~/%!&()*+,=:@?-]+\$1 (permanent|redirect); \}$' "$STAGED"; then
     echo "orthobio-apply-redirects: refused — line(s) above are not generator output" >&2
     exit 1
 fi
@@ -34,7 +46,7 @@ if [ -f "$DST" ]; then
     cp -p "$DST" "$BACKUP"
 fi
 
-install -o root -g root -m 0644 "$SRC" "$DST"
+install -o root -g root -m 0644 "$STAGED" "$DST"
 
 if ! nginx -t; then
     echo "orthobio-apply-redirects: nginx rejected the config — rolling back" >&2

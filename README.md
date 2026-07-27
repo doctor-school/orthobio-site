@@ -80,10 +80,15 @@ workflow `Deploy` собирает, синхронизирует `dist/` на х
 конфиг nginx не трогаются. Генератор валидирует каждую запись, хост-скрипт
 перепроверяет результат и откатывается, если `nginx -t` не прошёл.
 
-Имена GitHub Secrets (значения — только в секрет-хранилище): `DEPLOY_SSH_KEY`,
-`DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`. Необязательные Variables с рабочими
-значениями по умолчанию: `DEPLOY_USER` (`deploy`), `SITE_HOST`
-(`new.orthobio.ru`).
+Имена GitHub Secrets (значения — только в секрет-хранилище; заданы на окружении
+`production`, а не на репозитории, и окружение пускает только `main`):
+`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`. Необязательные Variables с
+рабочими значениями по умолчанию: `DEPLOY_USER` (`deploy`), `SITE_HOST`
+(`new.orthobio.ru`), `SITE_INDEXABLE` (`false`).
+
+Конфиги хоста (vhost, forced-command-обёртка, установщик редиректов) деплоем
+**не** доставляются — после их правки нужен `sh infra/host/provision.sh <ssh-target>`
+с машины, у ключа которой есть sudo на хосте.
 
 **Ждёт владельца:** одна A-запись в Beget (`new.orthobio.ru` → IP хоста) — после
 неё certbot выпускает сертификат, и временный URL открывается по HTTPS.

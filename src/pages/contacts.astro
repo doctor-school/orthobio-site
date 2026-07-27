@@ -1,0 +1,39 @@
+---
+/**
+ * /contacts — ТЗ §4.
+ *
+ * ⚠️ The congress contact is undecided (CONTACT_EMAIL / CONTACT_PHONE are
+ * TODO(Антон) in config/site.ts) and MUST NOT be welcome@congress-ph.ru — that
+ * mailbox belongs to the 2026 site's technical operator. Until the owner
+ * decides, the page says so plainly.
+ */
+import SectionHeading from '@/components/SectionHeading.astro';
+import { CONTACT_EMAIL, CONTACT_PHONE } from '@/config/site';
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('contacts');
+const hasContacts = CONTACT_EMAIL !== null || CONTACT_PHONE !== null;
+---
+
+<SectionLayout page={page}>
+  {
+    hasContacts && (
+      <div class="ob-container ob-section">
+        <SectionHeading title="Оргкомитет" />
+        <ul class="ob-list">
+          {CONTACT_EMAIL && (
+            <li>
+              <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            </li>
+          )}
+          {CONTACT_PHONE && (
+            <li>
+              <a href={`tel:${CONTACT_PHONE.replace(/[^+\d]/g, '')}`}>{CONTACT_PHONE}</a>
+            </li>
+          )}
+        </ul>
+      </div>
+    )
+  }
+</SectionLayout>

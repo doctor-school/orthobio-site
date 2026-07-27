@@ -1,0 +1,37 @@
+---
+/**
+ * DocCard — a downloadable document (program / theses PDF) hosted by US
+ * (bundle components/archive/DocCard). The href goes through `mediaUrl()`; the
+ * schema has already guaranteed the file is not a legacy cloud link.
+ */
+import { mediaUrl } from '@/config/site';
+
+interface Props {
+  href: string;
+  title: string;
+  meta?: string;
+}
+
+const { href, title, meta = 'PDF' } = Astro.props;
+---
+
+<a class="ob-dc" href={mediaUrl(href)}>
+  <span class="ob-dc__icon" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 2.5h7l3.5 3.5v11.5h-10.5z"></path>
+      <path d="M12 2.5v3.5h3.5"></path>
+      <path d="M7.5 11h5M7.5 14h5"></path>
+    </svg>
+  </span>
+  <span>
+    <span class="ob-dc__title">{title}</span>
+    <span class="ob-dc__meta">{meta}</span>
+  </span>
+</a>

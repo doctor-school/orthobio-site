@@ -1,0 +1,11 @@
+/* Global stylesheet entry — the single import the layout pulls in. Order is
+   deliberate:
+     1. tokens.css     — design tokens (the only file with literal values)
+     2. base.css       — minimal reset + document defaults
+     3. components.css — the .ob-* component layer
+   Tailwind was removed at review of PR #14: not one utility class was ever
+   used, so the framework contributed only a preflight that base.css now owns
+   explicitly. The convention is recorded in AGENTS.md → Code style. */
+@import './tokens.css';
+@import './base.css';
+@import './components.css';

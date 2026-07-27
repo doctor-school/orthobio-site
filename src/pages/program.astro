@@ -1,0 +1,9 @@
+---
+/** /program — ТЗ §4: честная заглушка + ссылка на программу 2026 в архиве. */
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('program');
+---
+
+<SectionLayout page={page} />

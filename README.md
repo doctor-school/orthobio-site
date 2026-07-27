@@ -25,12 +25,24 @@ pnpm dev            # дев-сервер (http://localhost:4321)
 pnpm build          # статическая сборка → dist/
 pnpm preview        # локальный просмотр собранного dist/
 pnpm typecheck      # astro check + tsc --noEmit (строгий TS)
+pnpm test:e2e       # Playwright: overflow-лестница + axe на каждый маршрут
 ```
+
+`pnpm test:e2e` сам собирает проект и поднимает `astro preview` на порту 4331
+(первый запуск: `pnpm exec playwright install chromium`).
 
 Контент годов конгресса — YAML-файлы `src/content/congress/<year>.yaml`;
 схема и правила заполнения: `src/content/schemas.ts` + документированный
-пример `src/content/congress/2099.yaml` (фикстура, `draft: true`).
-Смоук-страница года: `/archive/<year>`.
+пример `src/content/congress/2099.yaml` (фикстура, `draft: true`,
+в публичную сборку не попадает). Страница года: `/archive/<year>`.
+
+Тексты статических разделов (`/program`, `/nmo`, `/participants`, …) — тоже
+данные: `src/content/pages/<slug>.yaml` (схема `pageSchema`), поэтому
+RU-типографика применяется автоматически на границе схемы.
+
+Все нерешённые владельцем значения (канал CTA «узнать первым», контакты
+оргкомитета) и базовый URL медиа — в одном файле `src/config/site.ts`
+с пометками `TODO(Антон)`.
 
 ## Инфраструктура (медиа-архив)
 

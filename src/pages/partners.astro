@@ -1,0 +1,63 @@
+---
+/**
+ * /partners — ТЗ §4: уровни партнёрства + контакт.
+ *
+ * Partners of the LAST congress are shown as what they are — партнёры 2026,
+ * under a year-named heading with a link into the archive. Nobody has been
+ * announced for 2027 and nothing here implies otherwise.
+ *
+ * The «стать партнёром» action is a mailto: built from CONTACT_EMAIL
+ * (⚠️ TODO(Антон) in config/site.ts). While that is null the page states where
+ * the address will appear instead of shipping a broken link.
+ */
+import PartnerTier from '@/components/PartnerTier.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import Button from '@/components/Button.astro';
+import { CONTACT_EMAIL } from '@/config/site';
+import { getCongressYear, getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+import { groupPartners } from '@/lib/congress';
+
+const REFERENCE_YEAR = 2026;
+
+const { data: page } = await getPage('partners');
+const reference = await getCongressYear(REFERENCE_YEAR);
+// Sponsor/exhibitor tiers only — organizing bodies belong to /orgs.
+const sponsorTiers = groupPartners(reference?.data.partners ?? []).filter(
+  (g) => g.tier !== 'organizer' && g.tier !== 'co-organizer',
+);
+---
+
+<SectionLayout page={page}>
+  <div class="ob-container ob-section">
+    {
+      CONTACT_EMAIL ? (
+        <Button variant="secondary" href={`mailto:${CONTACT_EMAIL}`}>
+          Стать партнёром — написать оргкомитету
+        </Button>
+      ) : (
+        <p class="ob-note">
+          Адрес оргкомитета для партнёрских запросов будет опубликован к открытию регистрации в
+          ноябре 2026 года.
+        </p>
+      )
+    }
+  </div>
+
+  <div class="ob-container ob-section">
+    <SectionHeading
+      title={`Партнёры конгресса ${REFERENCE_YEAR}`}
+      linkLabel={`Всё о конгрессе ${REFERENCE_YEAR}`}
+      linkHref={`/archive/${REFERENCE_YEAR}`}
+    />
+    {
+      sponsorTiers.length > 0 ? (
+        sponsorTiers.map((group) => (
+          <PartnerTier tier={group.tier} label={group.label} partners={group.items} />
+        ))
+      ) : (
+        <p class="ob-empty">нет данных</p>
+      )
+    }
+  </div>
+</SectionLayout>

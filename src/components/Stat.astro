@@ -1,0 +1,14 @@
+---
+/** Stat — headline figure of the hero («7 конгрессов»). */
+interface Props {
+  value: string;
+  label: string;
+}
+
+const { value, label } = Astro.props;
+---
+
+<div class="ob-stat">
+  <span class="ob-stat__v">{value}</span>
+  <span class="ob-stat__l">{label}</span>
+</div>

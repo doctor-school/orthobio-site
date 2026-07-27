@@ -1,0 +1,130 @@
+/* ============================================================================
+   ОРТОБИОЛОГИЯ — design tokens (single source of truth for the site).
+
+   Ported VERBATIM from the Claude.design bundle (`tokens/colors.css`,
+   `tokens/typography.css`, `tokens/layout.css`) — this file is the ONLY place
+   in the repo where a raw colour/size literal may appear. Components and pages
+   reference `var(--token)` and never a literal (AGENTS.md → Code style).
+
+   Palette roles (design bundle §VISUAL FOUNDATIONS): the congress accents
+   (sky/green/lime) are an IDENTITY layer and do NOT pass AA as text on white —
+   text/link colour comes from the darkened `--ob-*-text` derivatives and the
+   Doctor.School blues. The «ОРТО» mark keeps its own colours as artwork and is
+   never recoloured with UI tokens.
+   ============================================================================ */
+
+:root {
+  /* --- Congress palette (identity accents; NOT for text on white) ---------- */
+  --ob-sky: #48a4db;
+  --ob-lime: #bdd631;
+  --ob-green: #70c143;
+
+  /* Darkened derivatives — the only accent values allowed as text (AA ≥ 4.5:1) */
+  --ob-sky-text: #186490;
+  --ob-green-text: #3d7a20;
+  --ob-lime-text: #66701b;
+
+  /* Deep fills for hover on coloured surfaces */
+  --ob-sky-deep: #2f86bd;
+  --ob-green-deep: #529f2b;
+
+  /* Tints — section/tag backgrounds */
+  --ob-sky-tint: #edf6fc;
+  --ob-lime-tint: #f7fae4;
+  --ob-green-tint: #eef8e8;
+
+  /* --- Doctor.School base (parent brand): actions, links, focus ------------ */
+  --ds-blue: #2d84f2;
+  --ds-blue-dark: #114d9e;
+  --ds-blue-light: #6bb1f7;
+  --ds-blue-pressed: #0d3a77;
+
+  /* --- Semantic status ----------------------------------------------------- */
+  --ok: #009959;
+  --warn: #b5791a;
+  --error: #c81e1e;
+  /* Faint warn wash behind session footnotes (НМО notes) */
+  --warn-wash: oklch(0.97 0.02 80);
+  /* AA-safe warn TEXT on --warn-wash (the raw --warn measures 3.36:1 there,
+     below the 4.5:1 body threshold) — same «darkened derivative for text» rule
+     the congress accents follow. */
+  --warn-text: #8a5a00;
+
+  /* --- Neutrals — blue-tinted grey ramp, light theme ------------------------ */
+  --bg: #ffffff;
+  --ink: oklch(0.21 0.02 250);
+  --muted: oklch(0.45 0.014 250);
+  --hairline: oklch(0.922 0.006 250);
+  /* Border of a card under hover — one step darker than the hairline. */
+  --hairline-strong: oklch(0.85 0.01 250);
+  --surface: oklch(0.968 0.004 250);
+  --surface-faint: oklch(0.985 0.002 250);
+
+  /* --- Semantic aliases ---------------------------------------------------- */
+  --text-body: var(--ink);
+  --text-muted: var(--muted);
+  --text-link: var(--ds-blue-dark);
+  --text-link-hover: var(--ds-blue-pressed);
+  --text-accent: var(--ob-sky-text);
+  --surface-page: var(--bg);
+  --surface-card: var(--bg);
+  --surface-section: var(--surface);
+  --surface-tinted: var(--surface-faint);
+  --border-card: var(--hairline);
+  --focus-ring: var(--ds-blue-light);
+  --btn-primary-bg: var(--ds-blue-dark);
+  --btn-primary-bg-hover: var(--ds-blue-pressed);
+  --btn-primary-bg-active: oklch(0.24 0.09 258);
+  --btn-primary-fg: #ffffff;
+  /* Play-button scrim on the video facade (over the dark ink plate). */
+  --scrim-play: oklch(0.35 0.05 250 / 0.85);
+  --on-dark: #ffffff;
+
+  /* --- Typography — Inter only, self-hosted (see base.css @font-face) ------- */
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --fs-display: 2.5rem;
+  --lh-display: 1.1;
+  --fs-display-lg: 3.5rem;
+  --fs-h1: 2rem;
+  --lh-h1: 1.15;
+  --fs-h2: 1.5rem;
+  --lh-h2: 1.25;
+  --fs-h3: 1.1875rem;
+  --lh-h3: 1.35;
+  --fs-body: 1rem;
+  --lh-body: 1.6;
+  --fs-small: 0.875rem;
+  --lh-small: 1.5;
+  --fs-caption: 0.75rem;
+  --lh-caption: 1.45;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --ls-overline: 0.08em;
+
+  /* --- Spacing (4px step), radii, shadows ---------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --shadow-card: none;
+  --shadow-lift: 0 4px 16px oklch(0.21 0.02 250 / 0.08);
+
+  /* --- Layout & focus ------------------------------------------------------ */
+  --container: 1200px;
+  --container-pad: 16px;
+  --focus-shadow: 0 0 0 3px var(--focus-ring);
+
+  /* State transition — the only motion in the system (120–160ms ease-out). */
+  --t-state: 0.13s ease-out;
+}

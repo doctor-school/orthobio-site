@@ -1,0 +1,39 @@
+---
+/**
+ * SectionLayout — shell for the static §4 section pages: page heading, lead,
+ * the editorial blocks from the `page` collection, then whatever data-driven
+ * sections the route adds through the default slot (committee, partners, …).
+ *
+ * Keeps every section page down to «fetch its entry, add its data sections»,
+ * so the copy lives in YAML and the markup is not duplicated eight times.
+ */
+import PageBlocks from '@/components/PageBlocks.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import type { PageEntry } from '@/content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+interface Props {
+  page: PageEntry['data'];
+}
+
+const { page } = Astro.props;
+---
+
+<BaseLayout title={page.title} description={page.description}>
+  <div class="ob-container ob-section">
+    <SectionHeading level="h1" overline={page.overline} title={page.title} />
+    {
+      page.lead.length > 0 && (
+        <div class="ob-prose">
+          {page.lead.map((p) => (
+            <p>{p}</p>
+          ))}
+        </div>
+      )
+    }
+  </div>
+  <div class="ob-container">
+    <PageBlocks blocks={page.blocks} />
+  </div>
+  <slot />
+</BaseLayout>

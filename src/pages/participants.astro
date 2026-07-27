@@ -1,0 +1,9 @@
+---
+/** /participants — ТЗ §4: формы участия и требования к материалам; дедлайны 2027 не выдуманы. */
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('participants');
+---
+
+<SectionLayout page={page} />

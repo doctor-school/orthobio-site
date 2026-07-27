@@ -1,0 +1,47 @@
+---
+/**
+ * SiteHeader — wordmark + primary navigation (bundle ui_kits/…/Chrome).
+ *
+ * No hamburger, no JS: the nav is a wrapping flex row, so at 360px it simply
+ * reflows onto more lines and every route stays one tap away. Sticky only from
+ * lg (see components.css) where the vertical budget allows it.
+ */
+// Referenced as a FILE, not inlined: the mark is 15KB of gradient artwork and
+// sits in the chrome of all 15 pages, so inlining re-sent it on every
+// navigation and never cached. `?url` emits a content-hashed asset that the
+// browser fetches once per session (PR #14 review). The 553-byte metaball in
+// the hero stays inline — there the request would cost more than the bytes.
+import markUrl from '@/assets/orto-mark-color.svg?url';
+import { NAV, SITE } from '@/config/site';
+
+interface Props {
+  /** Pathname of the current page — drives aria-current. */
+  path: string;
+}
+
+const { path } = Astro.props;
+/** `/archive/2025` marks the «Архив» item; `/` matches only itself. */
+const isCurrent = (href: string): boolean =>
+  href === '/' ? path === '/' : path === href || path.startsWith(href.replace(/\/$/, '') + '/');
+---
+
+<header class="ob-head">
+  <div class="ob-container ob-head__in">
+    <a class="ob-head__logo" href="/">
+      <img src={markUrl} width="36" height="36" alt="Знак ОРТО" />
+      <span>
+        <span class="ob-head__name">{SITE.name}</span>
+        <span class="ob-head__sub">{SITE.tagline}</span>
+      </span>
+    </a>
+    <nav class="ob-nav" aria-label="Основная навигация">
+      {
+        NAV.map((item) => (
+          <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</header>

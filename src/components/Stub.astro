@@ -1,0 +1,53 @@
+---
+/**
+ * Stub — the honest placeholder pattern (ТЗ §4 principle 2): what is missing,
+ * when it arrives, and where to go meanwhile. A full-fledged page state, not an
+ * error state.
+ *
+ * The heading level is a prop because a stub can be the only block of a page
+ * (under the page <h1> → h2) or sit inside a section (→ h3); a wrong level
+ * breaks the outline, which axe flags.
+ */
+interface Props {
+  title: string;
+  text?: string | null;
+  linkLabel?: string | null;
+  linkHref?: string | null;
+  level?: 'h2' | 'h3';
+}
+
+const { title, text = null, linkLabel = null, linkHref = null, level = 'h2' } = Astro.props;
+---
+
+<div class="ob-stub">
+  <svg
+    class="ob-stub__icon"
+    viewBox="0 0 20 20"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linecap="round"
+    aria-hidden="true"
+  >
+    <circle cx="10" cy="10" r="7.5"></circle>
+    <path d="M10 6v4.2l2.8 1.6"></path>
+  </svg>
+  {
+    level === 'h2' ? (
+      <h2 class="ob-stub__title">{title}</h2>
+    ) : (
+      <h3 class="ob-stub__title">{title}</h3>
+    )
+  }
+  {text && <p class="ob-stub__text">{text}</p>}
+  {
+    /* Both or neither: a link labelled only «→» has no accessible name. The
+       schema rejects the half-set pair at build (pageSchemaChecked); this is
+       the render-side half of the same rule. */
+    linkHref && linkLabel && (
+      <a class="ob-stub__link" href={linkHref}>
+        {linkLabel} →
+      </a>
+    )
+  }
+</div>

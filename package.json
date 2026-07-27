@@ -9,7 +9,10 @@
   },
   "packageManager": "pnpm@10.7.0",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   },
   "scripts": {
     "dev": "astro dev",
@@ -17,14 +20,26 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "typecheck": "astro check && tsc --noEmit"
+    "typecheck": "astro check && tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "icons": "node scripts/generate-icons.mjs",
+    "assets:svgo": "svgo --folder src/assets --recursive --multipass"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
     "astro": "^6.4.2",
     "typograf": "^7.7.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
-    "typescript": "^5"
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^26.1.1",
+    "sharp": "^0.35.3",
+    "svgo": "^4.0.2",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

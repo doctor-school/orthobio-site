@@ -1,0 +1,89 @@
+---
+/**
+ * Главная (/) — ТЗ §4: hero 2027, цифры прошлых лет, CTA «узнать первым»,
+ * честная заглушка программы и тизер архива.
+ *
+ * The program placeholder is READ FROM the /program page entry, so the honest
+ * «в разработке» wording exists in exactly one place.
+ */
+import ArchiveYearCard from '@/components/ArchiveYearCard.astro';
+import Button from '@/components/Button.astro';
+import Hero from '@/components/Hero.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import Stat from '@/components/Stat.astro';
+import Stub from '@/components/Stub.astro';
+import { SUBSCRIBE_LABEL, SUBSCRIBE_URL } from '@/config/site';
+import { getCongressYears, getPage } from '@/content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+const { data: page } = await getPage('home');
+const { data: programPage } = await getPage('program');
+const programStub = programPage.blocks.find((b) => b.kind === 'stub');
+
+// Teaser: the three most recent congresses; the hub has them all.
+const recentYears = (await getCongressYears()).slice(0, 3);
+
+// Dates for 2027 are not announced (ТЗ §6, open question 3) — the placeholder
+// IS the fact, not a missing value.
+const DATES_2027 = 'Весна 2027, даты уточняются';
+---
+
+<BaseLayout title={page.title} description={page.description}>
+  <Hero overline={page.overline} title={page.title} dates={DATES_2027}>
+    {page.lead.map((p) => <p>{p}</p>)}
+
+    <div slot="cta">
+      {
+        SUBSCRIBE_URL ? (
+          <Button size="lg" href={SUBSCRIBE_URL}>
+            {SUBSCRIBE_LABEL}
+          </Button>
+        ) : (
+          <>
+            {/* Канал подписки не выбран (TODO(Антон) в config/site.ts): блок
+                остаётся, но как честное утверждение, а не мёртвая кнопка. */}
+            <p class="ob-hero__cta-pending">Регистрация откроется в ноябре 2026 года</p>
+            <p class="ob-hero__cta-note">
+              Канал, в котором можно узнать об открытии регистрации первым, будет объявлен здесь.
+            </p>
+          </>
+        )
+      }
+    </div>
+
+    <Fragment slot="stats">
+      {page.stats.map((s) => <Stat value={s.value} label={s.label} />)}
+    </Fragment>
+
+    {page.statsNote && <p class="ob-hero__cta-note" slot="statsNote">{page.statsNote}</p>}
+  </Hero>
+
+  {
+    programStub && (
+      <div class="ob-container ob-section">
+        <SectionHeading overline="2027" title="Программа конгресса" linkLabel="Подробнее" linkHref="/program" />
+        <Stub
+          level="h3"
+          title={programStub.title}
+          text={programStub.text}
+          linkLabel={programStub.linkLabel}
+          linkHref={programStub.linkHref}
+        />
+      </div>
+    )
+  }
+
+  <div class="ob-band">
+    <div class="ob-container ob-section">
+      <SectionHeading
+        overline="2021-2026"
+        title="Архив конгрессов"
+        linkLabel="Все годы"
+        linkHref="/archive/"
+      />
+      <div class="ob-cards">
+        {recentYears.map((entry) => <ArchiveYearCard entry={entry} />)}
+      </div>
+    </div>
+  </div>
+</BaseLayout>

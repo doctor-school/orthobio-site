@@ -1,0 +1,61 @@
+---
+/**
+ * PersonCard — президиум / обращения (bundle components/people/PersonCard).
+ * No portrait → an initial plate (decorative: the name is right next to it).
+ * Greeting texts were never published for any year, so `text` is usually null.
+ *
+ * The portrait is served through `<Image>`: the rescued files are 1–2MB stills
+ * for a 72px circle, so build-time resizing is the difference between a page a
+ * phone can open on mobile data and one it cannot. `inferSize` reads the
+ * intrinsic size at build — unlike photos/cover, the schema carries no
+ * dimensions for greeting portraits.
+ *
+ * TODO(#2 media pipeline): the sources are 16:9 stills, not square headshots;
+ * the crop is biased upward in CSS (.ob-pc__photo) so the face survives. The
+ * real fix is square derivatives in the bucket.
+ */
+import { Image } from 'astro:assets';
+
+import { mediaUrl } from '@/config/site';
+
+interface Props {
+  name: string;
+  role?: string | null;
+  photo?: string | null;
+  text?: string | null;
+  /**
+   * Above the fold — load eagerly. On an archive year page the presidium is the
+   * first thing under the header, so lazy-loading those portraits delays the
+   * LCP instead of saving anything (audit nit N2).
+   */
+  priority?: boolean;
+}
+
+const { name, role = null, photo = null, text = null, priority = false } = Astro.props;
+---
+
+<div class="ob-pc">
+  {
+    photo ? (
+      <Image
+        class="ob-pc__photo"
+        src={mediaUrl(photo)}
+        alt={`Фото: ${name}`}
+        inferSize
+        widths={[72, 144]}
+        sizes="72px"
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+      />
+    ) : (
+      <span class="ob-pc__initial" aria-hidden="true">
+        {name.trim()[0]}
+      </span>
+    )
+  }
+  <div class="ob-pc__box">
+    <p class="ob-pc__name">{name}</p>
+    {role && <p class="ob-pc__role">{role}</p>}
+    {text && <p class="ob-pc__text">{text}</p>}
+  </div>
+</div>

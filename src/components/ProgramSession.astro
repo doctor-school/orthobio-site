@@ -1,0 +1,49 @@
+---
+/**
+ * ProgramSession — one session of a congress program (bundle
+ * components/program/ProgramSession). Session-level footnotes (satellite
+ * symposia that earn no НМО credits) render in the warn tone: material
+ * information for a physician audience.
+ */
+import type { Session } from '@/lib/congress';
+
+interface Props {
+  session: Session;
+  /** Heading level — h4 when the sessions sit under a day heading (h3). */
+  level?: 'h3' | 'h4';
+}
+
+const { session, level = 'h3' } = Astro.props;
+---
+
+<section class="ob-ps">
+  {
+    (session.time || session.hall) && (
+      <div class="ob-ps__meta">
+        {session.time && <span>{session.time}</span>}
+        {session.hall && <span>{session.hall}</span>}
+      </div>
+    )
+  }
+  {
+    level === 'h3' ? (
+      <h3 class="ob-ps__title">{session.title}</h3>
+    ) : (
+      <h4 class="ob-ps__title">{session.title}</h4>
+    )
+  }
+  {session.moderators.length > 0 && <p class="ob-ps__mods">Модераторы: {session.moderators.join(', ')}</p>}
+  {session.note && <p class="ob-ps__note">{session.note}</p>}
+  {
+    session.talks.length > 0 && (
+      <ul class="ob-ps__talks">
+        {session.talks.map((talk) => (
+          <li class="ob-ps__talk">
+            <p class="ob-ps__talk-t">{talk.title}</p>
+            {talk.speakers.length > 0 && <p class="ob-ps__talk-s">{talk.speakers.join(', ')}</p>}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>

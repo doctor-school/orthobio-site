@@ -1,0 +1,100 @@
+# ОРТОБИОЛОГИЯ 2021 — II конгресс (совместно с IX НПК «Приоровские чтения»).
+# Sources: docs/recon/archive-2021.md · docs/assets-manifest.yaml (year 2021).
+# Media: /media/<s3_key> — root-relative paths that map 1:1 to the staged
+# assets tree (C:\Users\sidor\orthobio-assets) and the future S3 keys; the
+# base-host swap happens in the site config (Issues #4/#5).
+
+year: 2021
+# Ordinal attested by the canonical YouTube title in the assets manifest:
+# «IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021».
+number: 2
+# Verbatim H1 of the archive page; no fuller official title survived.
+title: ОРТОБИОЛОГИЯ 2021
+# No source page states the 2021 dates. Derived from EXIF DateTimeOriginal of
+# the staged album (2021/photos/, sampled: 22.04 ×18, 23.04 ×12, 24.04 ×15) —
+# the same technique the assets manifest used to pin the «15/16 апреля»
+# folders to 2022 (PR #9 review).
+# TODO(Антон): подтвердить даты — 2021 шёл совместно с IX «Приоровскими
+# чтениями», альбом может покрывать родительскую конференцию, а не только
+# конгресс.
+dates: 22-24 апреля 2021
+startDate: 2021-04-22
+endDate: 2021-04-24
+place: null
+
+# «ОБРАЩЕНИЕ К УЧАСТНИКАМ» — two co-president cards, page order. The greeting
+# texts were not extractable (graphics/JS); no portraits were published.
+greetings:
+  - name: Губин А.В.
+    role: Сопрезидент Конгресса
+    photo: null
+    text: null
+  - name: Загородний Н.В.
+    role: Сопрезидент Конгресса
+    photo: null
+    text: null
+
+committee: []
+
+# No program (by days/sections) was ever published on the 2021 archive page.
+program: null
+
+cover:
+  url: /media/2021/photos/DSC07008.jpg
+  alt: Конгресс ОРТОБИОЛОГИЯ 2021
+  width: 5811
+  height: 3874
+
+# Curated gallery = the 3 preview photos actually displayed on the page.
+# The staged previews/ copies are byte-identical to these files in the Drive
+# album (manifest dedup note: previews s3_key is null), so we reference the
+# photos/ copies which are the ones shipped to S3.
+photos:
+  - url: /media/2021/photos/DSC07008.jpg
+    alt: Конгресс ОРТОБИОЛОГИЯ 2021, фото 1
+    width: 5811
+    height: 3874
+  - url: /media/2021/photos/DSC07253.jpg
+    alt: Конгресс ОРТОБИОЛОГИЯ 2021, фото 2
+    width: 5731
+    height: 3821
+  - url: /media/2021/photos/DSC07433.jpg
+    alt: Конгресс ОРТОБИОЛОГИЯ 2021, фото 3
+    width: 5808
+    height: 3872
+
+posters: []
+
+# YouTube links + canonical oEmbed titles from the assets manifest (2021-videos).
+videos:
+  - url: https://www.youtube.com/watch?v=c-RvCZ2GPKM
+    title: Отчётный ролик Ортобиология 2021
+  - url: https://www.youtube.com/watch?v=IkDFPdYZbJw
+    title: IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021
+  - url: https://www.youtube.com/watch?v=UArPFb4HjEY
+    title: IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021
+
+# The «ОТЧЕТ КОНГРЕССА ОРТОБИОЛОГИЯ 2021» button opens a modal saying the
+# report «будет доступен чуть позже» — the PDF was never published
+# (Playwright-verified, manifest item 2021-pdf-report: not-found).
+theses: null
+
+# The page shows three untiered partner/organizer logos (recon: «Логотипы
+# партнёров/организаторов»). The source assigns no tiers, so all three go into
+# the neutral `partner` bucket; evexcon is noted in recon as техорганизатор.
+partners:
+  - name: НМИЦ ТО им. Н.Н. Приорова
+    tier: partner
+    logo: null
+    url: https://www.cito-priorov.ru
+  - name: Doctor.School
+    tier: partner
+    logo: null
+    url: https://doctor.school
+  # «Ивексикон» here vs «Ивекскон» in 2026.yaml — BOTH spellings are attested
+  # (recon prints «Ивексикон» in the 2021 partner block and «Ивекскон» in the
+  # 2026 «при поддержке» list); kept verbatim per source, not a typo to fix.
+  - name: ООО «Ивексикон»
+    tier: partner
+    logo: null
+    url: https://evexcon.ru

@@ -21,9 +21,11 @@ interface Props {
    * page h1 directly), h3 in a teaser that already has a section heading.
    */
   level?: 'h2' | 'h3';
+  /** First cards of the grid are above the fold — load their cover eagerly. */
+  priority?: boolean;
 }
 
-const { entry, level = 'h3' } = Astro.props;
+const { entry, level = 'h3', priority = false } = Astro.props;
 const c = entry.data;
 const href = `/archive/${c.year}`;
 const highlights = yearHighlights(c);
@@ -48,7 +50,7 @@ const cover = c.cover ? displaySize(c.cover.width, c.cover.height, COVER_MAX) : 
         height={cover.height}
         widths={COVER_WIDTHS}
         sizes={COVER_SIZES}
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
         decoding="async"
       />
     ) : (

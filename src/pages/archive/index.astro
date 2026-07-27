@@ -11,7 +11,11 @@ const years = await getCongressYears();
 <SectionLayout page={page}>
   <div class="ob-container ob-section">
     <div class="ob-cards">
-      {years.map((entry) => <ArchiveYearCard entry={entry} level="h2" />)}
+      {
+        /* The first row is above the fold at every width (one card at 360, up
+           to three at 1280) — those covers load eagerly, the rest lazily. */
+        years.map((entry, i) => <ArchiveYearCard entry={entry} level="h2" priority={i < 3} />)
+      }
     </div>
   </div>
 </SectionLayout>

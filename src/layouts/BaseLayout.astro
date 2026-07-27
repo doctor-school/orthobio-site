@@ -47,11 +47,29 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     {description && <meta name="description" content={description} />}
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href={canonical} />}
+    {
+      /* Icons (audit nit N1): without a declared icon the browser requests
+         /favicon.ico on every page and 404s. SVG first for modern browsers,
+         32px PNG as the fallback. Generated from the brand mark — see
+         `pnpm icons`. */
+    }
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     {description && <meta property="og:description" content={description} />}
     <meta property="og:site_name" content={SITE.title} />
     {!noindex && <meta property="og:url" content={canonical} />}
+    {
+      /* The CTA points at a messenger, so the share card is the first thing the
+         audience sees — the mark on the page background, not a blank box. */
+    }
+    <meta property="og:image" content={new URL('/og-image.png', Astro.site).href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <a class="ob-skip" href="#main">Перейти к содержимому</a>

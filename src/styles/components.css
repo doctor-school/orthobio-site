@@ -167,7 +167,7 @@
   color: var(--text-link-hover);
 }
 
-.ob-head__logo svg {
+.ob-head__logo img {
   width: 36px;
   height: 36px;
   flex: none;
@@ -220,6 +220,13 @@
   background: var(--ob-sky-tint);
 }
 
+/* The current page was the one interactive element with no hover feedback
+   (audit nit N4) — it stays marked, but still reacts. */
+.ob-nav a[aria-current='page']:hover {
+  background: var(--ob-sky-tint);
+  color: var(--ds-blue-pressed);
+}
+
 /* ── Site chrome: footer ─────────────────────────────────────────────────── */
 
 .ob-foot {
@@ -257,7 +264,7 @@
   margin-bottom: var(--sp-3);
 }
 
-.ob-foot__mark svg {
+.ob-foot__mark img {
   height: 44px;
   width: 44px;
   flex: none;
@@ -404,6 +411,15 @@
   font-size: var(--fs-h1);
   line-height: var(--lh-h1);
   font-weight: var(--fw-bold);
+}
+
+/* 24px minimum pointer target (WCAG 2.2 §2.5.8): small type alone renders a
+   19–22px line box (audit nit N3). Same treatment as the footer links. */
+.ob-sh__link,
+.ob-stub__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 
 .ob-sh__link {
@@ -909,8 +925,11 @@ a.ob-pt__card:active {
   border-color: var(--ob-sky);
 }
 
+/* Fixed slot: the logo box is reserved before the file loads, so a tier grid
+   cannot reflow when logos finally land (no partner has one yet). */
 .ob-pt__card img {
-  max-height: 44px;
+  width: 120px;
+  height: 44px;
   max-width: 80%;
   object-fit: contain;
 }

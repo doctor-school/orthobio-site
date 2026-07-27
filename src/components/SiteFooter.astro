@@ -7,8 +7,10 @@
  * is `null` (⚠️ TODO(Антон)) the column states honestly that contacts will be
  * published, and NEVER the operator's welcome@congress-ph.ru.
  */
-import DsLogo from '@/assets/ds-logo-with-slogan-color.svg';
-import Mark from '@/assets/orto-mark-green.svg';
+// File references rather than inline SVG — see the note in SiteHeader.astro:
+// these two are 19KB of artwork repeated in the chrome of every page.
+import dsLogoUrl from '@/assets/ds-logo-with-slogan-color.svg?url';
+import markUrl from '@/assets/orto-mark-green.svg?url';
 import { CONTACT_EMAIL, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
 ---
 
@@ -16,7 +18,7 @@ import { CONTACT_EMAIL, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
   <div class="ob-container ob-foot__in">
     <div class="ob-foot__col">
       <div class="ob-foot__mark">
-        <Mark width={44} height={44} aria-hidden="true" />
+        <img src={markUrl} width="44" height="44" alt="" />
         <b>{SITE.name}</b>
       </div>
       <p>{FOOTER.about}</p>
@@ -50,7 +52,7 @@ import { CONTACT_EMAIL, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
     </nav>
 
     <div class="ob-foot__col">
-      <DsLogo class="ob-foot__ds" role="img" aria-label="Doctor.School" />
+      <img class="ob-foot__ds" src={dsLogoUrl} width="96" height="40" alt="Doctor.School" />
       <p>{FOOTER.copyright}</p>
     </div>
   </div>

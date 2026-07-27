@@ -37,11 +37,35 @@ const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
         {partners.map((p) =>
           p.url ? (
             <a class="ob-pt__card" href={p.url}>
-              {p.logo ? <img src={mediaUrl(p.logo)} alt={p.name} loading="lazy" /> : p.name}
+              {
+                p.logo ? (
+                  /* Fixed 120×44 slot with `object-fit: contain` (see
+                     .ob-pt__card img): the schema carries no logo dimensions,
+                     so reserving the box in CSS is what keeps the tier grid
+                     from reflowing once real logos land in the bucket — every
+                     partner is `logo: null` today, which is why no test would
+                     have caught it (PR #14 review). */
+                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="44" loading="lazy" />
+                ) : (
+                  p.name
+                )
+              }
             </a>
           ) : (
             <span class="ob-pt__card">
-              {p.logo ? <img src={mediaUrl(p.logo)} alt={p.name} loading="lazy" /> : p.name}
+              {
+                p.logo ? (
+                  /* Fixed 120×44 slot with `object-fit: contain` (see
+                     .ob-pt__card img): the schema carries no logo dimensions,
+                     so reserving the box in CSS is what keeps the tier grid
+                     from reflowing once real logos land in the bucket — every
+                     partner is `logo: null` today, which is why no test would
+                     have caught it (PR #14 review). */
+                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="44" loading="lazy" />
+                ) : (
+                  p.name
+                )
+              }
             </span>
           ),
         )}

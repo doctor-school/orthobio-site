@@ -23,9 +23,15 @@ interface Props {
   role?: string | null;
   photo?: string | null;
   text?: string | null;
+  /**
+   * Above the fold — load eagerly. On an archive year page the presidium is the
+   * first thing under the header, so lazy-loading those portraits delays the
+   * LCP instead of saving anything (audit nit N2).
+   */
+  priority?: boolean;
 }
 
-const { name, role = null, photo = null, text = null } = Astro.props;
+const { name, role = null, photo = null, text = null, priority = false } = Astro.props;
 ---
 
 <div class="ob-pc">
@@ -38,7 +44,7 @@ const { name, role = null, photo = null, text = null } = Astro.props;
         inferSize
         widths={[72, 144]}
         sizes="72px"
-        loading="lazy"
+        loading={priority ? 'eager' : 'lazy'}
         decoding="async"
       />
     ) : (

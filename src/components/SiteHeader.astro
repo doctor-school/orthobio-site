@@ -6,7 +6,12 @@
  * reflows onto more lines and every route stays one tap away. Sticky only from
  * lg (see components.css) where the vertical budget allows it.
  */
-import Mark from '@/assets/orto-mark-color.svg';
+// Referenced as a FILE, not inlined: the mark is 15KB of gradient artwork and
+// sits in the chrome of all 15 pages, so inlining re-sent it on every
+// navigation and never cached. `?url` emits a content-hashed asset that the
+// browser fetches once per session (PR #14 review). The 553-byte metaball in
+// the hero stays inline — there the request would cost more than the bytes.
+import markUrl from '@/assets/orto-mark-color.svg?url';
 import { NAV, SITE } from '@/config/site';
 
 interface Props {
@@ -23,7 +28,7 @@ const isCurrent = (href: string): boolean =>
 <header class="ob-head">
   <div class="ob-container ob-head__in">
     <a class="ob-head__logo" href="/">
-      <Mark width={36} height={36} role="img" aria-label="Знак ОРТО" />
+      <img src={markUrl} width="36" height="36" alt="Знак ОРТО" />
       <span>
         <span class="ob-head__name">{SITE.name}</span>
         <span class="ob-head__sub">{SITE.tagline}</span>

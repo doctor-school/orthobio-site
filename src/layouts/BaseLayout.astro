@@ -33,7 +33,12 @@ interface Props {
 
 const { title, description = null, noindex = false } = Astro.props;
 
-const pageTitle = title === SITE.title ? title : `${title} — ${SITE.title}`;
+// Archive pages take the bare wordmark as their suffix: «ОРТОБИОЛОГИЯ 2021 —
+// архив — ОРТОБИОЛОГИЯ 2027 — VIII Конгресс» put two conflicting years in one
+// browser tab (content audit М1). The site is still about the 2027 congress —
+// only the suffix of a historical page drops the year.
+const suffix = Astro.url.pathname.startsWith('/archive/') ? SITE.name : SITE.title;
+const pageTitle = title === suffix ? title : `${title} — ${suffix}`;
 // `site` is set in astro.config.mjs, so Astro.site is always defined here.
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 ---

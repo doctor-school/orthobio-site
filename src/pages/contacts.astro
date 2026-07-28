@@ -5,7 +5,12 @@
  * ⚠️ The congress contact is undecided (CONTACT_EMAIL / CONTACT_PHONE are
  * TODO(Антон) in config/site.ts) and MUST NOT be welcome@congress-ph.ru — that
  * mailbox belongs to the 2026 site's technical operator. Until the owner
- * decides, the page says so plainly.
+ * decides, the page says so through the `Stub` block: the prose alone read as
+ * an unfinished page rather than a declared state (content audit М3).
+ *
+ * The stub is dropped from the block list the moment a contact exists — one
+ * config value flips the page from «будет опубликовано» to the real address,
+ * with no editing of the copy.
  */
 import SectionHeading from '@/components/SectionHeading.astro';
 import { CONTACT_EMAIL, CONTACT_PHONE } from '@/config/site';
@@ -14,9 +19,10 @@ import SectionLayout from '@/layouts/SectionLayout.astro';
 
 const { data: page } = await getPage('contacts');
 const hasContacts = CONTACT_EMAIL !== null || CONTACT_PHONE !== null;
+const blocks = hasContacts ? page.blocks.filter((b) => b.kind !== 'stub') : page.blocks;
 ---
 
-<SectionLayout page={page}>
+<SectionLayout page={{ ...page, blocks }}>
   {
     hasContacts && (
       <div class="ob-container ob-section">

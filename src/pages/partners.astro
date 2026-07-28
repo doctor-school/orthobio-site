@@ -2,21 +2,26 @@
 /**
  * /partners — ТЗ §4: уровни партнёрства + контакт.
  *
- * Partners of the LAST congress are shown as what they are — партнёры 2026,
- * under a year-named heading with a link into the archive. Nobody has been
- * announced for 2027 and nothing here implies otherwise.
+ * The page OPENS with the honest stub «партнёры 2027 будут объявлены»
+ * (`blocks` in partners.yaml) — before this the whole body of a 2027 page was
+ * the 2026 registry, whose tier headings repeat the very same five level names
+ * offered above, so the roster read as «уже занятые слоты» (content audit К1).
+ * The registry stays, but under an overline that names the congress it belongs
+ * to and a counter of what is in it.
  *
  * The «стать партнёром» action is a mailto: built from CONTACT_EMAIL
  * (⚠️ TODO(Антон) in config/site.ts). While that is null the page states where
- * the address will appear instead of shipping a broken link.
+ * the address will appear instead of shipping a broken link — and the copy in
+ * partners.yaml matches that state instead of inviting a request to nobody
+ * (content audit К2).
  */
 import PartnerTier from '@/components/PartnerTier.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Button from '@/components/Button.astro';
-import { CONTACT_EMAIL } from '@/config/site';
+import { CONTACT_EMAIL, REGISTRATION_OPENS } from '@/config/site';
 import { getCongressYear, getPage } from '@/content';
 import SectionLayout from '@/layouts/SectionLayout.astro';
-import { groupPartners } from '@/lib/congress';
+import { groupPartners, nbsp, plural } from '@/lib/congress';
 
 const REFERENCE_YEAR = 2026;
 
@@ -26,6 +31,9 @@ const reference = await getCongressYear(REFERENCE_YEAR);
 const sponsorTiers = groupPartners(reference?.data.partners ?? []).filter(
   (g) => g.tier !== 'organizer' && g.tier !== 'co-organizer',
 );
+// Counter of what the section actually renders, not of the year's full roster
+// (organizers are on /orgs).
+const sponsorCount = sponsorTiers.reduce((sum, g) => sum + g.items.length, 0);
 ---
 
 <SectionLayout page={page}>
@@ -37,16 +45,23 @@ const sponsorTiers = groupPartners(reference?.data.partners ?? []).filter(
         </Button>
       ) : (
         <p class="ob-note">
-          Адрес оргкомитета для партнёрских запросов будет опубликован к открытию регистрации в
-          ноябре 2026 года.
+          Адрес оргкомитета для партнёрских запросов будет опубликован к открытию регистрации — {
+            REGISTRATION_OPENS.nominative
+          }.
         </p>
       )
     }
   </div>
 
-  <div class="ob-container ob-section">
+  <div class="ob-container ob-section" id="p26">
     <SectionHeading
+      overline={`VII конгресс · ${REFERENCE_YEAR}`}
       title={`Партнёры конгресса ${REFERENCE_YEAR}`}
+      meta={
+        sponsorCount > 0
+          ? nbsp(sponsorCount, plural(sponsorCount, ['партнёр', 'партнёра', 'партнёров']))
+          : null
+      }
       linkLabel={`Всё о конгрессе ${REFERENCE_YEAR}`}
       linkHref={`/archive/${REFERENCE_YEAR}`}
     />

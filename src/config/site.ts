@@ -50,19 +50,37 @@ export const mediaUrl = (path: string): string =>
   path.startsWith(MEDIA_PREFIX) ? MEDIA_BASE_URL + path.slice(MEDIA_PREFIX.length) : path;
 
 /**
+ * Planned opening of registration (ТЗ §4: «трафик к открытию регистрации»).
+ *
+ * The date is repeated across a dozen strings — config, templates and page
+ * copy — and it is a PLAN, not an announced date: when it moves, it must move
+ * in one place. Templates read these constants directly; the page YAML cannot
+ * interpolate TypeScript, so `tests/unit/registration-date.test.ts` fails the
+ * build if any content file names a different month (content audit М2).
+ */
+export const REGISTRATION_OPENS = {
+  /** Nominative — «…к открытию регистрации — ноябрь 2026». */
+  nominative: 'ноябрь 2026',
+  /** Prepositional — «регистрация откроется в ноябре 2026 года». */
+  prepositional: 'ноябре 2026',
+} as const;
+
+/**
  * ⚠️ TODO(Антон): куда ведёт CTA «узнать первым» — t.me/DoctorSchool или
  * отдельный канал конгресса (Issue #4, ТЗ §6 open question 5)?
  *
- * `null` until decided. While null the home page renders the CTA block as a
- * static statement («Регистрация откроется в ноябре 2026») plus a note that the
- * subscription channel will be announced — an honest state, not a dead button.
- * Setting a URL here turns the same block into the primary CTA button and needs
- * no template change.
+ * The design v2 mockup draws the CTA as a live button to `t.me/DoctorSchool`,
+ * but which channel receives the traffic is an account decision, not a design
+ * one — so the value stays `null` until the owner confirms it. While null the
+ * home page renders the CTA block as a static statement («Регистрация
+ * откроется в ноябре 2026») plus a note that the subscription channel will be
+ * announced — an honest state, not a dead button. Setting a URL here turns the
+ * same block into the primary CTA button and needs no template change.
  */
 export const SUBSCRIBE_URL: string | null = null;
 
 /** Label of the «узнать первым» CTA (constant regardless of the channel). */
-export const SUBSCRIBE_LABEL = 'Регистрация откроется в ноябре 2026 — узнать первым';
+export const SUBSCRIBE_LABEL = `Регистрация откроется в ${REGISTRATION_OPENS.prepositional} — узнать первым`;
 
 /**
  * ⚠️ TODO(Антон): контактный адрес оргкомитета конгресса-2027.
@@ -111,14 +129,19 @@ export const FOOTER_LINKS = [...NAV, { href: '/contacts', label: 'Контакт
  * the `page` collection — page copy goes through the schema's `prose()`
  * transform, and these few strings are authored already typeset.
  *
- * The organizer line deliberately does NOT name a 2027 organizing body: the
- * 2026 site lists five organizer entities and the 2027 composition is not
- * confirmed (ТЗ §4 «честные заглушки»).
+ * `about` names МОО «ОРТО» as the organizer of the CONGRESS — the society that
+ * owns the event across all its editions, not a 2027 partner roster (owner
+ * input, design v2 footer). The copyright line no longer says «при поддержке
+ * Doctor.School»: on /partners that sat three screens under «партнёрский состав
+ * 2027 не объявлен» and read as a support claim for the upcoming congress
+ * (content audit С4). Doctor.School stays in the footer as the site's author —
+ * the mark alone, opposite the copyright.
  */
 export const FOOTER = {
+  slogan: 'Будущее начинается здесь',
   about:
-    'Научный конгресс по регенеративной травматологии и ортопедии. Материалы конгрессов 2021–2026 — в архиве сайта.',
+    'Конгресс по регенеративной травматологии и ортопедии. Организатор — МОО «Общество регенеративной травматологии и ортопедии» (ОРТО). Материалы конгрессов 2021–2026 — в архиве сайта.',
   /** Shown while CONTACT_EMAIL is null. */
-  contactsPending: 'Контакты оргкомитета будут опубликованы к открытию регистрации — ноябрь 2026.',
-  copyright: `© 2021–${SITE.upcomingYear} · При поддержке Doctor.School`,
+  contactsPending: `Контакты оргкомитета будут опубликованы к открытию регистрации — ${REGISTRATION_OPENS.nominative}.`,
+  copyright: `© 2021–${SITE.upcomingYear} · Конгресс ОРТОБИОЛОГИЯ`,
 } as const;

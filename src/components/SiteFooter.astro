@@ -1,11 +1,13 @@
 ---
 /**
- * SiteFooter — brand blurb, contacts, full sitemap, Doctor.School attribution
- * (bundle ui_kits/…/Chrome).
+ * SiteFooter — brand column, sitemap, contacts, plus a baseline row with the
+ * copyright and the Doctor.School mark (bundle ui_kits/…/Chrome v2).
  *
  * The contacts column is driven by `CONTACT_EMAIL` in config/site.ts: while it
  * is `null` (⚠️ TODO(Антон)) the column states honestly that contacts will be
- * published, and NEVER the operator's welcome@congress-ph.ru.
+ * published, and NEVER the operator's welcome@congress-ph.ru. Its second line
+ * points at /faq — the one page that answers what the missing address would
+ * have been asked.
  */
 // File references rather than inline SVG — see the note in SiteHeader.astro:
 // these two are 19KB of artwork repeated in the chrome of every page.
@@ -18,24 +20,11 @@ import { CONTACT_EMAIL, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
   <div class="ob-container ob-foot__in">
     <div class="ob-foot__col">
       <div class="ob-foot__mark">
-        <img src={markUrl} width="44" height="44" alt="" />
+        <img src={markUrl} width="40" height="40" alt="" />
         <b>{SITE.name}</b>
       </div>
+      <p class="ob-foot__slogan">{FOOTER.slogan}</p>
       <p>{FOOTER.about}</p>
-    </div>
-
-    <div class="ob-foot__col">
-      <p class="ob-foot__title">Контакты</p>
-      {
-        CONTACT_EMAIL ? (
-          <p>
-            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-          </p>
-        ) : (
-          <p>{FOOTER.contactsPending}</p>
-        )
-      }
-      <p><a href="/contacts">Контакты →</a></p>
     </div>
 
     <nav class="ob-foot__col" aria-label="Карта сайта">
@@ -52,8 +41,22 @@ import { CONTACT_EMAIL, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
     </nav>
 
     <div class="ob-foot__col">
-      <img class="ob-foot__ds" src={dsLogoUrl} width="96" height="40" alt="Doctor.School" />
-      <p>{FOOTER.copyright}</p>
+      <p class="ob-foot__title">Контакты</p>
+      {
+        CONTACT_EMAIL ? (
+          <p>
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          </p>
+        ) : (
+          <p>{FOOTER.contactsPending}</p>
+        )
+      }
+      <p><a class="ob-arrow" href="/faq">Вопросы и ответы</a></p>
     </div>
+  </div>
+
+  <div class="ob-container ob-foot__base">
+    <p>{FOOTER.copyright}</p>
+    <img class="ob-foot__ds" src={dsLogoUrl} width="82" height="34" alt="Doctor.School" />
   </div>
 </footer>

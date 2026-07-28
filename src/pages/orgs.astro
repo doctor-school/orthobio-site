@@ -2,17 +2,19 @@
 /**
  * /orgs — ТЗ §4: оргкомитет + организаторы.
  *
- * The 2027 composition is not confirmed, so the page renders the VERIFIED 2026
- * data from the content collection under headings that name the year — 2026
- * content is never presented as 2027 (ТЗ §4 principle 2). When a 2027 edition
- * file appears, this page switches to it by changing one constant.
+ * The 2027 composition is not confirmed, so the page OPENS with the honest
+ * stub (`blocks` in orgs.yaml) and only then renders the VERIFIED 2026 data
+ * from the content collection, under an overline and headings that name the
+ * year. A single sentence of lead was not enough: two screens of academic
+ * regalia outweighed it (content audit С3). When a 2027 edition file appears,
+ * this page switches to it by changing one constant.
  */
 import CommitteeList from '@/components/CommitteeList.astro';
 import PartnerTier from '@/components/PartnerTier.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import { getCongressYear, getPage } from '@/content';
 import SectionLayout from '@/layouts/SectionLayout.astro';
-import { groupPartners } from '@/lib/congress';
+import { groupPartners, nbsp, plural } from '@/lib/congress';
 
 /** The most recent congress whose composition is verified from recon. */
 const REFERENCE_YEAR = 2026;
@@ -27,8 +29,16 @@ const organizers = groupPartners(reference?.data.partners ?? []).filter(
 ---
 
 <SectionLayout page={page}>
-  <div class="ob-container ob-section">
-    <SectionHeading title={`Оргкомитет конгресса ${REFERENCE_YEAR}`} />
+  <div class="ob-container ob-section" id="orgs26">
+    <SectionHeading
+      overline={`VII конгресс · ${REFERENCE_YEAR}`}
+      title={`Оргкомитет конгресса ${REFERENCE_YEAR}`}
+      meta={
+        committee.length > 0
+          ? nbsp(committee.length, plural(committee.length, ['персона', 'персоны', 'персон']))
+          : null
+      }
+    />
     {
       committee.length > 0 ? (
         <CommitteeList members={committee} />

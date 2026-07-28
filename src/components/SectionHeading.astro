@@ -1,7 +1,8 @@
 ---
 /**
- * SectionHeading — nominative section/page heading with an optional overline and
- * a right-side invitation link (bundle components/core/SectionHeading).
+ * SectionHeading — nominative section/page heading with an optional overline, a
+ * counter appended to the title and a right-side invitation link
+ * (bundle components/core/SectionHeading).
  *
  * `level` picks the heading tag; the outline is always h1 → h2 → h3, so pages
  * pass `level="h1"` exactly once (axe `heading-order` is asserted in e2e).
@@ -12,9 +13,18 @@ interface Props {
   level?: 'h1' | 'h2';
   linkLabel?: string | null;
   linkHref?: string | null;
+  /** Counter for what the section holds («80 фото», «52 партнёра»). */
+  meta?: string | null;
 }
 
-const { title, overline = null, level = 'h2', linkLabel = null, linkHref = null } = Astro.props;
+const {
+  title,
+  overline = null,
+  level = 'h2',
+  linkLabel = null,
+  linkHref = null,
+  meta = null,
+} = Astro.props;
 const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
 ---
 
@@ -22,14 +32,26 @@ const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
   <div class="ob-sh__box">
     {overline && <span class="ob-sh__overline">{overline}</span>}
     {
-      level === 'h1' ? <h1 class="ob-sh__title">{title}</h1> : <h2 class="ob-sh__title">{title}</h2>
+      level === 'h1' ? (
+        <h1 class="ob-sh__title">
+          {title}
+          {meta && <span class="ob-sh__meta">{meta}</span>}
+        </h1>
+      ) : (
+        <h2 class="ob-sh__title">
+          {title}
+          {meta && <span class="ob-sh__meta">{meta}</span>}
+        </h2>
+      )
     }
   </div>
   {
-    /* Both or neither — a link whose only text is «→» has no accessible name. */
+    /* Both or neither — a link whose only text is «→» has no accessible name.
+       The arrow itself is `.ob-arrow`'s pseudo-element, so it stays out of the
+       accessible name entirely. */
     linkHref && linkLabel && (
-      <a class="ob-sh__link" href={linkHref}>
-        {linkLabel} →
+      <a class="ob-sh__link ob-arrow" href={linkHref}>
+        {linkLabel}
       </a>
     )
   }

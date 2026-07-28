@@ -55,6 +55,25 @@ h3 {
   overflow-wrap: break-word;
 }
 
+/* Ragging: headings balance across their lines, paragraphs avoid orphans.
+   Both degrade to normal wrapping where unsupported. */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Anchor targets (the year sections, the photo lightbox) must not land under
+   the sticky header. */
+[id] {
+  scroll-margin-top: 88px;
+}
+
 a {
   color: var(--text-link);
   text-decoration: underline;
@@ -65,6 +84,31 @@ a {
 
 a:hover {
   color: var(--text-link-hover);
+}
+
+/* Invitation link «… →» (design v2 global pattern): the arrow is a CSS
+   pseudo-element, so it never enters the accessible name of the link — the
+   label alone must read as a destination. */
+a.ob-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+a.ob-arrow::after {
+  content: '→';
+  transition: translate var(--t-state);
+}
+
+a.ob-arrow:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a.ob-arrow:hover::after {
+  translate: 3px 0;
 }
 
 /* Visible focus ring on EVERY interactive element (AGENTS.md hard rule). */
@@ -79,7 +123,8 @@ a:hover {
 }
 
 img,
-svg {
+svg,
+video {
   max-width: 100%;
 }
 

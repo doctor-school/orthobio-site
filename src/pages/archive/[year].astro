@@ -11,8 +11,10 @@
  */
 import { Image } from 'astro:assets';
 
+import Metaball from '@/assets/metaball-element.svg';
 import CommitteeList from '@/components/CommitteeList.astro';
 import DocCard from '@/components/DocCard.astro';
+import MediaGrid from '@/components/MediaGrid.astro';
 import PartnerTier from '@/components/PartnerTier.astro';
 import PersonCard from '@/components/PersonCard.astro';
 import PhotoGrid from '@/components/PhotoGrid.astro';
@@ -64,6 +66,11 @@ const programSummary =
 // placeholder (PR #14 review).
 const hasProgram = Boolean(c.program?.pdf) || sessions.length > 0;
 
+/** Videos past the third go behind the MediaGrid disclosure. */
+const VIDEOS_VISIBLE = 3;
+const videoHead = c.videos.slice(0, VIDEOS_VISIBLE);
+const videoRest = c.videos.slice(VIDEOS_VISIBLE);
+
 const partnerGroups = groupPartners(c.partners);
 const posterImages = c.posters.filter(
   (p): p is typeof p & { width: number; height: number } => p.width !== null && p.height !== null,
@@ -87,19 +94,23 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
 }
 <BaseLayout title={`${title} — архив`} description={description} noindex={c.draft}>
   <div class="ob-yh">
+    <Metaball class="ob-yh__pattern" aria-hidden="true" />
     <div class="ob-container ob-yh__in">
       {c.draft && <p class="ob-yh__draft">Черновик / фикстура — не публиковать</p>}
-      <p class="ob-yh__num">{ordinalLabel(c.number)} · Архив</p>
+      {/* A year page is a common search landing spot; without this the hub is
+          only reachable through the header nav. */}
+      <p class="ob-yh__crumb"><a href="/archive/">Архив конгрессов</a></p>
+      <p class="ob-yh__num">{ordinalLabel(c.number)}</p>
       <h1 class="ob-yh__title">{title}</h1>
       <p class="ob-yh__meta">{meta}</p>
     </div>
   </div>
 
   <div class="ob-container ob-section">
-    <SectionHeading title="Президиум и обращения" />
+    <SectionHeading title="Президиум" />
     {
       c.greetings.length > 0 ? (
-        <div class="ob-cards--narrow ob-cards">
+        <div class="ob-cards">
           {c.greetings.map((g, i) => (
             <PersonCard
               name={g.name}
@@ -126,8 +137,7 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
   }
 
   <div class="ob-container ob-section">
-    <SectionHeading title="Программа" />
-    {programSummary && <p class="ob-note">{programSummary}</p>}
+    <SectionHeading title="Программа" meta={programSummary} />
     {c.program?.pdf && <DocCard href={c.program.pdf} title={`${title}. Программа конгресса`} />}
     {
       days.map((day) => (
@@ -145,7 +155,10 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
   </div>
 
   <div class="ob-container ob-section">
-    <SectionHeading title="Фотоотчёт" />
+    <SectionHeading
+      title="Фотоотчёт"
+      meta={c.photos.length > 0 ? nbsp(c.photos.length, 'фото') : null}
+    />
     {
       c.photos.length > 0 ? (
         <PhotoGrid photos={c.photos} year={c.year} />
@@ -158,12 +171,25 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
   {
     c.videos.length > 0 && (
       <div class="ob-container ob-section">
-        <SectionHeading title="Видео" />
-        <div class="ob-cards">
-          {c.videos.map((v) => (
+        <SectionHeading
+          title="Видео"
+          meta={nbsp(c.videos.length, plural(c.videos.length, ['запись', 'записи', 'записей']))}
+        />
+        {/* Three cards up front, the rest behind the disclosure — a year can
+            hold three videos or thirty and the sections below must stay
+            reachable either way. */}
+        <MediaGrid total={c.videos.length} visible={VIDEOS_VISIBLE} noun="видео">
+          {videoHead.map((v) => (
             <VideoCard url={v.url} title={v.title} year={c.year} />
           ))}
-        </div>
+          {videoRest.length > 0 && (
+            <Fragment slot="rest">
+              {videoRest.map((v) => (
+                <VideoCard url={v.url} title={v.title} year={c.year} />
+              ))}
+            </Fragment>
+          )}
+        </MediaGrid>
       </div>
     )
   }
@@ -187,7 +213,9 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
           <DocCard href={p.url} title={p.title ?? `Постер конгресса ${c.year}`} />
         ))}
         {posterImages.length > 0 && (
-          <div class="ob-pg">
+          /* Reuses the photo grid's tile layout without its lightbox: a poster
+             is a document to open, not a gallery frame to page through. */
+          <div class="ob-pg__grid">
             {posterImages.map((p) => {
               // Dimensions are known here (that is what `posterImages` filters
               // on), so no `inferSize` — it would make the build download every
@@ -215,7 +243,13 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
   {
     partnerGroups.length > 0 && (
       <div class="ob-container ob-section">
-        <SectionHeading title={`Партнёры конгресса ${c.year}`} />
+        <SectionHeading
+          title={`Партнёры конгресса ${c.year}`}
+          meta={nbsp(
+            c.partners.length,
+            plural(c.partners.length, ['партнёр', 'партнёра', 'партнёров']),
+          )}
+        />
         {partnerGroups.map((group) => (
           <PartnerTier tier={group.tier} label={group.label} partners={group.items} />
         ))}

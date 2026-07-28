@@ -348,13 +348,32 @@ const listBlockSchema = z.object({
  * link is a CONTENT error and must fail the build, not ship as a nameless link
  * (PR #14 review).
  */
+/** Glyphs the Stub badge can carry — one per kind of missing content. */
+export const STUB_ICONS = [
+  'clock',
+  'calendar',
+  'photo',
+  'video',
+  'doc',
+  'people',
+  'partners',
+] as const;
+
 const stubBlockSchema = z.object({
   kind: z.literal('stub'),
   title: prose(),
   text: proseOrNull(),
   linkLabel: proseOrNull(),
-  /** Internal route; verbatim (not prose-routed — it is a path, not copy). */
+  /** Internal route or in-page anchor; verbatim (a path, not copy). */
   linkHref: z.string().nullable().default(null),
+  /** Badge glyph — names the TYPE of the content that is missing. */
+  icon: z.enum(STUB_ICONS).default('clock'),
+  /**
+   * Horizontal notice form, for a stub that opens a page whose remaining
+   * sections carry real (archive) content — as opposed to a stub that IS the
+   * whole page state, like /program.
+   */
+  compact: z.boolean().default(false),
 });
 
 /** Q&A rendered as native <details> (no client JS). */

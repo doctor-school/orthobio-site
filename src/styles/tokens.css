@@ -79,15 +79,25 @@
   /* Play-button scrim on the video facade (over the dark ink plate). */
   --scrim-play: oklch(0.35 0.05 250 / 0.85);
   --on-dark: #ffffff;
+  /* Photo lightbox: full-screen scrim plus the controls that sit on it. */
+  --scrim-lightbox: oklch(0.17 0.02 250 / 0.93);
+  --lightbox-caption: oklch(0.87 0.008 250);
+  --lightbox-control: oklch(1 0 0 / 0.16);
+  --lightbox-control-hover: oklch(1 0 0 / 0.32);
 
   /* --- Typography — Inter only, self-hosted (see base.css @font-face) ------- */
   --font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --fs-display: 2.5rem;
-  --lh-display: 1.1;
-  --fs-display-lg: 3.5rem;
-  --fs-h1: 2rem;
+  /* Display / h1 / h2 are FLUID (design v2): the size follows the viewport
+     instead of stepping at 1024px, so the 640–1023px band — tablets and split
+     windows, previously stuck at the phone size — no longer reads as a blown-up
+     mobile page. The clamp ceilings are the former desktop values (56/40/24px),
+     so nothing grows past what the design already sanctioned; the separate
+     `--fs-display-lg` token and its media query are gone with the step. */
+  --fs-display: clamp(2.375rem, 1.85rem + 2.4vw, 3.5rem);
+  --lh-display: 1.08;
+  --fs-h1: clamp(1.75rem, 1.5rem + 1.3vw, 2.5rem);
   --lh-h1: 1.15;
-  --fs-h2: 1.5rem;
+  --fs-h2: clamp(1.375rem, 1.32rem + 0.3vw, 1.5rem);
   --lh-h2: 1.25;
   --fs-h3: 1.1875rem;
   --lh-h3: 1.35;
@@ -122,7 +132,14 @@
 
   /* --- Layout & focus ------------------------------------------------------ */
   --container: 1200px;
-  --container-pad: 16px;
+  /* Fluid gutter (design v2): 16px on a phone, 24px once the window can afford
+     it — the container no longer hugs the viewport edge on a desktop. */
+  --container-pad: clamp(16px, 3vw, 24px);
+  /* Vertical rhythm between sections, fluid on the same principle. Replaces the
+     `--sp-7` → `--sp-8` step the section/band classes used to make at 768px. */
+  --sp-sec: clamp(44px, 4vw + 28px, 72px);
+  /* Line measure for running text blocks. */
+  --measure: 62ch;
   --focus-shadow: 0 0 0 3px var(--focus-ring);
 
   /* State transition — the only motion in the system (120–160ms ease-out). */

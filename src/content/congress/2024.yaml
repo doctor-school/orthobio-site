@@ -23,12 +23,18 @@ endDate: 2024-04-19
 place: null
 
 # «ОБРАЩЕНИЯ К УЧАСТНИКАМ» — 3 unique persons (recon: 5 cards with
-# duplicates). Card portraits for Загородний/Страхов are staged; Губин's card
-# had no portrait. Greeting texts not published (video addresses — videos[]).
+# duplicates). Greeting texts not published (video addresses — videos[]).
+#
+# photo: null у всех троих. У Губина карточка портрета не имела изначально;
+# у Загороднего и Страхова спасённые файлы (/media/2024/previews/zagorodniy.png,
+# strahov.png) — титульные стоп-кадры видео 16:9: зелёная моховая стена, поверх
+# левой половины кадра диагональная плашка с ФИО и регалиями, лицо в правой
+# трети. В кружке 72px это сплошная зелень, а не портрет (Issue #16 п.4).
+# Плашка с инициалом — санкционированное дизайном состояние карточки.
 greetings:
   - name: Загородний Н.В.
     role: Президент
-    photo: /media/2024/previews/zagorodniy.png
+    photo: null
     text: null
   - name: Губин А.В.
     role: Сопрезидент
@@ -36,7 +42,7 @@ greetings:
     text: null
   - name: Страхов М.А.
     role: член Оргкомитета
-    photo: /media/2024/previews/strahov.png
+    photo: null
     text: null
 
 committee: []

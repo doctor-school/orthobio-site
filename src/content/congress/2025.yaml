@@ -22,16 +22,24 @@ endDate: 2025-04-19
 place: null
 
 # «ОБРАЩЕНИЯ К УЧАСТНИКАМ» — 2 unique persons (the page prints the Страхов
-# card twice — Creatium artifact). Card portraits are staged; greeting texts
-# not published (video addresses — videos[]).
+# card twice — Creatium artifact). Greeting texts not published (video
+# addresses — videos[]).
+#
+# photo: null у обоих. Спасённые файлы
+# (/media/2025/previews/zagorodniy_ortobio_2025_03280.jpg,
+# strahov_ortobio_2025_03280_03280.jpg) — не портреты, а постеры видео 971×546
+# с гигантским словом «ОРТОБИОЛОГИЯ» во всю ширину и сильной блочной
+# пикселизацией: человек за буквами не читается даже в полный рост, не то что
+# в кружке 72px (Issue #16 п.4). Плашка с инициалом — санкционированное
+# дизайном состояние карточки.
 greetings:
   - name: Загородний Н. В.
     role: Президент конгресса
-    photo: /media/2025/previews/zagorodniy_ortobio_2025_03280.jpg
+    photo: null
     text: null
   - name: Страхов М. А.
     role: Член Оргкомитета конгресса
-    photo: /media/2025/previews/strahov_ortobio_2025_03280_03280.jpg
+    photo: null
     text: null
 
 # «ОРГКОМИТЕТ» — 9 persons, regalia verbatim from the page (incl. its typos

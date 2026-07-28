@@ -82,6 +82,67 @@ test('a year page renders its data and says «нет данных» for what is 
   await expect(program.getByText('нет данных')).toBeVisible();
 });
 
+test('a 2027 page opens with its stub, before any 2026 data', async ({ page }) => {
+  // The regression this guards is ordering, not presence: the copy already said
+  // «состав 2027 будет объявлен», but it sat under one line of lead followed by
+  // two screens of 2026 data, and the data won (content audit К1/С3).
+  for (const [path, dataSelector] of [
+    ['/partners', '.ob-pt'],
+    ['/orgs', '.ob-cl'],
+  ] as const) {
+    await page.goto(path);
+    const stubFirst = await page.evaluate((selector) => {
+      const stub = document.querySelector('.ob-stub');
+      const data = document.querySelector(selector);
+      if (!stub || !data) return null;
+      // eslint-disable-next-line no-bitwise
+      return Boolean(stub.compareDocumentPosition(data) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }, dataSelector);
+    expect(stubFirst, `${path} must open with the 2027 stub`).toBe(true);
+  }
+});
+
+test('the footer claims no 2027 supporter', async ({ page }) => {
+  await page.goto('/partners');
+  const footer = await page.locator('.ob-foot').innerText();
+  expect(footer).not.toContain('При поддержке');
+  expect(footer).toContain('© 2021–2027');
+});
+
+test('the photo lightbox opens and closes without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto('/archive/2022');
+  const lightbox = page.locator('#pg2022-1');
+  await expect(lightbox).toBeHidden();
+  await page.locator('.ob-pg__it').first().click();
+  await expect(lightbox).toBeVisible();
+  // ←/→ cycle, ✕ returns to the gallery anchor.
+  await lightbox.getByRole('link', { name: 'Следующее фото' }).click();
+  await expect(page.locator('#pg2022-2')).toBeVisible();
+  await page.locator('#pg2022-2 .ob-pg__close').click();
+  await expect(page.locator('#pg2022-2')).toBeHidden();
+  await context.close();
+});
+
+test('media past the fold is disclosed without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto('/archive/2022');
+  // 2022 holds 8 videos; three are up front, the rest behind the disclosure.
+  const hidden = page.locator('.ob-mg__more .ob-vc');
+  await expect(hidden.first()).toBeHidden();
+  await page.locator('.ob-mg__more summary').click();
+  await expect(hidden.first()).toBeVisible();
+
+  // 12 photos, 11 tiles up front.
+  const hiddenPhotos = page.locator('.ob-pg__more .ob-pg__it');
+  await expect(hiddenPhotos.first()).toBeHidden();
+  await page.locator('.ob-pg__more summary').click();
+  await expect(hiddenPhotos.first()).toBeVisible();
+  await context.close();
+});
+
 test('FAQ answers open without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();

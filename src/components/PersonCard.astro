@@ -10,9 +10,13 @@
  * intrinsic size at build — unlike photos/cover, the schema carries no
  * dimensions for greeting portraits.
  *
- * TODO(#2 media pipeline): the sources are 16:9 stills, not square headshots;
- * the crop is biased upward in CSS (.ob-pc__photo) so the face survives. The
- * real fix is square derivatives in the bucket.
+ * TODO(#2 media pipeline): NO year ships a portrait today. The rescued files
+ * are 16:9 title cards of the greeting videos — half the frame is a branded
+ * plate and the person sits in the right third, so a 72px circle showed a green
+ * wedge instead of a face (Issue #16). Every `photo` is `null` until square
+ * derivatives exist in the bucket; the initial plate below is the design's own
+ * state for that (PersonCard.prompt.md), not a fallback. The upward crop bias
+ * in CSS (.ob-pc__photo) stays for the day a portrait returns.
  */
 import { Image } from 'astro:assets';
 

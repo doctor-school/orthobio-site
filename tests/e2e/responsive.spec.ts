@@ -48,4 +48,25 @@ test.describe('responsive', () => {
       expect(blocking, `axe violations on expanded /faq: ${JSON.stringify(blocking)}`).toEqual([]);
     });
   }
+
+  // Same blind spot on the year page: every guard above measures the gallery
+  // CLOSED, and a `:target` lightbox exists only while the fragment points at
+  // it — so the state a reader actually looks at was untested.
+  for (const width of OVERFLOW_WIDTHS) {
+    test(`the open photo lightbox holds at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await page.goto('/archive/2022#pg2022-1');
+      await expect(page.locator('#pg2022-1')).toBeVisible();
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+      await expectNoColumnOverlap(page, `lightbox @${width}`);
+
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+      const blocking = results.violations.filter((v) =>
+        ['critical', 'serious'].includes(v.impact ?? ''),
+      );
+      expect(blocking, `axe violations on the open lightbox: ${JSON.stringify(blocking)}`).toEqual(
+        [],
+      );
+    });
+  }
 });

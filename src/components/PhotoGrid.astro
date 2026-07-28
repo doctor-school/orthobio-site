@@ -1,13 +1,35 @@
 ---
 /**
- * PhotoGrid — фотоотчёт года (bundle components/archive/PhotoGrid).
+ * PhotoGrid — фотоотчёт года (bundle components/archive/PhotoGrid v2).
  *
- * The originals in the bucket are camera JPEGs up to 5811px wide while a tile
- * is at most ~400px, so `<Image>` resizes them at BUILD time and emits a
- * `srcset`: a phone on mobile data downloads a tile, not a 3MB original. The
- * intrinsic ratio comes from the content model (the schema requires
- * width/height), which is what reserves layout space and keeps CLS at zero;
- * `displaySize()` caps the largest variant we ask sharp to produce.
+ * Three things beyond a plain grid, all of them pure CSS/HTML (the site ships
+ * zero client JS — AGENTS.md):
+ * • reportage grid: the first photo occupies a 2×2 cell from 640px up;
+ * • everything past `visible` hides inside a native <details>, so a year with
+ *   80 photos does not bury the sections under it;
+ * • click-to-enlarge is a `:target` lightbox — each photo has a full-screen
+ *   `<div id>` that the tile links to, with ←/→ links cycling through the set
+ *   and the backdrop/✕ linking back to the grid anchor.
+ *
+ * The originals in the bucket are camera JPEGs up to 5811px wide, so `<Image>`
+ * resizes them at BUILD time and emits a `srcset`: a tile and a lightbox frame
+ * are separate size ladders, and a phone on mobile data never downloads a 3MB
+ * original. The intrinsic ratio comes from the content model (the schema
+ * requires width/height), which is what reserves layout space and keeps CLS at
+ * zero; `displaySize()` caps the largest variant we ask sharp to produce.
+ *
+ * Known cost of `:target`, so the next reader does not file it as a defect —
+ * none of the three is fixable without the client JS the brief forbids (§5):
+ * • Escape does not close the lightbox, and neither does the Android Back
+ *   gesture in the sense a modal implies — Back walks the fragment history
+ *   backwards one photo at a time (open + n arrows = n+2 entries);
+ * • focus is not trapped: Tab past the ✕/←/→ leaves the overlay and lands on
+ *   page controls hidden behind the 93%-opaque scrim (WCAG 2.2 §2.4.11). The
+ *   frames are the LAST children of `.ob-pg`, so the escape happens as late in
+ *   the document order as the markup can push it, and the very first Tab after
+ *   opening still lands on «Закрыть»;
+ * • focus is not restored to the tile that opened the frame — closing returns
+ *   to the gallery anchor, so the next Tab restarts at the first tile.
  */
 import { Image } from 'astro:assets';
 
@@ -18,32 +40,164 @@ import { displaySize } from '@/lib/congress';
 interface Props {
   photos: CongressEntry['data']['photos'];
   year: number;
+  /** Tiles shown before the «Показать все фото» disclosure. */
+  visible?: number;
+  /** Anchor base — only needed if a page ever renders two galleries. */
+  id?: string;
+  /**
+   * Tiles link to a full-screen frame. `false` renders the grid alone — no
+   * anchors, no frames — for a context where a fragment link would fight the
+   * page (a teaser inside another `:target` surface). No caller needs it yet;
+   * it is here because the design's contract has it (bundle PhotoGrid props).
+   */
+  lightbox?: boolean;
 }
 
-const { photos, year } = Astro.props;
+const { photos, year, visible = 11, id, lightbox = true } = Astro.props;
 
-/** Tile widths across the ladder: one column at 360 → four at 1280. */
+const base = id ?? `pg${year}`;
+/**
+ * A disclosure that reveals one or two tiles costs a click and a label to save
+ * half a screen — 2022 and 2025 hold exactly 12 photos against a default of 11,
+ * so «Показать все фото (12)» used to unfold a SINGLE tile (PR #17 review). The
+ * default comes from the design's 80-photo demo, where it is right; the floor
+ * below keeps it right for the sets we actually have.
+ */
+const MIN_HIDDEN = 3;
+const shown = photos.length - visible < MIN_HIDDEN ? photos.length : visible;
+const head = photos.slice(0, shown);
+const rest = photos.slice(shown);
+
+/** Tile widths across the ladder: two columns at 360 → four at 1280. */
 const TILE_WIDTHS = [320, 480, 640];
 const TILE_MAX = 640;
-const TILE_SIZES = '(min-width: 1024px) 300px, (min-width: 640px) 45vw, 92vw';
+const TILE_SIZES = '(min-width: 1024px) 300px, (min-width: 640px) 33vw, 46vw';
+
+/**
+ * The lead tile is a 2×2 cell from 640px up (see `.ob-pg__grid--lead`), so it
+ * renders at roughly twice the width of its neighbours — 570px at a 1280px
+ * viewport — and the shared `TILE_SIZES` was asking the browser for a 300px
+ * variant, i.e. a 1.9× upscale that showed as visibly soft lettering next to the
+ * crisp tiles beside it (a11y audit of PR #17). One `sizes` string cannot serve
+ * both, because `sizes` is per-image and this image alone spans two columns.
+ */
+const LEAD_WIDTHS = [480, 640, 960, 1280];
+const LEAD_MAX = 1280;
+const LEAD_SIZES = '(min-width: 1024px) 620px, (min-width: 640px) 66vw, 46vw';
+
+/** Lightbox frame: capped at the design's `max-width: min(1100px, 94vw)`. */
+const FRAME_WIDTHS = [640, 1100];
+const FRAME_MAX = 1100;
+const FRAME_SIZES = '(min-width: 1170px) 1100px, 94vw';
+
+const altOf = (
+  photo: CongressEntry['data']['photos'][number],
+  index: number,
+): string => photo.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${year}, фото ${index + 1}`;
 ---
 
 {
   photos.length > 0 && (
-    <div class="ob-pg">
-      {photos.map((p, i) => {
-        const size = displaySize(p.width, p.height, TILE_MAX);
+    <div class="ob-pg" id={base}>
+      <div class="ob-pg__grid ob-pg__grid--lead">
+        {head.map((p, i) => {
+          // Only the first tile of the head grid gets the 2×2 cell, so only it
+          // gets the wider ladder.
+          const lead = i === 0;
+          const size = displaySize(p.width, p.height, lead ? LEAD_MAX : TILE_MAX);
+          const img = (
+            <Image
+              src={mediaUrl(p.url)}
+              alt={altOf(p, i)}
+              width={size.width}
+              height={size.height}
+              widths={lead ? LEAD_WIDTHS : TILE_WIDTHS}
+              sizes={lead ? LEAD_SIZES : TILE_SIZES}
+              loading="lazy"
+              decoding="async"
+            />
+          );
+          return lightbox ? (
+            <a class="ob-pg__it" href={`#${base}-${i + 1}`}>
+              {img}
+            </a>
+          ) : (
+            <span class="ob-pg__it">{img}</span>
+          );
+        })}
+      </div>
+
+      {rest.length > 0 && (
+        <details class="ob-pg__more">
+          <summary>
+            <span class="ob-pg__sum-show">Показать все фото ({photos.length})</span>
+            <span class="ob-pg__sum-hide">Свернуть фотоотчёт</span>
+          </summary>
+          <div class="ob-pg__grid">
+            {rest.map((p, i) => {
+              const index = i + shown;
+              const size = displaySize(p.width, p.height, TILE_MAX);
+              const img = (
+                <Image
+                  src={mediaUrl(p.url)}
+                  alt={altOf(p, index)}
+                  width={size.width}
+                  height={size.height}
+                  widths={TILE_WIDTHS}
+                  sizes={TILE_SIZES}
+                  loading="lazy"
+                  decoding="async"
+                />
+              );
+              return lightbox ? (
+                <a class="ob-pg__it" href={`#${base}-${index + 1}`}>
+                  {img}
+                </a>
+              ) : (
+                <span class="ob-pg__it">{img}</span>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
+      {lightbox && photos.map((p, i) => {
+        const prev = ((i - 1 + photos.length) % photos.length) + 1;
+        const next = ((i + 1) % photos.length) + 1;
+        const size = displaySize(p.width, p.height, FRAME_MAX);
         return (
-          <Image
-            src={mediaUrl(p.url)}
-            alt={p.alt ?? `Конгресс ОРТОБИОЛОГИЯ ${year}, фото ${i + 1}`}
-            width={size.width}
-            height={size.height}
-            widths={TILE_WIDTHS}
-            sizes={TILE_SIZES}
-            loading="lazy"
-            decoding="async"
-          />
+          <div class="ob-pg__lb" id={`${base}-${i + 1}`} role="dialog" aria-label={altOf(p, i)}>
+            {/* Click-outside closes; kept out of the tab order because the ✕
+                right next to it is the same action with a real label. */}
+            <a class="ob-pg__bg" href={`#${base}`} aria-label="Закрыть" tabindex="-1" />
+            <a class="ob-pg__close" href={`#${base}`} aria-label="Закрыть">
+              ✕
+            </a>
+            <figure>
+              <Image
+                src={mediaUrl(p.url)}
+                alt={altOf(p, i)}
+                width={size.width}
+                height={size.height}
+                widths={FRAME_WIDTHS}
+                sizes={FRAME_SIZES}
+                loading="lazy"
+                decoding="async"
+              />
+              <a class="ob-pg__nav ob-pg__nav--prev" href={`#${base}-${prev}`} aria-label="Предыдущее фото">
+                ←
+              </a>
+              <a class="ob-pg__nav ob-pg__nav--next" href={`#${base}-${next}`} aria-label="Следующее фото">
+                →
+              </a>
+              <figcaption>
+                <span>{altOf(p, i)}</span>
+                <span>
+                  {i + 1} / {photos.length}
+                </span>
+              </figcaption>
+            </figure>
+          </div>
         );
       })}
     </div>

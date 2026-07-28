@@ -12,7 +12,7 @@ import Hero from '@/components/Hero.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Stat from '@/components/Stat.astro';
 import Stub from '@/components/Stub.astro';
-import { SUBSCRIBE_LABEL, SUBSCRIBE_URL } from '@/config/site';
+import { REGISTRATION_OPENS, SUBSCRIBE_LABEL, SUBSCRIBE_URL } from '@/config/site';
 import { getCongressYears, getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 
@@ -42,7 +42,9 @@ const DATES_2027 = 'Весна 2027, даты уточняются';
           <>
             {/* Канал подписки не выбран (TODO(Антон) в config/site.ts): блок
                 остаётся, но как честное утверждение, а не мёртвая кнопка. */}
-            <p class="ob-hero__cta-pending">Регистрация откроется в ноябре 2026 года</p>
+            <p class="ob-hero__cta-pending">
+              Регистрация откроется в {REGISTRATION_OPENS.prepositional} года
+            </p>
             <p class="ob-hero__cta-note">
               Канал, в котором можно узнать об открытии регистрации первым, будет объявлен здесь.
             </p>
@@ -61,8 +63,15 @@ const DATES_2027 = 'Весна 2027, даты уточняются';
   {
     programStub && (
       <div class="ob-container ob-section">
-        <SectionHeading overline="2027" title="Программа конгресса" linkLabel="Подробнее" linkHref="/program" />
+        <SectionHeading
+          overline="2027"
+          title="Программа конгресса"
+          linkLabel="О программе"
+          linkHref="/program"
+        />
         <Stub
+          compact
+          icon="calendar"
           level="h3"
           title={programStub.title}
           text={programStub.text}

@@ -17,21 +17,30 @@ startDate: 2022-04-15
 endDate: 2022-04-16
 place: null
 
-# «ОБРАЩЕНИЕ К УЧАСТНИКАМ» — 3 cards, page order; card images are the staged
-# video-preview stills. Greeting texts were not published (video addresses
-# instead — see videos[]).
+# «ОБРАЩЕНИЕ К УЧАСТНИКАМ» — 3 cards, page order. Greeting texts were not
+# published (video addresses instead — see videos[]).
+#
+# photo: null для всех троих. Спасённые файлы в бакете есть
+# (/media/2022/previews/prevyu_zagorodniy.png, gubin_prevyu.png,
+# prevyu_strahov.png), но это НЕ портреты, а титульные стоп-кадры видео 16:9:
+# левую половину кадра занимает зелёная плашка «ОРТОБИОЛОГИЯ 2022» со знаком
+# ОРТО, человек сидит в правой трети. В кружке 72px виден кирпич и зелёный
+# скос, а не лицо (жалоба владельца, Issue #16 п.4). Плашка с инициалом —
+# санкционированное дизайном состояние карточки (PersonCard.prompt.md:
+# «имя + роль без фото это боевое состояние»). Вернуть фото можно, когда в
+# бакете появятся квадратные кропы лиц (Issue #2, media pipeline).
 greetings:
   - name: Загородний Н.В.
     role: Президент конгресса
-    photo: /media/2022/previews/prevyu_zagorodniy.png
+    photo: null
     text: null
   - name: Губин А.В.
     role: Сопрезидент
-    photo: /media/2022/previews/gubin_prevyu.png
+    photo: null
     text: null
   - name: Страхов М.А.
     role: член Оргкомитета
-    photo: /media/2022/previews/prevyu_strahov.png
+    photo: null
     text: null
 
 committee: []

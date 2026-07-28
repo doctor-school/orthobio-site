@@ -23,28 +23,18 @@
   padding-inline: var(--container-pad);
 }
 
+/* Section rhythm rides the fluid `--sp-sec` (design v2) — the former 768px step
+   from `--sp-7` to `--sp-8` is expressed by the token itself now. */
 .ob-section {
-  padding-top: var(--sp-7);
-}
-
-@media (min-width: 768px) {
-  .ob-section {
-    padding-top: var(--sp-8);
-  }
+  padding-top: var(--sp-sec);
 }
 
 /* Alternating faintly tinted band (design: «секции чередуются подложкой»). */
 .ob-band {
   background: var(--surface-section);
-  margin-top: var(--sp-7);
-  padding-bottom: var(--sp-7);
-}
-
-@media (min-width: 768px) {
-  .ob-band {
-    margin-top: var(--sp-8);
-    padding-bottom: var(--sp-8);
-  }
+  border-block: 1px solid var(--hairline);
+  margin-top: var(--sp-sec);
+  padding-bottom: var(--sp-sec);
 }
 
 /* Card grid: reflows by available width, never by hardcoded breakpoints.
@@ -62,7 +52,7 @@
 
 /* Prose column: measure-limited running text under a section heading. */
 .ob-prose {
-  max-width: 68ch;
+  max-width: var(--measure);
   color: var(--text-muted);
 }
 
@@ -131,6 +121,20 @@
   background: var(--surface-page);
 }
 
+/* Brand ribbon opening the page (design v2 chrome); the footer closes with the
+   same sequence. Decorative — it carries no information, hence a pseudo. */
+.ob-head::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--ob-sky) 0 46%,
+    var(--ob-green) 46% 78%,
+    var(--ob-lime) 78% 100%
+  );
+}
+
 /* Sticky only where there is vertical room to spare: on a 360px phone a
    sticky header + wrapped nav would eat a third of the viewport. */
 @media (min-width: 1024px) {
@@ -157,13 +161,19 @@
   color: var(--text-body);
   margin-right: auto;
   border-radius: var(--r-sm);
+  transition: color var(--t-state);
 }
 
-.ob-head__logo:hover .ob-head__name {
+/* The state lives on the LINK, not on the wordmark inside it: styling the
+   descendant left `.ob-head__logo` itself unchanged under the pointer, which is
+   what a state sweep over interactive elements reports as «no :hover» (a11y
+   audit of PR #17). `.ob-head__name` carries no colour of its own, so it
+   inherits the change and the pixels on screen are the same as before. */
+.ob-head__logo:hover {
   color: var(--text-link);
 }
 
-.ob-head__logo:active .ob-head__name {
+.ob-head__logo:active {
   color: var(--text-link-hover);
 }
 
@@ -232,41 +242,68 @@
 .ob-foot {
   border-top: 1px solid var(--hairline);
   background: var(--surface-faint);
-  margin-top: var(--sp-8);
+  margin-top: var(--sp-sec);
+}
+
+/* Brand ribbon closing the page — the same sky/green/lime sequence the header
+   opens with (design v2 chrome). */
+.ob-foot::after {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--ob-sky) 0 46%,
+    var(--ob-green) 46% 78%,
+    var(--ob-lime) 78% 100%
+  );
 }
 
 .ob-foot__in {
   display: grid;
   gap: var(--sp-6);
-  padding-block: var(--sp-7);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  padding-block: var(--sp-7) var(--sp-6);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+  .ob-foot__in {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: var(--sp-7);
+  }
 }
 
 .ob-foot__col {
   font-size: var(--fs-small);
+  line-height: var(--lh-small);
   color: var(--text-muted);
   min-width: 0;
 }
 
 .ob-foot__col p {
-  margin: 0 0 6px;
+  margin: 0 0 var(--sp-2);
+  max-width: 42ch;
 }
 
 .ob-foot__title {
-  color: var(--text-body);
+  font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--text-body);
+  margin: 0 0 var(--sp-3);
 }
 
 .ob-foot__mark {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-3);
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .ob-foot__mark img {
-  height: 44px;
-  width: 44px;
+  height: 40px;
+  width: 40px;
   flex: none;
 }
 
@@ -276,9 +313,13 @@
   letter-spacing: 0.04em;
 }
 
-.ob-foot__ds {
-  height: 40px;
-  width: auto;
+.ob-foot__slogan {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-sky-text);
+  margin: 0 0 var(--sp-3);
 }
 
 .ob-foot__map {
@@ -286,14 +327,47 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 /* Footer link rows are 19px tall from the small type alone — padded to clear
    the 24px pointer-target floor (WCAG 2.2 §2.5.8) without changing the look. */
 .ob-foot__map a {
   display: inline-block;
-  padding-block: 3px;
+  padding-block: 5px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.ob-foot__map a:hover {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Baseline row: copyright on the left, the Doctor.School mark opposite. The
+   attribution is the site's AUTHORSHIP and deliberately carries no «при
+   поддержке» claim — the 2027 partner roster is not announced (content audit
+   С4). */
+.ob-foot__base {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding-block: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--hairline);
+}
+
+.ob-foot__base p {
+  margin: 0;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.ob-foot__ds {
+  height: 34px;
+  width: auto;
 }
 
 /* ── Button ──────────────────────────────────────────────────────────────── */
@@ -413,6 +487,19 @@
   font-weight: var(--fw-bold);
 }
 
+/* Counter appended to a section title («80 фото», «52 партнёра», design v2).
+   It lives INSIDE the heading element, so it is part of the heading's
+   accessible name — which is the point: «Фотоотчёт, 80 фото» is what a screen
+   reader user needs from the outline, not a detached number. */
+.ob-sh__meta {
+  font-size: var(--fs-small);
+  line-height: 1;
+  color: var(--text-muted);
+  font-weight: var(--fw-regular);
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
 /* 24px minimum pointer target (WCAG 2.2 §2.5.8): small type alone renders a
    19–22px line box (audit nit N3). Same treatment as the footer links. */
 .ob-sh__link,
@@ -466,17 +553,29 @@
   background: var(--surface-faint);
   border: 1px dashed var(--hairline);
   border-radius: var(--r-lg);
-  padding: var(--sp-6) var(--sp-5);
+  padding: var(--sp-7) var(--sp-5);
   text-align: center;
   max-width: 640px;
 }
 
-.ob-stub__icon {
-  width: 36px;
-  height: 36px;
+/* Icon plate — the type of the missing content is readable at a glance
+   (design v2: calendar for a program, people for a committee, …). */
+.ob-stub__badge {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-pill);
+  background: var(--ob-sky-tint);
   color: var(--ob-sky-text);
-  margin: 0 auto var(--sp-3);
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--sp-4);
+  flex: none;
+}
+
+.ob-stub__badge svg {
+  width: 26px;
+  height: 26px;
 }
 
 .ob-stub__title {
@@ -490,11 +589,57 @@
 .ob-stub__text {
   font-size: var(--fs-body);
   color: var(--text-muted);
-  margin: 0 0 var(--sp-4);
+  margin: 0 auto var(--sp-4);
+  max-width: 46ch;
 }
 
 .ob-stub__link {
   font-size: var(--fs-body);
+}
+
+/* Compact form (design v2): the stub is one block AMONG others on a page
+   («Партнёры 2027 будут объявлены» above the 2026 registry), not the whole
+   page state — so it reads as a horizontal notice rather than a hero-sized
+   empty state. */
+.ob-stub--compact {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  text-align: left;
+  padding: var(--sp-5);
+  max-width: 720px;
+  border-radius: var(--r-md);
+}
+
+.ob-stub--compact .ob-stub__badge {
+  margin: 0;
+  width: 44px;
+  height: 44px;
+}
+
+.ob-stub--compact .ob-stub__badge svg {
+  width: 22px;
+  height: 22px;
+}
+
+.ob-stub--compact .ob-stub__box {
+  min-width: 0;
+}
+
+.ob-stub--compact .ob-stub__title {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}
+
+.ob-stub--compact .ob-stub__text {
+  margin: 0 0 8px;
+  max-width: none;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+.ob-stub--compact .ob-stub__link {
+  font-size: var(--fs-small);
 }
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
@@ -577,12 +722,6 @@
   font-weight: var(--fw-bold);
   margin: 0 0 var(--sp-3);
   max-width: 16em;
-}
-
-@media (min-width: 1024px) {
-  .ob-hero__title {
-    font-size: var(--fs-display-lg);
-  }
 }
 
 .ob-hero__dates {
@@ -898,6 +1037,9 @@ a.ob-yc:active {
   color: var(--text-body);
   text-decoration: none;
   overflow-wrap: anywhere;
+  /* Long organisation names («МОО «Общество регенеративной травматологии и
+     ортопедии» (ОРТО)») read as an even block instead of a ragged tail. */
+  text-wrap: balance;
   transition:
     box-shadow var(--t-state),
     border-color var(--t-state);
@@ -1032,22 +1174,248 @@ a.ob-pt__card:active {
   overflow-wrap: anywhere;
 }
 
-/* ── PhotoGrid ───────────────────────────────────────────────────────────── */
+/* ── MediaGrid (disclosure over a card grid, zero client JS) ─────────────── */
 
-.ob-pg {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-  gap: var(--sp-3);
+/* Shared «Показать все …» disclosure button, used by MediaGrid and PhotoGrid.
+   Styled as the system's secondary button; the label swaps to «Свернуть» when
+   the <details> is open, which is why both spans always render. */
+.ob-mg__more,
+.ob-pg__more {
+  text-align: center;
 }
 
-.ob-pg img {
+.ob-mg__more {
+  margin-top: var(--sp-4);
+}
+
+.ob-pg__more {
+  margin-top: var(--sp-3);
+}
+
+.ob-mg__more summary,
+.ob-pg__more summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--ds-blue-dark);
+  background: var(--surface-card);
+  border: 1px solid color-mix(in oklab, var(--ds-blue-dark) 32%, var(--bg));
+  border-radius: var(--r-pill);
+  padding: 10px 20px;
+  transition:
+    background var(--t-state),
+    border-color var(--t-state);
+}
+
+.ob-mg__more summary::-webkit-details-marker,
+.ob-pg__more summary::-webkit-details-marker {
+  display: none;
+}
+
+.ob-mg__more summary:hover,
+.ob-pg__more summary:hover {
+  background: var(--ob-sky-tint);
+  border-color: var(--ds-blue-dark);
+}
+
+.ob-mg__more summary:active,
+.ob-pg__more summary:active {
+  background: var(--surface);
+}
+
+.ob-mg__more[open] summary {
+  margin-bottom: var(--sp-4);
+}
+
+.ob-pg__more[open] summary {
+  margin-bottom: var(--sp-3);
+}
+
+.ob-mg__more[open] .ob-mg__sum-show,
+.ob-pg__more[open] .ob-pg__sum-show {
+  display: none;
+}
+
+.ob-mg__more:not([open]) .ob-mg__sum-hide,
+.ob-pg__more:not([open]) .ob-pg__sum-hide {
+  display: none;
+}
+
+/* The disclosure button is centred; the revealed grid is not. */
+.ob-mg__more .ob-mg__grid,
+.ob-pg__more .ob-pg__grid {
+  text-align: left;
+}
+
+.ob-mg__grid {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+}
+
+/* ── PhotoGrid ───────────────────────────────────────────────────────────── */
+
+/* Reportage grid: two columns on a phone, four from lg, and the first tile of
+   the lead grid claims a 2×2 cell once there are three columns to spare. */
+.ob-pg__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+@media (min-width: 640px) {
+  .ob-pg__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .ob-pg__grid--lead .ob-pg__it:first-child {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  /* The lead tile fills its taller cell instead of keeping the 3:2 crop. */
+  .ob-pg__grid--lead .ob-pg__it:first-child img {
+    aspect-ratio: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ob-pg__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.ob-pg__grid img {
   width: 100%;
-  height: auto;
+  height: 100%;
   aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: var(--r-sm);
   background: var(--surface);
   display: block;
+}
+
+.ob-pg__it {
+  display: block;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface);
+  transition: box-shadow var(--t-state);
+}
+
+a.ob-pg__it:hover {
+  box-shadow: var(--shadow-lift);
+}
+
+a.ob-pg__it:active {
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+/* ── PhotoGrid lightbox (:target, no client JS) ──────────────────────────── */
+
+/* Hidden until its id is the URL fragment; closing links back to the gallery
+   anchor, which is why every control is an <a> and not a button. */
+.ob-pg__lb {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  padding: var(--sp-4);
+  background: var(--scrim-lightbox);
+}
+
+.ob-pg__lb:target {
+  display: grid;
+  place-items: center;
+}
+
+/* Scroll lock, without a byte of client JS. The scrim is 93% opaque, so a wheel
+   or a swipe over it used to scroll a page the reader cannot see — and closing
+   then returned the gallery anchor to a different position than it was opened
+   from. `:has()` is supported by every target browser (Chrome 105+, Safari
+   15.4+, Firefox 121+); where it is not, the degradation is exactly today's
+   behaviour. */
+html:has(.ob-pg__lb:target) {
+  overflow: hidden;
+}
+
+.ob-pg__bg {
+  position: absolute;
+  inset: 0;
+}
+
+.ob-pg__lb figure {
+  margin: 0;
+  position: relative;
+  max-width: min(1100px, 94vw);
+}
+
+.ob-pg__lb figure img {
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: var(--r-md);
+  display: block;
+}
+
+.ob-pg__lb figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  color: var(--lightbox-caption);
+  font-size: var(--fs-small);
+  margin-top: 10px;
+}
+
+.ob-pg__nav,
+.ob-pg__close {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  background: var(--lightbox-control);
+  color: var(--on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  position: absolute;
+  transition: background var(--t-state);
+}
+
+.ob-pg__nav:hover,
+.ob-pg__close:hover,
+.ob-pg__nav:active,
+.ob-pg__close:active {
+  background: var(--lightbox-control-hover);
+  color: var(--on-dark);
+}
+
+.ob-pg__nav {
+  top: 50%;
+  translate: 0 -50%;
+  font-size: 20px;
+}
+
+.ob-pg__nav--prev {
+  left: 10px;
+}
+
+.ob-pg__nav--next {
+  right: 10px;
+}
+
+.ob-pg__close {
+  top: 14px;
+  right: 14px;
+  font-size: 18px;
+  z-index: 61;
 }
 
 /* ── VideoCard ───────────────────────────────────────────────────────────── */
@@ -1248,13 +1616,65 @@ details[open] > .ob-faq__q::after {
 
 /* ── Year page header band ───────────────────────────────────────────────── */
 
+/* Sky-tinted band with the brand motif (design v2): an archive year now reads
+   as a distinct destination rather than a paler copy of a section page. */
 .ob-yh {
+  position: relative;
+  overflow: hidden;
   border-bottom: 1px solid var(--hairline);
-  background: var(--surface-faint);
+  background: var(--ob-sky-tint);
+}
+
+.ob-yh__pattern {
+  position: absolute;
+  right: -80px;
+  top: -90px;
+  width: 280px;
+  /* The source SVG carries width/height attributes; height must follow the CSS
+     width or the artwork letterboxes inside its own box. */
+  height: auto;
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
 }
 
 .ob-yh__in {
-  padding-block: var(--sp-7);
+  position: relative;
+  padding-block: var(--sp-6) var(--sp-7);
+}
+
+/* Breadcrumb back to the hub — the year page is otherwise a dead end for
+   anyone who arrived from search. */
+.ob-yh__crumb {
+  font-size: var(--fs-small);
+  margin: 0 0 var(--sp-5);
+}
+
+.ob-yh__crumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+
+.ob-yh__crumb a::before {
+  content: '←';
+  transition: translate var(--t-state);
+}
+
+.ob-yh__crumb a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ob-yh__crumb a:hover::before {
+  translate: -3px 0;
+}
+
+.ob-yh__crumb a:active {
+  color: var(--ob-sky-text);
 }
 
 .ob-yh__num {
@@ -1275,6 +1695,7 @@ details[open] > .ob-faq__q::after {
 
 .ob-yh__meta {
   font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
   color: var(--text-muted);
   margin: 0;
 }

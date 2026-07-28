@@ -1,0 +1,52 @@
+---
+/**
+ * MediaGrid — card grid that hides everything past the first few behind a
+ * native <details> (bundle components/archive/MediaGrid). Used where a year may
+ * hold three cards or thirty: видео, документы.
+ *
+ * DEVIATIONS from the bundle, both forced by repo rules:
+ * • The bundle counts and slices `React.Children`; Astro has no equivalent, so
+ *   the caller passes the already-split head (default slot) and tail (`rest`
+ *   slot) plus the `total` the button prints.
+ * • The bundle's `min` prop lands as an inline `style`, which AGENTS.md
+ *   forbids. The column floor is fixed at 300px in CSS — the value every call
+ *   site uses.
+ *
+ * Zero client JS: <details> is the disclosure (design brief §5).
+ */
+interface Props {
+  /** Total number of cards, for «Показать все видео (N)». */
+  total: number;
+  /** How many the caller put in the default slot; the rest go in `rest`. */
+  visible: number;
+  /** Noun in the button label; the design's default is «материалы». */
+  noun?: string;
+}
+
+const { total, visible, noun = 'материалы' } = Astro.props;
+// Counted, not probed: `Astro.slots.has('rest')` is true even when the slot's
+// content evaluates to nothing, which rendered an empty disclosure for every
+// year with three videos or fewer.
+const hasRest = total > visible;
+---
+
+<div class="ob-mg">
+  <div class="ob-mg__grid">
+    <slot />
+  </div>
+  {
+    hasRest && (
+      <details class="ob-mg__more">
+        <summary>
+          <span class="ob-mg__sum-show">
+            Показать все {noun} ({total})
+          </span>
+          <span class="ob-mg__sum-hide">Свернуть</span>
+        </summary>
+        <div class="ob-mg__grid">
+          <slot name="rest" />
+        </div>
+      </details>
+    )
+  }
+</div>

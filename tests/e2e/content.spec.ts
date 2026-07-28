@@ -28,8 +28,11 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('2027');
   // The dates placeholder IS the fact — no invented 2027 dates.
   await expect(page.getByText(/даты уточняются/i)).toBeVisible();
-  // Figures are labelled as past congresses.
-  await expect(page.getByText(/Цифры прошедших конгрессов/i)).toBeVisible();
+  // Figures are labelled as past congresses…
+  await expect(page.getByText(/прошедших конгрессов/i)).toBeVisible();
+  // …and the caption dates only the range the archive can show. 2020 was an
+  // inference, not a sourced year (PR #17 review).
+  await expect(page.locator('body')).not.toContainText('2020');
 });
 
 test('the operator mailbox is never published', async ({ page }) => {
@@ -80,6 +83,67 @@ test('a year page renders its data and says «нет данных» for what is 
   await expect(page.locator('.ob-pg img').first()).toBeVisible();
   const program = page.locator('.ob-section', { has: page.getByRole('heading', { name: 'Программа' }) });
   await expect(program.getByText('нет данных')).toBeVisible();
+});
+
+test('a 2027 page opens with its stub, before any 2026 data', async ({ page }) => {
+  // The regression this guards is ordering, not presence: the copy already said
+  // «состав 2027 будет объявлен», but it sat under one line of lead followed by
+  // two screens of 2026 data, and the data won (content audit К1/С3).
+  for (const [path, dataSelector] of [
+    ['/partners', '.ob-pt'],
+    ['/orgs', '.ob-cl'],
+  ] as const) {
+    await page.goto(path);
+    const stubFirst = await page.evaluate((selector) => {
+      const stub = document.querySelector('.ob-stub');
+      const data = document.querySelector(selector);
+      if (!stub || !data) return null;
+      // eslint-disable-next-line no-bitwise
+      return Boolean(stub.compareDocumentPosition(data) & Node.DOCUMENT_POSITION_FOLLOWING);
+    }, dataSelector);
+    expect(stubFirst, `${path} must open with the 2027 stub`).toBe(true);
+  }
+});
+
+test('the footer claims no 2027 supporter', async ({ page }) => {
+  await page.goto('/partners');
+  const footer = await page.locator('.ob-foot').innerText();
+  expect(footer).not.toContain('При поддержке');
+  expect(footer).toContain('© 2021–2027');
+});
+
+test('the photo lightbox opens and closes without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto('/archive/2022');
+  const lightbox = page.locator('#pg2022-1');
+  await expect(lightbox).toBeHidden();
+  await page.locator('.ob-pg__it').first().click();
+  await expect(lightbox).toBeVisible();
+  // ←/→ cycle, ✕ returns to the gallery anchor.
+  await lightbox.getByRole('link', { name: 'Следующее фото' }).click();
+  await expect(page.locator('#pg2022-2')).toBeVisible();
+  await page.locator('#pg2022-2 .ob-pg__close').click();
+  await expect(page.locator('#pg2022-2')).toBeHidden();
+  await context.close();
+});
+
+test('media past the fold is disclosed without JavaScript', async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto('/archive/2022');
+  // 2022 holds 8 videos; three are up front, the rest behind the disclosure.
+  const hidden = page.locator('.ob-mg__more .ob-vc');
+  await expect(hidden.first()).toBeHidden();
+  await page.locator('.ob-mg__more summary').click();
+  await expect(hidden.first()).toBeVisible();
+
+  // The photo gallery holds 12 frames against a default of 11 visible, so its
+  // disclosure would have unfolded a SINGLE tile; below the floor PhotoGrid
+  // shows the set whole and renders no disclosure at all (PR #17 review).
+  await expect(page.locator('.ob-pg__more')).toHaveCount(0);
+  await expect(page.locator('.ob-pg__grid .ob-pg__it')).toHaveCount(12);
+  await context.close();
 });
 
 test('FAQ answers open without JavaScript', async ({ browser }) => {

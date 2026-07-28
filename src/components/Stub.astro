@@ -7,6 +7,9 @@
  * The heading level is a prop because a stub can be the only block of a page
  * (under the page <h1> → h2) or sit inside a section (→ h3); a wrong level
  * breaks the outline, which axe flags.
+ *
+ * `icon` names the TYPE of the missing content and `compact` switches to the
+ * horizontal form used when the stub is one block among others (design v2).
  */
 interface Props {
   title: string;
@@ -14,40 +17,76 @@ interface Props {
   linkLabel?: string | null;
   linkHref?: string | null;
   level?: 'h2' | 'h3';
+  /** Content type the placeholder stands for — picks the badge glyph. */
+  icon?: StubIcon;
+  /** Horizontal notice form, for a stub that sits inside a longer page. */
+  compact?: boolean;
 }
 
-const { title, text = null, linkLabel = null, linkHref = null, level = 'h2' } = Astro.props;
+export type StubIcon = 'clock' | 'calendar' | 'photo' | 'video' | 'doc' | 'people' | 'partners';
+
+/**
+ * Inner markup of each glyph; the wrapping <svg> below carries the shared
+ * presentation attributes. Authored constants, never user input — `set:html` is
+ * safe here and keeps the map out of the template.
+ */
+const ICONS: Record<StubIcon, string> = {
+  clock: '<circle cx="10" cy="10" r="7.5"/><path d="M10 6v4.2l2.8 1.6"/>',
+  calendar:
+    '<rect x="3" y="4.5" width="14" height="12.5" rx="2"/><path d="M3 8.5h14"/><path d="M7 2.5v3.5"/><path d="M13 2.5v3.5"/>',
+  photo:
+    '<rect x="2.5" y="4" width="15" height="12" rx="2"/><circle cx="7" cy="8.3" r="1.4"/><path d="M2.5 13.5l4-3.5 3.5 3 3-2.5 4.5 3.5"/>',
+  video: '<rect x="2.5" y="4.5" width="15" height="11" rx="2"/><path d="M8.5 7.5v5l4.3-2.5z"/>',
+  doc: '<path d="M5 2.5h7l3.5 3.5v11.5h-10.5z"/><path d="M12 2.5v3.5h3.5"/><path d="M7.5 11h5M7.5 14h5"/>',
+  people:
+    '<circle cx="7" cy="6.8" r="2.8"/><path d="M2.5 16.5c0-2.7 2-4.4 4.5-4.4s4.5 1.7 4.5 4.4"/><circle cx="14" cy="7.8" r="2.2"/><path d="M13.4 12.3c2.3.2 4.1 1.7 4.1 4.2"/>',
+  partners: '<circle cx="7.3" cy="10" r="4.8"/><circle cx="12.7" cy="10" r="4.8"/>',
+};
+
+const {
+  title,
+  text = null,
+  linkLabel = null,
+  linkHref = null,
+  level = 'h2',
+  icon = 'clock',
+  compact = false,
+} = Astro.props;
+
+const cls = `ob-stub${compact ? ' ob-stub--compact' : ''}`;
 ---
 
-<div class="ob-stub">
-  <svg
-    class="ob-stub__icon"
-    viewBox="0 0 20 20"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linecap="round"
-    aria-hidden="true"
-  >
-    <circle cx="10" cy="10" r="7.5"></circle>
-    <path d="M10 6v4.2l2.8 1.6"></path>
-  </svg>
-  {
-    level === 'h2' ? (
-      <h2 class="ob-stub__title">{title}</h2>
-    ) : (
-      <h3 class="ob-stub__title">{title}</h3>
-    )
-  }
-  {text && <p class="ob-stub__text">{text}</p>}
-  {
-    /* Both or neither: a link labelled only «→» has no accessible name. The
-       schema rejects the half-set pair at build (pageSchemaChecked); this is
-       the render-side half of the same rule. */
-    linkHref && linkLabel && (
-      <a class="ob-stub__link" href={linkHref}>
-        {linkLabel} →
-      </a>
-    )
-  }
+<div class={cls}>
+  <span class="ob-stub__badge" aria-hidden="true">
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <Fragment set:html={ICONS[icon]} />
+    </svg>
+  </span>
+  <div class="ob-stub__box">
+    {
+      level === 'h2' ? (
+        <h2 class="ob-stub__title">{title}</h2>
+      ) : (
+        <h3 class="ob-stub__title">{title}</h3>
+      )
+    }
+    {text && <p class="ob-stub__text">{text}</p>}
+    {
+      /* Both or neither: a link labelled only «→» has no accessible name. The
+         schema rejects the half-set pair at build (pageSchemaChecked); this is
+         the render-side half of the same rule. */
+      linkHref && linkLabel && (
+        <a class="ob-stub__link ob-arrow" href={linkHref}>
+          {linkLabel}
+        </a>
+      )
+    }
+  </div>
 </div>

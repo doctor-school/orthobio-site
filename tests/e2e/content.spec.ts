@@ -28,8 +28,11 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('2027');
   // The dates placeholder IS the fact — no invented 2027 dates.
   await expect(page.getByText(/даты уточняются/i)).toBeVisible();
-  // Figures are labelled as past congresses.
-  await expect(page.getByText(/Цифры прошедших конгрессов/i)).toBeVisible();
+  // Figures are labelled as past congresses…
+  await expect(page.getByText(/прошедших конгрессов/i)).toBeVisible();
+  // …and the caption dates only the range the archive can show. 2020 was an
+  // inference, not a sourced year (PR #17 review).
+  await expect(page.locator('body')).not.toContainText('2020');
 });
 
 test('the operator mailbox is never published', async ({ page }) => {
@@ -135,11 +138,11 @@ test('media past the fold is disclosed without JavaScript', async ({ browser }) 
   await page.locator('.ob-mg__more summary').click();
   await expect(hidden.first()).toBeVisible();
 
-  // 12 photos, 11 tiles up front.
-  const hiddenPhotos = page.locator('.ob-pg__more .ob-pg__it');
-  await expect(hiddenPhotos.first()).toBeHidden();
-  await page.locator('.ob-pg__more summary').click();
-  await expect(hiddenPhotos.first()).toBeVisible();
+  // The photo gallery holds 12 frames against a default of 11 visible, so its
+  // disclosure would have unfolded a SINGLE tile; below the floor PhotoGrid
+  // shows the set whole and renders no disclosure at all (PR #17 review).
+  await expect(page.locator('.ob-pg__more')).toHaveCount(0);
+  await expect(page.locator('.ob-pg__grid .ob-pg__it')).toHaveCount(12);
   await context.close();
 });
 

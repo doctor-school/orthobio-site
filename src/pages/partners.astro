@@ -7,7 +7,9 @@
  * the 2026 registry, whose tier headings repeat the very same five level names
  * offered above, so the roster read as «уже занятые слоты» (content audit К1).
  * The registry stays, but under an overline that names the congress it belongs
- * to and a counter of what is in it.
+ * to, a counter of what is in it, and a year inside EVERY tier heading — the
+ * audit made that last one the condition for keeping the registry on the page
+ * at all, because the tier headings are where the double reading happens.
  *
  * The «стать партнёром» action is a mailto: built from CONTACT_EMAIL
  * (⚠️ TODO(Антон) in config/site.ts). While that is null the page states where
@@ -68,7 +70,16 @@ const sponsorCount = sponsorTiers.reduce((sum, g) => sum + g.items.length, 0);
     {
       sponsorTiers.length > 0 ? (
         sponsorTiers.map((group) => (
-          <PartnerTier tier={group.tier} label={group.label} partners={group.items} />
+          /* The year goes into every tier heading, not just the section H2:
+             those five labels are the same five levels offered above as the
+             2027 structure, and a reader scanning h3s saw them as filled slots
+             (content audit К1, review of PR #17). */
+          <PartnerTier
+            tier={group.tier}
+            label={group.label}
+            partners={group.items}
+            year={REFERENCE_YEAR}
+          />
         ))
       ) : (
         <p class="ob-empty">нет данных</p>

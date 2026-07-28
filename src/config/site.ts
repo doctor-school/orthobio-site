@@ -130,8 +130,21 @@ export const FOOTER_LINKS = [...NAV, { href: '/contacts', label: 'Контакт
  * transform, and these few strings are authored already typeset.
  *
  * `about` names МОО «ОРТО» as the organizer of the CONGRESS — the society that
- * owns the event across all its editions, not a 2027 partner roster (owner
- * input, design v2 footer). The copyright line no longer says «при поддержке
+ * owns the event across all its editions, not a 2027 partner roster.
+ *
+ * PROVENANCE, because the two sources disagree and the disagreement is only
+ * apparent. `docs/recon/orthobio-ru-main.md:20` lists FIVE organizing bodies
+ * for the 2026 edition (ОРТО, АТОР, МАПО, НМИЦ ТО им. Приорова, кафедра
+ * травматологии и ортопедии ФНКЦ ФМБА) — that is the co-organizer roster of one
+ * congress, and it lives on /orgs, where it is rendered per year. This line is
+ * about the society that holds the event itself, and it is not our inference:
+ * the owner edited the footer copy directly in the design system on 2026-07-28
+ * (Claude.design, `ui_kits/orthobio-site/Chrome.jsx`), which is the canonical
+ * design input for this site. So no TODO(Антон) marker — the question was put to
+ * the owner and answered. If it is ever reopened, it is reopened in the design
+ * system first, not here (PR #17 review raised it; resolved as above).
+ *
+ * The copyright line no longer says «при поддержке
  * Doctor.School»: on /partners that sat three screens under «партнёрский состав
  * 2027 не объявлен» and read as a support claim for the upcoming congress
  * (content audit С4). Doctor.School stays in the footer as the site's author —

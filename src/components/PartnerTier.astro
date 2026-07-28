@@ -16,10 +16,23 @@ interface Props {
   partners: CongressEntry['data']['partners'];
   /** Heading level — h3 inside a section, h2 when the tier IS the section. */
   level?: 'h2' | 'h3';
+  /**
+   * Year appended to the tier heading. Needed where the page is ABOUT another
+   * year than the roster: on /partners the same five level names are offered as
+   * the 2027 structure right above the 2026 registry, so bare «Генеральные
+   * партнёры» read as slots already taken (content audit К1). On
+   * /archive/<year> the whole page is the year — passing it there would only
+   * repeat the h1.
+   */
+  year?: number | null;
 }
 
-const { tier, label, partners, level = 'h3' } = Astro.props;
+const { tier, label, partners, level = 'h3', year = null } = Astro.props;
 const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
+// Part of the heading TEXT, not a decoration beside it: the qualifier has to
+// reach anyone navigating by headings, which is exactly the reader the finding
+// is about.
+const heading = year ? `${label} · ${year}` : label;
 ---
 
 {
@@ -27,9 +40,9 @@ const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
     <div class={cls}>
       <div class="ob-pt__h">
         {level === 'h2' ? (
-          <h2 class="ob-pt__title">{label}</h2>
+          <h2 class="ob-pt__title">{heading}</h2>
         ) : (
-          <h3 class="ob-pt__title">{label}</h3>
+          <h3 class="ob-pt__title">{heading}</h3>
         )}
         <span class="ob-pt__count">{partners.length}</span>
       </div>

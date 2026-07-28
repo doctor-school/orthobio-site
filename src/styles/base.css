@@ -86,13 +86,25 @@ a:hover {
   color: var(--text-link-hover);
 }
 
-/* Invitation link «… →» (design v2 global pattern): the arrow is a CSS
-   pseudo-element, so it never enters the accessible name of the link — the
-   label alone must read as a destination. */
+/* Invitation link «… →» (design v2 global pattern). The arrow is a CSS
+   pseudo-element so that no template has to repeat the glyph — it is NOT a way
+   to keep it out of the accessible name: AccName §2F counts `::before`/`::after`
+   content, and Chrome and Firefox both do, so the name of such a link really is
+   «О программе →» (measured, PR #17 review). Which is why the label alone still
+   has to read as a destination: the arrow is the only thing that follows it, and
+   it carries no meaning of its own.
+
+   `min-height` is the WCAG 2.2 §2.5.8 floor: these are STANDALONE links in
+   their own block (Stub CTA, footer contacts), not links inside a sentence, so
+   the inline exception does not apply and the 21px line box was under the 24px
+   target. Padding rather than a taller line box keeps the text baseline where
+   the design put it. */
 a.ob-arrow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 24px;
+  padding-block: 2px;
   font-weight: var(--fw-medium);
   text-decoration: none;
 }

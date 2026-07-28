@@ -161,13 +161,19 @@
   color: var(--text-body);
   margin-right: auto;
   border-radius: var(--r-sm);
+  transition: color var(--t-state);
 }
 
-.ob-head__logo:hover .ob-head__name {
+/* The state lives on the LINK, not on the wordmark inside it: styling the
+   descendant left `.ob-head__logo` itself unchanged under the pointer, which is
+   what a state sweep over interactive elements reports as «no :hover» (a11y
+   audit of PR #17). `.ob-head__name` carries no colour of its own, so it
+   inherits the change and the pixels on screen are the same as before. */
+.ob-head__logo:hover {
   color: var(--text-link);
 }
 
-.ob-head__logo:active .ob-head__name {
+.ob-head__logo:active {
   color: var(--text-link-hover);
 }
 
@@ -1327,6 +1333,16 @@ a.ob-pg__it:active {
 .ob-pg__lb:target {
   display: grid;
   place-items: center;
+}
+
+/* Scroll lock, without a byte of client JS. The scrim is 93% opaque, so a wheel
+   or a swipe over it used to scroll a page the reader cannot see — and closing
+   then returned the gallery anchor to a different position than it was opened
+   from. `:has()` is supported by every target browser (Chrome 105+, Safari
+   15.4+, Firefox 121+); where it is not, the degradation is exactly today's
+   behaviour. */
+html:has(.ob-pg__lb:target) {
+  overflow: hidden;
 }
 
 .ob-pg__bg {

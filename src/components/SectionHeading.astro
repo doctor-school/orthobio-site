@@ -47,8 +47,11 @@ const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
   </div>
   {
     /* Both or neither — a link whose only text is «→» has no accessible name.
-       The arrow itself is `.ob-arrow`'s pseudo-element, so it stays out of the
-       accessible name entirely. */
+       The arrow is `.ob-arrow`'s pseudo-element, which spares every caller the
+       glyph but does NOT hide it from assistive tech: pseudo-element content
+       counts towards the accessible name (AccName §2F), so this link announces
+       as «О программе →» (measured, PR #17 review). `linkLabel` therefore has to
+       stand on its own as a destination. */
     linkHref && linkLabel && (
       <a class="ob-sh__link ob-arrow" href={linkHref}>
         {linkLabel}

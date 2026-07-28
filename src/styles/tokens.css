@@ -82,8 +82,17 @@
   /* Photo lightbox: full-screen scrim plus the controls that sit on it. */
   --scrim-lightbox: oklch(0.17 0.02 250 / 0.93);
   --lightbox-caption: oklch(0.87 0.008 250);
-  --lightbox-control: oklch(1 0 0 / 0.16);
-  --lightbox-control-hover: oklch(1 0 0 / 0.32);
+  /* DELIBERATE DEVIATION from design v2, which paints the ✕/←/→ pills as 16%
+     WHITE (`oklch(1 0 0 / 0.16)`, hover 0.32). Those pills composite over the
+     PHOTOGRAPH, not over the scrim, and the congress photography is almost all
+     white-walled halls: a white glyph on a 16% white pill measured 1.10–1.48:1
+     over the bright frames (a11y audit of PR #17), against the 4.5:1 that WCAG
+     1.4.3 requires for a 20px glyph and the 3:1 of 1.4.11 for the control. A
+     dark pill is the only fix that does not depend on the pixels underneath, so
+     the alpha now darkens instead of lightening; hover goes darker still, which
+     keeps the design's «hover = more contrast» direction intact. */
+  --lightbox-control: oklch(0.21 0.02 250 / 0.66);
+  --lightbox-control-hover: oklch(0.21 0.02 250 / 0.85);
 
   /* --- Typography — Inter only, self-hosted (see base.css @font-face) ------- */
   --font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;

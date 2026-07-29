@@ -44,6 +44,10 @@
 # see item 2026-committee-portraits. This is the first rescue run after the
 # 2026-07-27 sweep; every other number in this file still describes that sweep.
 #
+# 2026-07-29 (Issue #39): 42 of the 49 `logos:` objects REPLACED IN PLACE —
+# same keys, same count, new bytes (re-cropped so the mark fills the card
+# slot). Object totals moved, `s3_objects*` did not. See the `logos:` header.
+#
 # ⚠️ Year attribution: the Google Drive folders «15 апреля»/«16 апреля»
 # (1MaNlskHjkZpxm9XzYkgSky-Jfb2o3xGK / 1fJ5BoMr1Tc2jPPDFpNQ6jDk5eSzmryN1)
 # contain photos of the 2022 congress (15–16.04.2022) but were copy-pasted onto
@@ -562,14 +566,35 @@ years:
 #
 # 19 partners across 2021/2024/2025/2026 keep `logo: null` — no mark exists on
 # any surviving source (see the per-year comments in the content YAML).
+#
+# 2026-07-29 (Issue #39) — re-derived, same 49 keys. Issue #22 only downscaled
+# each source, so the empty field the source baked in survived into the object:
+# a 414px «Берлин-Хеми» wordmark inside a 512px lime tile was painted 58px wide
+# in PartnerTier's 120×72 `object-fit: contain` slot, and the creatium
+# соорганизатор scans put a small crest in the middle of a 286×120 white
+# letterbox. `scripts/retrim-partner-logos.mjs` re-fetches each `source_url`,
+# refuses to proceed unless the bytes still match the `original:` block below,
+# crops the field down to the mark and leaves a uniform margin (8% of the
+# mark's long side, grown by replicating the frame's own edge pixels).
+#
+# Backgrounds are NOT recoloured: the lime is the operator's house style for
+# the partner grid (owner ruling on #39), so it is kept — there is just less of
+# it. 42 of the 49 objects changed; the marks they paint grew ×1.23…×2.31. The
+# 7 untouched objects are the five white 512×512 orthobio.ru/orgs marks (out of
+# scope) plus vmeda.jpg and rnch-petrovskogo.jpg, whose marks already run to
+# the frame edge — measured, not assumed, which is why vmeda is here and not in
+# the issue's list of scans to trim. `object.w/h` are no longer a uniform 240px
+# long side: a cropped 286×120 scan has fewer pixels than that and is not
+# upscaled to fake them.
 logos:
   rescued_at: '2026-07-29'
   s3_prefix: 'logos/'
   s3_uploaded_at: '2026-07-29'
+  retrimmed_at: '2026-07-29' # Issue #39; 42 of 49 objects re-uploaded in place
   counters:
     objects: 49
     original_bytes: 39136525
-    object_bytes: 292126
+    object_bytes: 326190 # was 292126 before the Issue #39 re-crop
   items:
     - id: logo-orto
       org: 'Общество регенеративной травматологии и ортопедии (ОРТО)'
@@ -636,7 +661,7 @@ logos:
       s3_key: 'logos/minzdrav.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 18563 }
-      object: { w: 240, h: 101, bytes: 2443, sha256: 'd576f4d36dc801431af8db299038f6d0f4355281891fe99cf14e3066f58a2b63' }
+      object: { w: 113, h: 113, bytes: 2909, sha256: 'b356fdd9e32f68074cacf59d438ef06f296e4c51951404b2aa8e3ec156eb6260' }
     - id: logo-fmba
       org: 'Федеральное медико-биологическое агентство России'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -647,7 +672,7 @@ logos:
       s3_key: 'logos/fmba.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 22501 }
-      object: { w: 240, h: 101, bytes: 2738, sha256: '156c6c85180dacce313476653eb692dbed5494bc1ce562a1bea9eda5c3243d0c' }
+      object: { w: 88, h: 98, bytes: 3371, sha256: '569bcae6923bc4b91dd772550e9a4718496d6ac26bb5842c9c8b628f278222dc' }
     - id: logo-vreden
       org: 'НМИЦ ТО им. Р.Р. Вредена'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -658,7 +683,7 @@ logos:
       s3_key: 'logos/vreden.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 21890 }
-      object: { w: 240, h: 101, bytes: 2531, sha256: 'df4e1444ca272cb446aa1d5af00f9eeeba11f006d93f6a097cd1588819b29f31' }
+      object: { w: 131, h: 71, bytes: 3278, sha256: '664c0cb91babe0b18dd70a50f2be881ad7aa96ecf792148812f9026cc91b1f23' }
     - id: logo-niir-nasonovoy
       org: 'НИИР им. В.А. Насоновой'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -669,7 +694,7 @@ logos:
       s3_key: 'logos/niir-nasonovoy.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 18747 }
-      object: { w: 240, h: 101, bytes: 2547, sha256: '831402fa3cc00647e66b9e0f1b1df9d41272ab561980ac789e5258c2ceceea8f' }
+      object: { w: 109, h: 110, bytes: 2958, sha256: '83dd8061f849037f928d71f60032e9acd4cbc1f2d3cbffbcf105d93c0da7efd4' }
     - id: logo-rudn
       org: 'Российский университет дружбы народов'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -680,7 +705,7 @@ logos:
       s3_key: 'logos/rudn.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 20752 }
-      object: { w: 240, h: 101, bytes: 2719, sha256: '094ab96c0ccdaea443762a31a38759f35ebea9835203e92769722c9d1672e1cd' }
+      object: { w: 89, h: 89, bytes: 3340, sha256: '51a5ec3b8854b7b1e44f13cc731041dfc75fbd7e437ccab0aed66991164acc9b' }
     - id: logo-msu
       org: 'МГУ им. М.В. Ломоносова'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -691,7 +716,7 @@ logos:
       s3_key: 'logos/msu.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 21489 }
-      object: { w: 240, h: 101, bytes: 3162, sha256: 'a97a18d09c2a7d9f960251d6c1259084b992bcfa4eb5f6449b9b41092649b02f' }
+      object: { w: 107, h: 105, bytes: 4121, sha256: '556a4002dc8f6b82d6b852da6a068cb85d674fd5d78ada1fd6eab3486a0f88ef' }
     - id: logo-rnimu
       org: 'РНИМУ им. Н.И. Пирогова'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -702,7 +727,7 @@ logos:
       s3_key: 'logos/rnimu.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 19358 }
-      object: { w: 240, h: 101, bytes: 2129, sha256: '0c3c4bc255edb3cb6dd01802fe96833385b5dc833154b2fe86d5ff187b815829' }
+      object: { w: 69, h: 99, bytes: 2793, sha256: '7f1dde1bab84f3b12a30ccaaf7fa6c0c741360d2ea0c6f39924b6136ff1db68d' }
     - id: logo-sechenov
       org: 'Первый МГМУ им. И.М. Сеченова'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -713,7 +738,7 @@ logos:
       s3_key: 'logos/sechenov.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 21431 }
-      object: { w: 240, h: 101, bytes: 2206, sha256: '6df2b936782ee11f082d531786de25fbd83982ff395e9ab5fd0a01c0f89e4755' }
+      object: { w: 89, h: 101, bytes: 2929, sha256: 'ba5e22ba559e1b8229d4b21c31d8a14148500d77ec242fb60c4e15eec3ab8204' }
     - id: logo-mgmsu
       org: 'МГМСУ им. А.И. Евдокимова'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -724,7 +749,7 @@ logos:
       s3_key: 'logos/mgmsu.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 27497 }
-      object: { w: 240, h: 101, bytes: 3745, sha256: '8a2dc6b725378c188fbd2487d46fbff229afc4827c4c27053621bcb175630197' }
+      object: { w: 105, h: 113, bytes: 5025, sha256: 'f2402453a93f1a40bfc844d4fe0ab6bbf5fed4e36b0405ebd60f6fc8e820834d' }
     - id: logo-fnkc-fmba
       org: 'ФНКЦ ФМБА России'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -735,7 +760,7 @@ logos:
       s3_key: 'logos/fnkc-fmba.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 30082 }
-      object: { w: 240, h: 101, bytes: 3802, sha256: '962843050dcfb62281acc5ac11059b3751244d035c9efef4cf9533f158a7bd14' }
+      object: { w: 232, h: 88, bytes: 4948, sha256: '77f1739e5953d3fd1e6452dcdd75ffef46f8bc87342c19037600d689dec8a19d' }
     - id: logo-rmanpo
       org: 'РМАНПО'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -746,7 +771,7 @@ logos:
       s3_key: 'logos/rmanpo.jpg'
       s3_status: uploaded
       original: { w: 286, h: 120, bytes: 22545 }
-      object: { w: 240, h: 101, bytes: 2764, sha256: '9d1ce73154fc978947d26b637e207678ee5284f59899b2bc0e84e7e8c14e799b' }
+      object: { w: 111, h: 91, bytes: 3629, sha256: '131b007c44a445949b902143f33690acbc14db19c0c471ff7fce92667ed02024' }
     - id: logo-vmeda
       org: 'Военно-медицинская академия им. С.М. Кирова'
       source: https://orthobio2021.creatium.site/archive/2025
@@ -779,7 +804,7 @@ logos:
       s3_key: 'logos/dr-reddys.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4660, sha256: '057170b1290fd296fa8534063b9f5c328299fde4a7f17578d657dadd004433bb' }
+      object: { w: 240, h: 79, bytes: 4698, sha256: 'f9a5e59033daf38a37a3c3bcb2fa7971c8e05bf5f9764e92e50e40e88e66ab55' }
     - id: logo-promomed
       org: 'ПРОМОМЕД, ПАО'
       source: https://orthobio.ru/exhibition
@@ -790,7 +815,7 @@ logos:
       s3_key: 'logos/promomed.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6471, sha256: 'ab5b3477998b81e9ecc639ab0db8f29019cafd3dea308a6133fcfa6074b93557' }
+      object: { w: 240, h: 91, bytes: 5854, sha256: '40e6978d00dc44e66b277764ede9b4974bdd78a255a0fbf8272c1e455670385c' }
     - id: logo-berlin-chemie
       org: 'Берлин-Хеми/А. Менарини, ООО'
       source: https://orthobio.ru/exhibition
@@ -801,7 +826,7 @@ logos:
       s3_key: 'logos/berlin-chemie.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5398, sha256: '2463d8cccf8e436eba00726c63c26126832ccdd91903cad232e9a2d679af482f' }
+      object: { w: 240, h: 69, bytes: 5485, sha256: '8d6fe4efac710e83599fdecb7943067797b5e995ad0e25cee1a21a3fb7e0a60a' }
     - id: logo-viatris
       org: 'Виатрис, ООО'
       source: https://orthobio.ru/exhibition
@@ -812,7 +837,7 @@ logos:
       s3_key: 'logos/viatris.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5313, sha256: '138c4e75b91420ead604f01b06a3a5f38eef46d431b71a66bcc7effa8ef55a88' }
+      object: { w: 240, h: 91, bytes: 5409, sha256: '73d06c6a444a90ae90ab749ec650e9b117d7f2abcb04ea1ab88680adca787ea0' }
     - id: logo-nizhpharm
       org: 'НИЖФАРМ, ГК'
       source: https://orthobio.ru/exhibition
@@ -823,7 +848,7 @@ logos:
       s3_key: 'logos/nizhpharm.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4320, sha256: 'e3f3c2a8e84c9d66207364f19c89f176aa3ea6fa9ee3bbe479f8cf7ed9588c62' }
+      object: { w: 240, h: 66, bytes: 4178, sha256: 'b715eb9941dbc56e376f7ad183a73fcfe4d9498e66d290234eaee34967560ead' }
     - id: logo-panbio-pharm
       org: 'ПанБио Фарм, ООО'
       source: https://orthobio.ru/exhibition
@@ -834,7 +859,7 @@ logos:
       s3_key: 'logos/panbio-pharm.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6722, sha256: 'b95c95a27784befd86ba67f93dad25531cca111611c273e796be42855830c61b' }
+      object: { w: 240, h: 140, bytes: 8159, sha256: '19e67c98161c0de85c178cedde54715777def1761b3515d39d5064b4ff1146a2' }
     - id: logo-haleon
       org: 'Хелеон Рус, АО'
       source: https://orthobio.ru/exhibition
@@ -845,7 +870,7 @@ logos:
       s3_key: 'logos/haleon.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 3419, sha256: '23e2d07f20ff1752bb8d8c5f9e0d93e57da34d3e81b369281137ca31a56ecfd4' }
+      object: { w: 240, h: 65, bytes: 3198, sha256: 'c2a4f90bf88fee46b1df2a1c0063408baf352701e2a42ec057ed2c59c5a5e9a0' }
     - id: logo-csc-pharma
       org: 'CSC Pharma Russia'
       source: https://orthobio.ru/exhibition
@@ -856,7 +881,7 @@ logos:
       s3_key: 'logos/csc-pharma.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4188, sha256: 'fad8550bcaf7a21a765dc6716444c223e0b2a11c556b4aa68b0f4e0e3104ddc2' }
+      object: { w: 240, h: 142, bytes: 5305, sha256: '04dc2d614211fa936acd1d67be56bbd6a499de82d9c5422b597ebf83f0d33a70' }
     - id: logo-biomir-servis
       org: 'БИОМИР сервис'
       source: https://orthobio.ru/exhibition
@@ -867,7 +892,7 @@ logos:
       s3_key: 'logos/biomir-servis.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 7259, sha256: 'e619f25b14b197c2af756c9d4abab8c8decd4d62ac633bed5787e50cf7e02bb3' }
+      object: { w: 240, h: 90, bytes: 6991, sha256: 'bbca4ffcf68843f06b239623aacdf80802a8802c472f40d666085d5a05101530' }
     - id: logo-generium
       org: 'ГЕНЕРИУМ, АО'
       source: https://orthobio.ru/exhibition
@@ -878,7 +903,7 @@ logos:
       s3_key: 'logos/generium.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5063, sha256: 'a38b6f04bc9674b00bff5e766d58779a4c4a70bf03bf011fe05c5e299cfa058a' }
+      object: { w: 240, h: 80, bytes: 4944, sha256: 'f8582eac18cb22278c31fce27712e66e03358dfe879e188c5c84a7a3cd8c695e' }
     - id: logo-kem
       org: 'КЭМ, ООО'
       source: https://orthobio.ru/exhibition
@@ -889,7 +914,7 @@ logos:
       s3_key: 'logos/kem.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6362, sha256: '3764bcee01929ed11fcaab4f77bab7045d5a82b097edc615fcad2968b03ed27f' }
+      object: { w: 240, h: 86, bytes: 6573, sha256: '966af0c3a6552eea8c81945ad0abcd488bce72bc318a7aa1acc0ac4a7531d09b' }
     - id: logo-rompharma
       org: 'Ромфарма, ООО'
       source: https://orthobio.ru/exhibition
@@ -900,7 +925,7 @@ logos:
       s3_key: 'logos/rompharma.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 8321, sha256: '9a09ea132366a13e447070513baa5e249e89caf66ef82abbbca248a65024a11a' }
+      object: { w: 240, h: 195, bytes: 13147, sha256: 'f2930a4d3d84e31b3501d93e25ccb3bc9c2110fdc985c71a9ab0d18da61b3761' }
     - id: logo-servier
       org: 'Сервье, АО'
       source: https://orthobio.ru/exhibition
@@ -911,7 +936,7 @@ logos:
       s3_key: 'logos/servier.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4825, sha256: '1e9ae8aff385942a36b2bf5417028b32f95ed62a09d71ccdd52d341fb4fdfe4f' }
+      object: { w: 240, h: 75, bytes: 4731, sha256: '3b8e280005361cccad58cd4fa3fe51a9695a67ef89b1c0bbb79f83a146c411fd' }
     - id: logo-arm
       org: 'АРМ, ООО'
       source: https://orthobio.ru/exhibition
@@ -922,7 +947,7 @@ logos:
       s3_key: 'logos/arm.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6211, sha256: 'da04727cf6530f478c31d1efb0dc4b802ac9712359cc252580abbc6c79c0bf5e' }
+      object: { w: 240, h: 203, bytes: 9001, sha256: '1b34546359259229137b12f2c3a844653d8e2b26e473b047584a093473e18784' }
     - id: logo-bionoltra
       org: 'БИОНОЛТРА ЭС ЭЙ, ООО'
       source: https://orthobio.ru/exhibition
@@ -933,7 +958,7 @@ logos:
       s3_key: 'logos/bionoltra.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5966, sha256: '66e4421aa5d9d6eb1288eb9b9974cfe09b30580ebb99cb520434da2c15fefb50' }
+      object: { w: 240, h: 114, bytes: 7390, sha256: '7c7700754b00aad61df33f24f42ca35664fd99a2bbcd684c09f3f74a83e6dc58' }
     - id: logo-kardiomed
       org: 'КардиоМед, ООО'
       source: https://orthobio.ru/exhibition
@@ -944,7 +969,7 @@ logos:
       s3_key: 'logos/kardiomed.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5754, sha256: 'e60d515f9b7cee032337c1a14334ca2b6cc6d3ea25d053b97b415b3397fb837f' }
+      object: { w: 240, h: 105, bytes: 6539, sha256: '6bf824cd18871349195844379a332dd1c6414e6ea00bdfe5d0f8dd0486d2e798' }
     - id: logo-multi-systems-technology
       org: 'Малти-Системс Текнолоджи, ООО'
       source: https://orthobio.ru/exhibition
@@ -955,7 +980,7 @@ logos:
       s3_key: 'logos/multi-systems-technology.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4339, sha256: 'ce81185078521b2cf28b483a047cd6972f3beea113b89d70816013210681f3e6' }
+      object: { w: 240, h: 130, bytes: 5604, sha256: 'b0bd94d9c63d0f8f811d9e48a1cfdcab1d36a4b6b571a35cbaffcd7bc7f41843' }
     - id: logo-mt-tehnika
       org: 'МТ Техника'
       source: https://orthobio.ru/exhibition
@@ -966,7 +991,7 @@ logos:
       s3_key: 'logos/mt-tehnika.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5263, sha256: 'c402179fa15d5cfd4fcaccdf82342dfbf3ab8b24ab5963c01082ceb1980666da' }
+      object: { w: 240, h: 84, bytes: 5220, sha256: 'a6e1123b9dadbda7ec0b7c7475d8b90fd6cb8f495757b6233c84ce4828ebb44c' }
     - id: logo-oksiterra
       org: 'ОКСИТЕРРА, ООО'
       source: https://orthobio.ru/exhibition
@@ -977,7 +1002,7 @@ logos:
       s3_key: 'logos/oksiterra.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 3037, sha256: '9607fa9ffe4a15f92713d5b968426c86945ca8908089bf96524cf3248b992391' }
+      object: { w: 240, h: 49, bytes: 2951, sha256: '4b25652d8a02ed84a0a7ca22fd072b04e81b4834d72159477a256f816909aab3' }
     - id: logo-orfan-grupp
       org: 'Орфан групп, ООО'
       source: https://orthobio.ru/exhibition
@@ -988,7 +1013,7 @@ logos:
       s3_key: 'logos/orfan-grupp.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6979, sha256: 'b5a22df9cea7f07b93eda588118d831af80e07f547b709cf7cd5dc8208cf4dfa' }
+      object: { w: 240, h: 129, bytes: 7640, sha256: 'b3f9c1fc4e1d9cea329e5e09d554299fce5b73dabd21b1df8a4567f64aeed0d6' }
     - id: logo-severnaya-zvezda
       org: 'Северная звезда, НАО'
       source: https://orthobio.ru/exhibition
@@ -999,7 +1024,7 @@ logos:
       s3_key: 'logos/severnaya-zvezda.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 7663, sha256: 'bc6fc8c9e72b2cc49ac2b07babd3459f09a641216b7a4621e71b478c3258aee4' }
+      object: { w: 240, h: 120, bytes: 9343, sha256: '4d4103f813964a93de1c7dc47727f59c02a8388c78111c35e8919ed95bc22b0f' }
     - id: logo-fbk
       org: 'ФБК, ООО'
       source: https://orthobio.ru/exhibition
@@ -1010,7 +1035,7 @@ logos:
       s3_key: 'logos/fbk.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4812, sha256: 'd46be39af720afaa9327c4f943ba2dd105cbf4e6f349365f79715a9393421620' }
+      object: { w: 240, h: 116, bytes: 5763, sha256: 'b7b1a7c9ba8f8be3cf005121bb558bc9cd2e494b6be3f198e5ae9f3637899b16' }
     - id: logo-pmp-agency
       org: 'PMP Agency'
       source: https://orthobio.ru/partners
@@ -1021,7 +1046,7 @@ logos:
       s3_key: 'logos/pmp-agency.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 8290, sha256: 'bf43431ad756ba731273a6465bd2072b219cca684ff5dd242461e7a628cbd15f' }
+      object: { w: 188, h: 240, bytes: 15517, sha256: 'f2dfe29ffa0b23ac7abbe68b420c769a43700bdd5216debd867b0b8e0258d0c6' }
     - id: logo-helpinver
       org: 'Helpinver'
       source: https://orthobio.ru/partners
@@ -1032,7 +1057,7 @@ logos:
       s3_key: 'logos/helpinver.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5671, sha256: '5f191c04525e79230d08389641fdc034295bf72213899e79290f45f53eb89d56' }
+      object: { w: 240, h: 86, bytes: 5989, sha256: 'd65b63a70889c905c839c09ec8d89b9567107965e25e7946871430d9675c2c55' }
     - id: logo-omnidoctor
       org: 'OmniDoctor'
       source: https://orthobio.ru/partners
@@ -1043,7 +1068,7 @@ logos:
       s3_key: 'logos/omnidoctor.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4503, sha256: '3459e1945dd48cac992db58680a6e713955494c4912c5842477f91b25bdb95ea' }
+      object: { w: 240, h: 53, bytes: 4133, sha256: '2fe95f68858de1d5c1b426227d19d036a489dcebc53b70288006dbf1b8c74361' }
     - id: logo-space-health
       org: 'Space Health'
       source: https://orthobio.ru/partners
@@ -1054,7 +1079,7 @@ logos:
       s3_key: 'logos/space-health.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 9835, sha256: '6f65ca77ca482bb6c61ccd278824c258d2c334438e5893a56a3a0a2710f981fd' }
+      object: { w: 240, h: 161, bytes: 11057, sha256: 'fb9a4b51e6a30c6107a61737db33e58ac2da13dbabaced005ebe4adccbbe15d4' }
     - id: logo-lvrach
       org: 'ЛВрач'
       source: https://orthobio.ru/partners
@@ -1065,7 +1090,7 @@ logos:
       s3_key: 'logos/lvrach.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4347, sha256: 'b0968e4f80118daf52793ed65fceb9fec58245a15a72b065dfecafd7bd428bf8' }
+      object: { w: 240, h: 76, bytes: 4169, sha256: 'bd853c80ac12e201436eb34f9a34c62f22f24367f1ef8ccb78ed4168fc759e70' }
     - id: logo-rusvrach
       org: 'РусВрач'
       source: https://orthobio.ru/partners
@@ -1076,7 +1101,7 @@ logos:
       s3_key: 'logos/rusvrach.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6084, sha256: '41843adba02c6ccd0b5efcb58c4c028cfaa32f2ef365c0be81152af21aef2d3c' }
+      object: { w: 240, h: 79, bytes: 5385, sha256: 'fef293b083e8f863d621e9c1410883924a3812ebaf3f9f112ce5a917185809fb' }
     - id: logo-innofarma
       org: 'InnoFarma'
       source: https://orthobio.ru/partners
@@ -1087,7 +1112,7 @@ logos:
       s3_key: 'logos/innofarma.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6548, sha256: '1bba05387dd3164e3caaf232bf0020d0d4ead29f436eb9d8910c9b2418197472' }
+      object: { w: 240, h: 80, bytes: 6347, sha256: '5f826e1a740564314c035212aea81bbb21e8012e96d3108a5570b93b5f24d8e3' }
     - id: logo-eco-vector
       org: 'Eco-Vector'
       source: https://orthobio.ru/partners
@@ -1098,7 +1123,7 @@ logos:
       s3_key: 'logos/eco-vector.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 4375, sha256: '88b1d469fd7755f2c2778d8455cae22032d73027e2cbd78a90a8ad7e9415ab37' }
+      object: { w: 240, h: 118, bytes: 4638, sha256: 'aea79f0e7ee6c59a56e00eec912adf89013d5063dd61158bfbfd73e9dd34648b' }
     - id: logo-opinion-leader
       org: 'Opinion Leader'
       source: https://orthobio.ru/partners
@@ -1109,7 +1134,7 @@ logos:
       s3_key: 'logos/opinion-leader.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6356, sha256: '7932ba8aec339307a0e168f8e08a391f904e3a384133215b383aed5633af73ff' }
+      object: { w: 240, h: 194, bytes: 8545, sha256: '29a7484d29f6e081a57b4744237a7e9ddeb25562272ea03bcc27d702d76897e3' }
 
 
 # ── Company profiles — Issue #24 (2026-07-29) ───────────────────────────────

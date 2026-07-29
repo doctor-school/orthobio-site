@@ -15,7 +15,9 @@ interface Props {
 const { href, title, meta = 'PDF' } = Astro.props;
 ---
 
-<a class="ob-dc" href={mediaUrl(href)}>
+{/* New tab: the PDF lives on our S3 host, so following it in place would drop
+    the reader out of the site and into a bare viewer with no way back. */}
+<a class="ob-dc" href={mediaUrl(href)} target="_blank" rel="noopener">
   <span class="ob-dc__icon" aria-hidden="true">
     <svg
       viewBox="0 0 20 20"

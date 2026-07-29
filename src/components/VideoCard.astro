@@ -42,8 +42,9 @@ const label = title ?? `Видео конгресса ${year}`;
 const embedSrc = videoEmbedSrc(url);
 ---
 
-{/* No `aria-label`: the accessible name is the card's own text — host badge
-    plus caption — which is every visible string inside the control, so a
+{/* The video host is a third party — open it beside the site, never in place
+    (#29). No `aria-label`: the accessible name is the card's own text — host
+    badge plus caption — which is every visible string inside the control, so a
     speech-input user can say «Rutube» or the title and hit the same target
     (WCAG 2.5.3). An authored label would also have to promise something
     conditional: «смотреть на странице» is false for exactly the no-JS visitor

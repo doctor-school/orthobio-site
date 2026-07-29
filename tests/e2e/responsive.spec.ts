@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ROUTES } from './_routes';
+import { ROUTES, YEAR_ROUTES } from './_routes';
 import { expectNoOverflow, measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
 
@@ -74,19 +74,39 @@ test.describe('responsive', () => {
    */
   const HERO_PATTERNS = ['.ob-hero__pattern--a', '.ob-hero__pattern--b'] as const;
 
-  async function probeHeroPattern(page: Page, width: number) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
+  /**
+   * Measures decorative pattern layers against the copy of the band they sit
+   * in. Written once and driven by `band` + `selectors` because the year header
+   * carries the very same motif under the very same design rule (#38) — a
+   * second copy of this probe would be a second place to fix.
+   */
+  interface PatternProbe {
+    path: string;
+    band: string;
+    selectors: readonly string[];
+    width: number;
+  }
 
-    return page.evaluate((selectors) => {
-      // EVERY text node of the hero, not a hand-listed set of tags: the `stats`
+  async function probePattern(page: Page, { path, band, selectors, width }: PatternProbe) {
+    // `width` is used as given — NOT `width - SCROLLBAR_GUTTER` like the
+    // overflow guards. There the question is «does the layout fit the usable
+    // width a real classic scrollbar leaves», here it is «where does the layer
+    // fall against the copy», and the nominal width is that question's worst
+    // case: the reserve beside the pattern is tightest at exactly 1024 CSS px,
+    // while a user whose window is 1024 gets ~1007 CSS px — below the
+    // breakpoint, where the layer is not painted at all.
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(path);
+
+    return page.evaluate(({ band, selectors }) => {
+      // EVERY text node of the band, not a hand-listed set of tags: the `stats`
       // and `statsNote` slots can render figures as div/span/li, and a selector
       // list would drop them and quietly start measuring less than it claims.
       // Line boxes, not element boxes — a 640px block can have every line end
       // far short of 640px.
       const lines: DOMRect[] = [];
       const walker = document.createTreeWalker(
-        document.querySelector('.ob-hero') as Node,
+        document.querySelector(band) as Node,
         NodeFilter.SHOW_TEXT,
       );
       for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -135,8 +155,11 @@ test.describe('responsive', () => {
       });
 
       return { textRight: lines.reduce((max, r) => Math.max(max, r.right), 0), patterns };
-    }, HERO_PATTERNS as unknown as string[]);
+    }, { band, selectors: selectors as unknown as string[] });
   }
+
+  const probeHeroPattern = (page: Page, width: number) =>
+    probePattern(page, { path: '/', band: '.ob-hero', selectors: HERO_PATTERNS, width });
 
   for (const width of [1024, 1120, 1279, 1280, 1440]) {
     test(`no hero pattern paints under the hero copy at ${width}px`, async ({ page }) => {
@@ -175,6 +198,87 @@ test.describe('responsive', () => {
         ).toBeGreaterThanOrEqual(textRight);
       }
     });
+  }
+
+  /**
+   * The year header carries the same metaball motif, and the same rule applies
+   * to it (#38): decorative artwork must not sit under the header copy. It got
+   * there by a different route than the hero's — the layer is anchored to the
+   * viewport's right edge (`right: -80px; width: 280px`, the design's own
+   * placement), so the strip it occupies is «viewport − 200px» and eats into
+   * the text column as soon as the window is narrow: at 360px it started at
+   * 160px while the copy ran to 328px — 168px of the year number, the H1 and
+   * the dates painted over.
+   *
+   * EVERY year route, not the one page a screenshot was taken of: the header is
+   * one template over per-year content, and the length of its copy is the whole
+   * question. 2026 proved it — its venue line («…отель „Холидей Инн Москва
+   * Сокольники“ (Русаковская ул., 24…») runs 300px longer than 2025's date line
+   * and walked straight into the layer at 1024 while 2025 was clean. A guard
+   * pinned to one year would have kept passing.
+   *
+   * Below 1024 the assertion is «hidden OR clear», not «hidden»: the guard
+   * exists to protect the copy, and a future placement that keeps the motif on
+   * a phone with real air is a legitimate way to satisfy it. At 1024 and up the
+   * layer must be THERE and clear — otherwise deleting the decoration outright
+   * would pass this suite.
+   *
+   * 1120 and 1199 join the canonical ladder for the same reason the hero guard
+   * samples 1120/1279: the band between the breakpoint and the 1200px container
+   * is where the reserve is tightest (4px), and the hero's geometry was already
+   * once «derived» correctly for the ladder's widths and wrong between them.
+   */
+  const YEAR_PATTERN_WIDTHS = [...OVERFLOW_WIDTHS, 1120, 1199];
+
+  for (const path of YEAR_ROUTES) {
+    for (const width of YEAR_PATTERN_WIDTHS) {
+      test(`the year header pattern stays off the copy of ${path} at ${width}px`, async ({
+        page,
+      }) => {
+        const { textRight, patterns } = await probePattern(page, {
+          path,
+          band: '.ob-yh',
+          selectors: ['.ob-yh__pattern'],
+          width,
+        });
+        expect(textRight).toBeGreaterThan(0);
+        const [p] = patterns;
+
+        // A missing element must not reach the clearance assertions below: with
+        // `left: 0` they would report a layer «crowding the text column» that
+        // is not in the DOM at all.
+        expect(
+          p.display,
+          `${p.selector} is not in the DOM on ${path} — the year header lost its brand motif`,
+        ).not.toBe('ABSENT');
+
+        if (width >= 1024) {
+          expect(
+            p.display,
+            `${p.selector} is "${p.display}" at ${width}px — the year header must keep the brand ` +
+              `motif at the widths that have room for it`,
+          ).toBe('block');
+          expect(p.pathFound, `${p.selector} has no <path> — the probe measured nothing`).toBe(
+            true,
+          );
+        }
+
+        if (p.display === 'none') return;
+
+        expect(
+          p.hits,
+          `${p.selector} paints over ${p.hits} of ${p.samples} points sampled inside the ` +
+            `${path} header's line boxes at ${width}px — decorative artwork is sitting under ` +
+            `the copy`,
+        ).toBe(0);
+        expect(
+          p.left,
+          `${p.selector} starts at ${Math.round(p.left)}px while the widest line of the ${path} ` +
+            `header ends at ${Math.round(textRight)}px — the decorative layer is crowding the ` +
+            `text column at ${width}px`,
+        ).toBeGreaterThanOrEqual(textRight);
+      });
+    }
   }
 
   // Same blind spot on the year page: every guard above measures the gallery

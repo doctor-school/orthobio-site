@@ -32,6 +32,11 @@ const baseCss = readFileSync(
   'utf8',
 );
 
+const componentsCss = readFileSync(
+  fileURLToPath(new URL('../../src/styles/components.css', import.meta.url)),
+  'utf8',
+);
+
 /** Resolves `--name`, following one level of `var(--other)` indirection. */
 function token(name: string): string {
   const seen = new Set<string>();
@@ -70,6 +75,32 @@ const hex = (value: string): RGB => {
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as RGB;
 };
 
+/**
+ * Parses the two colour notations `tokens.css` actually uses — `#rrggbb` and
+ * `oklch(L C H)` with an optional `/ alpha` — into an opaque colour plus its
+ * alpha. Anything else throws rather than being quietly skipped: a token that
+ * grows a third notation must be understood here, not measured as black.
+ */
+function parseColour(raw: string): { rgb: RGB; alpha: number } {
+  const value = raw.trim();
+  if (/^#[0-9a-f]{6}$/i.test(value)) return { rgb: hex(value), alpha: 1 };
+
+  const ok = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+)\s*)?\)$/i.exec(value);
+  if (ok) {
+    return {
+      rgb: oklch(Number(ok[1]), Number(ok[2]), Number(ok[3])),
+      alpha: ok[4] === undefined ? 1 : Number(ok[4]),
+    };
+  }
+  throw new Error(`focus-ring test cannot measure the colour notation ${JSON.stringify(raw)}`);
+}
+
+/** The colour a token names, composited over `backdrop` if it is translucent. */
+function surfaceOf(name: string, backdrop: RGB = WHITE): RGB {
+  const { rgb, alpha } = parseColour(token(name));
+  return alpha === 1 ? rgb : over(rgb, backdrop, alpha);
+}
+
 /** oklch → sRGB (Ottosson's matrices), for the neutral ramp and the scrims. */
 function oklch(L: number, C: number, hDeg: number): RGB {
   const h = (hDeg * Math.PI) / 180;
@@ -103,31 +134,48 @@ const BLACK: RGB = [0, 0, 0];
  * is mostly white-walled halls, but a dark frame composites differently, and a
  * ring that only works over one of them works over neither in practice.
  */
+/** Reads a rule's `opacity` out of components.css, so tonal layers cannot drift. */
+function opacityOf(selector: string): number {
+  const rule = new RegExp(`${selector.replace(/[.]/g, '\\.')}\\s*\\{[^}]*?opacity:\\s*([\\d.]+)`).exec(
+    componentsCss,
+  );
+  if (!rule) throw new Error(`no opacity declared for ${selector} in components.css`);
+  return Number(rule[1]);
+}
+
 const SURFACES: Record<string, RGB> = {
-  'page / card (--bg)': WHITE,
-  'footer (--surface-faint)': oklch(0.985, 0.002, 250),
-  'section band (--surface)': oklch(0.968, 0.004, 250),
-  'tinted band (--ob-sky-tint)': hex('#edf6fc'),
-  'НМО note (--warn-wash)': oklch(0.97, 0.02, 80),
-  'primary button / skip link (--btn-primary-bg)': hex('#114d9e'),
-  'primary button hover (--btn-primary-bg-hover)': hex('#0d3a77'),
-  'video facade plate (--ink)': oklch(0.21, 0.02, 250),
-  'video play scrim (--scrim-play over --ink)': over(
-    oklch(0.35, 0.05, 250),
-    oklch(0.21, 0.02, 250),
-    0.85,
+  'page / card (--bg)': surfaceOf('--bg'),
+  'footer (--surface-faint)': surfaceOf('--surface-faint'),
+  'section band (--surface)': surfaceOf('--surface'),
+  'tinted band (--ob-sky-tint)': surfaceOf('--ob-sky-tint'),
+  'НМО note (--warn-wash)': surfaceOf('--warn-wash'),
+  'primary button / skip link (--btn-primary-bg)': surfaceOf('--btn-primary-bg'),
+  'primary button hover (--btn-primary-bg-hover)': surfaceOf('--btn-primary-bg-hover'),
+  'video facade plate (--ink)': surfaceOf('--ink'),
+  'video play scrim (--scrim-play over --ink)': surfaceOf('--scrim-play', surfaceOf('--ink')),
+  'lightbox scrim over a bright photo': surfaceOf('--scrim-lightbox', WHITE),
+  'lightbox scrim over a dark photo': surfaceOf('--scrim-lightbox', BLACK),
+  'lightbox pill over a bright photo': surfaceOf('--lightbox-control', WHITE),
+  'lightbox pill over a dark photo': surfaceOf('--lightbox-control', BLACK),
+  'lightbox pill, hovered, over a bright photo': surfaceOf('--lightbox-control-hover', WHITE),
+  'lightbox pill, hovered, over a dark photo': surfaceOf('--lightbox-control-hover', BLACK),
+  // The brand pattern. It is `pointer-events: none` and placed in the free strip
+  // beside the copy, so nothing focusable is MEANT to land on it — but it bleeds
+  // past the band edges at ≥1024, and a ring that failed on it would fail the day
+  // a layout shifts by 40px. All three instances: the hero's full-strength one,
+  // the hero's tonal second, and the year header's, which is tonal over the sky
+  // tint rather than over white.
+  'brand pattern, hero instance A (--ob-green)': surfaceOf('--ob-green'),
+  'brand pattern, hero instance B (tonal, on white)': over(
+    surfaceOf('--ob-green'),
+    surfaceOf('--bg'),
+    opacityOf('.ob-hero__pattern--b'),
   ),
-  'lightbox scrim over a bright photo': over(oklch(0.17, 0.02, 250), WHITE, 0.93),
-  'lightbox scrim over a dark photo': over(oklch(0.17, 0.02, 250), BLACK, 0.93),
-  'lightbox pill over a bright photo (--lightbox-control)': over(oklch(0.21, 0.02, 250), WHITE, 0.66),
-  'lightbox pill over a dark photo (--lightbox-control)': over(oklch(0.21, 0.02, 250), BLACK, 0.66),
-  // The hero/year-header brand pattern. It is `pointer-events: none` and placed
-  // in the free strip beside the copy, so nothing focusable is MEANT to land on
-  // it — but it bleeds past the band edges at ≥1024, and a ring that failed on
-  // it would fail the day a layout shifts by 40px. Both instances: full strength
-  // and the 0.5 tonal one.
-  'brand pattern (--ob-green)': hex('#70c143'),
-  'brand pattern, second instance at 0.5 on white': over(hex('#70c143'), WHITE, 0.5),
+  'brand pattern, year header (tonal, on --ob-sky-tint)': over(
+    surfaceOf('--ob-green'),
+    surfaceOf('--ob-sky-tint'),
+    opacityOf('.ob-yh__pattern'),
+  ),
 };
 
 /**
@@ -144,8 +192,8 @@ const SURFACES: Record<string, RGB> = {
 const MIN = 3; // SC 1.4.11 floor for a non-text indicator.
 
 describe('focus indicator contrast (WCAG 2.2 SC 1.4.11)', () => {
-  const ring = hex(token('--focus-ring'));
-  const halo = hex(token('--focus-ring-halo'));
+  const ring = surfaceOf('--focus-ring');
+  const halo = surfaceOf('--focus-ring-halo');
 
   it('is built from two rungs that contrast against EACH OTHER', () => {
     // This is what makes the pair background-independent: whichever rung the
@@ -159,12 +207,65 @@ describe('focus indicator contrast (WCAG 2.2 SC 1.4.11)', () => {
     expect(best).toBeGreaterThanOrEqual(MIN);
   });
 
-  it('paints the halo over the ring, 2px then 4px', () => {
-    // Order is load-bearing: box-shadow paints the first entry on top, so the
-    // halo has to come first or the ring is buried under a 4px white glow.
-    expect(token('--focus-shadow').replace(/\s+/g, ' ')).toBe(
-      '0 0 0 2px var(--focus-ring-halo), 0 0 0 4px var(--focus-ring)',
+  /**
+   * Asserted as an INVARIANT rather than as one exact string: what has to hold
+   * is «halo first, ring behind it, ring thicker», and pinning the literal
+   * declaration would fail a harmless reformat while still passing a swap that
+   * inverts the two.
+   */
+  it('paints the halo over the ring, and the ring wider than the halo', () => {
+    const layers = token('--focus-shadow')
+      .split(',')
+      .map((layer) => /0 0 0 (\d+)px var\((--[\w-]+)\)/.exec(layer.trim()));
+
+    expect(layers.every(Boolean), `unparsable --focus-shadow: ${token('--focus-shadow')}`).toBe(
+      true,
     );
+    const [inner, outer] = layers as RegExpExecArray[];
+
+    // box-shadow paints the first entry on top, so the halo has to come first
+    // or the ring is buried under a spread of halo.
+    expect(inner[2]).toBe('--focus-ring-halo');
+    expect(outer[2]).toBe('--focus-ring');
+    // …and the ring has to reach past the halo, or it is fully covered.
+    expect(Number(outer[1])).toBeGreaterThan(Number(inner[1]));
+    // Both rungs have to be thick enough to read as an indicator at all.
+    expect(Number(inner[1])).toBeGreaterThanOrEqual(2);
+  });
+
+  /**
+   * The cascade guarantee, added after the review of PR #44 found five card
+   * components whose `:hover` replaced the whole `box-shadow` and took the ring
+   * with it. The fix is structural — the focus rules sit OUTSIDE every cascade
+   * layer while the component file sits inside one — so what is asserted is the
+   * structure, not the five components that happened to be wrong.
+   */
+  it('keeps the focus rules out of every cascade layer', () => {
+    const layerOpen = baseCss.indexOf('@layer base {');
+    const focusRule = baseCss.indexOf(':focus-visible {');
+    expect(layerOpen, 'base.css declares no @layer base').toBeGreaterThan(-1);
+    // The layer must be closed before the focus rule starts, i.e. the last `}`
+    // of the layered block precedes it.
+    expect(focusRule).toBeGreaterThan(layerOpen);
+    expect(baseCss.slice(layerOpen, focusRule)).toMatch(/\}\s*(\/\*[\s\S]*?\*\/\s*)*$/);
+    expect(componentsCss).toMatch(/@layer components \{/);
+  });
+
+  /**
+   * A component state that paints its own elevation must publish it, or winning
+   * the cascade would mean DELETING the hover lift the design asks for. Every
+   * `box-shadow` declared on a `:hover`/`:active` in the component layer has to
+   * go through `--shadow-state`; the sweep is over the file, so a sixth card is
+   * covered the day it is written.
+   */
+  it('routes every stateful elevation through --shadow-state', () => {
+    const offenders = [
+      ...componentsCss.matchAll(/([^{}]*:(?:hover|active)[^{}]*)\{([^}]*)\}/g),
+    ].filter(([, , body]) => /box-shadow:/.test(body) && !/box-shadow:\s*var\(--shadow-state\)/.test(body))
+      .filter(([, , body]) => !/--shadow-state:/.test(body))
+      .map(([, selector]) => selector.trim());
+
+    expect(offenders, 'these states paint a shadow without publishing it').toEqual([]);
   });
 });
 
@@ -180,18 +281,37 @@ describe('focus indicator contrast (WCAG 2.2 SC 1.4.11)', () => {
  * hatch is present and restores a real outline.
  */
 describe('focus indicator under forced colours', () => {
-  const block =
-    /@media\s*\(forced-colors:\s*active\)\s*\{\s*:focus-visible\s*\{([^}]*)\}/.exec(baseCss);
+  /**
+   * Tolerates the shapes a formatter may produce — the query may be spelled with
+   * or without spaces, the rule may carry other selectors alongside
+   * `:focus-visible`, and the declarations may be in any order — while still
+   * requiring that the block exists and that `:focus-visible` is one of the
+   * things it re-declares.
+   */
+  const block = /@media[^{]*\(\s*forced-colors\s*:\s*active\s*\)[^{]*\{([\s\S]*?)\n\}/.exec(
+    baseCss,
+  );
 
   it('re-declares :focus-visible inside a forced-colors block', () => {
-    expect(block, 'base.css has no @media (forced-colors: active) focus rule').not.toBeNull();
+    expect(block, 'base.css has no @media (forced-colors: active) rule').not.toBeNull();
+    expect(block![1]).toMatch(/(^|[\s,])(:focus-visible|[\w.[\]='-]+:focus-visible)[\s,{]/);
   });
 
   it('restores an outline in a system colour, not one of ours', () => {
     const body = block![1];
-    // `Highlight` is the palette the USER chose; any token of ours would either
-    // be substituted away by the UA or fail against a palette we cannot see.
-    expect(body).toMatch(/outline:\s*\d+px\s+solid\s+Highlight/);
-    expect(body).toMatch(/outline-offset:\s*\d+px/);
+    // `Highlight` is the palette the USER chose. A token of ours would be either
+    // substituted away by the UA or invisible against a palette we cannot see,
+    // so the assertion is specifically «a system colour keyword», not «a colour».
+    expect(body).toMatch(
+      /outline:\s*(?:[\d.]+px\s+solid\s+(Highlight|CanvasText|LinkText|ButtonText)|(Highlight|CanvasText|LinkText|ButtonText)\s+solid\s+[\d.]+px)/,
+    );
+    // A zero offset would let the outline sit on the glyphs; the box-shadow ring
+    // it replaces stood off the element by the width of its halo.
+    const offset = /outline-offset:\s*([\d.]+)px/.exec(body);
+    expect(offset, 'no outline-offset in the forced-colors block').not.toBeNull();
+    expect(Number(offset![1])).toBeGreaterThan(0);
+    // The unlayered position matters here too: a layered forced-colours rule
+    // would lose to any component `:hover` exactly the way the ring did.
+    expect(block!.index).toBeGreaterThan(baseCss.indexOf(':focus-visible {'));
   });
 });

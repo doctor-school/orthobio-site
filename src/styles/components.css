@@ -13,7 +13,19 @@
      long unbreakable Russian token can never push the page wider than the
      viewport (donor overflow incident bbm#47).
    • Every interactive element carries :hover / :active / :focus-visible.
+   • A state that paints a `box-shadow` publishes it into `--shadow-state` as
+     well, so the focus ring can compose with it (see below).
+
+   CASCADE LAYER. The whole file is one `@layer components` block — declared
+   after `@layer base`, so every tie this file used to win on source order it
+   still wins. The reason the layer exists is in base.css's header: the focus
+   rules live OUTSIDE all layers, which is what stops a `:hover` here from
+   silently deleting the focus ring, as five card components did until PR #44.
+   The body is NOT re-indented; a layer block is otherwise transparent and a
+   1900-line reindent would have hidden the real change.
    ============================================================================ */
+
+@layer components {
 
 /* ── Layout primitives ───────────────────────────────────────────────────── */
 
@@ -826,7 +838,8 @@
 }
 
 a.ob-yc:hover {
-  box-shadow: var(--shadow-lift);
+  --shadow-state: var(--shadow-lift);
+  box-shadow: var(--shadow-state);
   border-color: var(--hairline-strong);
   color: var(--text-body);
 }
@@ -1091,7 +1104,8 @@ a.ob-yc:active {
 }
 
 a.ob-pt__card:hover {
-  box-shadow: var(--shadow-lift);
+  --shadow-state: var(--shadow-lift);
+  box-shadow: var(--shadow-state);
   border-color: var(--hairline-strong);
   color: var(--text-link);
 }
@@ -1420,7 +1434,8 @@ a.ob-pg__it {
 }
 
 a.ob-pg__it:hover {
-  box-shadow: var(--shadow-lift);
+  --shadow-state: var(--shadow-lift);
+  box-shadow: var(--shadow-state);
 }
 
 a.ob-pg__it:hover img {
@@ -1429,7 +1444,11 @@ a.ob-pg__it:hover img {
 
 a.ob-pg__it:active {
   /* Drops the hover lift back to the design's resting card elevation, which is
-     exactly the value `--shadow-card` names. */
+     exactly the value `--shadow-card` names. `--shadow-state` has to be dropped
+     with it — pressing happens while hovering, so the hover rule above has
+     already published the lift, and the focus ring would otherwise compose with
+     an elevation this state is explicitly taking away. */
+  --shadow-state: initial;
   box-shadow: var(--shadow-card);
   opacity: 0.9;
 }
@@ -1557,7 +1576,8 @@ html:has(.ob-pg__lb:target) {
 
 /* Not qualified with `a`: once the player loads, the card is a <div>. */
 .ob-vc:hover {
-  box-shadow: var(--shadow-lift);
+  --shadow-state: var(--shadow-lift);
+  box-shadow: var(--shadow-state);
   border-color: var(--hairline-strong);
   color: var(--text-body);
 }
@@ -1669,7 +1689,8 @@ html:has(.ob-pg__lb:target) {
 }
 
 a.ob-dc:hover {
-  box-shadow: var(--shadow-lift);
+  --shadow-state: var(--shadow-lift);
+  box-shadow: var(--shadow-state);
   border-color: var(--hairline-strong);
   color: var(--text-body);
 }
@@ -1975,4 +1996,7 @@ details[open] > .ob-faq__q::after {
     align-items: baseline;
     gap: var(--sp-4);
   }
+}
+
+/* ── end @layer components ───────────────────────────────────────────────── */
 }

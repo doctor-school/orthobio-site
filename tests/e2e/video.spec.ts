@@ -142,6 +142,75 @@ test.describe('the loaded player holds the layout', () => {
   }
 });
 
+/**
+ * Poster frames (Issue #33). The facade used to be a bare dark plate because
+ * hotlinking the providers' CDNs is out; the frames now come from our own
+ * bucket. Two claims are load-bearing and only a browser can settle them: the
+ * image really decodes (a 404 still occupies its reserved box, so the DOM alone
+ * proves nothing), and the page asks NO foreign host for it.
+ */
+test.describe('poster frames', () => {
+  const BUCKET_POSTERS = 'https://s3.twcstorage.ru/orthobio-media/posters/';
+
+  test('every card paints a poster served from our own bucket', async ({ page }) => {
+    const foreign: string[] = [];
+    page.on('request', (r) => {
+      const { hostname } = new URL(r.url());
+      if (/ytimg|rtbcdn|youtube|rutube/.test(hostname)) foreign.push(r.url());
+    });
+
+    // 2022 is the densest year: 8 videos, 5 of them behind the disclosure.
+    await page.goto('/archive/2022');
+    const posters = page.locator('a.ob-vc img.ob-vc__poster');
+    await expect(posters).toHaveCount(8);
+
+    for (const src of await posters.evaluateAll((imgs) =>
+      imgs.map((i) => (i as HTMLImageElement).getAttribute('src')),
+    )) {
+      expect(src).toContain(BUCKET_POSTERS);
+    }
+
+    // The reserved box: without both attributes the card reflows when the
+    // image lands, which is the CLS the facade's 16/9 exists to prevent.
+    const first = posters.first();
+    await expect(first).toHaveAttribute('width', /^\d+$/);
+    await expect(first).toHaveAttribute('height', /^\d+$/);
+
+    await first.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => first.evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBeGreaterThan(0);
+
+    // The whole point of the rescue: not one request leaves for a provider.
+    expect(foreign).toEqual([]);
+  });
+
+  test('the dark plate survives underneath as the poster-less fallback', async ({ page }) => {
+    // No published year has a poster-less video, so the fallback cannot be
+    // observed directly. What CAN be observed is that the poster covers the
+    // plate rather than replacing it — the plate is still painted, and a card
+    // that loses its <img> lands back on it.
+    await page.goto('/archive/2025');
+    const facade = page.locator('.ob-vc__facade').first();
+    const bg = await facade.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(bg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(bg).not.toBe('transparent');
+
+    // The play glyph must stay ON TOP of the poster: it is a positioned
+    // element's job to escape a static sibling's stacking, and getting that
+    // wrong hides the only affordance the card has.
+    const play = page.locator('.ob-vc__play').first();
+    await play.scrollIntoViewIfNeeded();
+    const box = await play.boundingBox();
+    expect(box).not.toBeNull();
+    const onTop = await page.evaluate(
+      ([x, y]) => document.elementFromPoint(x, y)?.closest('.ob-vc__play') !== null,
+      [box!.x + box!.width / 2, box!.y + box!.height / 2],
+    );
+    expect(onTop).toBe(true);
+  });
+});
+
 test('a YouTube card stays an outbound link and says so', async ({ page }) => {
   // 20 of 23 archive videos are YouTube-hosted, which the RF cannot rely on —
   // those cards must not pretend to embed.

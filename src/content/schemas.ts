@@ -368,6 +368,36 @@ export const congressSchema = z.object({
         /** Embed link — `videoLocation()`, NOT `mediaLocation()`: see ALLOWED_VIDEO_HOSTS. */
         url: videoLocation(),
         title: proseOrNull(),
+        /**
+         * Poster frame of the click-to-load facade (Issue #33).
+         *
+         * `mediaLocation()`, not `videoLocation()`: the URL of the video may
+         * point at YouTube/Rutube, but its POSTER is an image we serve
+         * ourselves — the frames were fetched once and re-encoded into
+         * `posters/` in our bucket (`scripts/rescue-video-posters.mjs`), so the
+         * card never asks a foreign CDN for a pixel. That is the difference
+         * between an embed link, which cannot be self-hosted, and media, which
+         * ТЗ §4 says must be.
+         *
+         * Shaped like `cover` / `photos[]` rather than as a bare URL: `width` /
+         * `height` are the intrinsic pixel dimensions the no-CLS rule
+         * (AGENTS.md) needs IN THE DATA, because the derivative stops at the
+         * source's own resolution — 800×450 for the 21 videos whose provider
+         * publishes an HD frame, 640×360 and 480×270 for the two 2021/2022
+         * uploads that only have a small one.
+         *
+         * `null` — the default — means no poster could be rescued; the facade
+         * falls back to the dark plate it drew before, which stays a finished
+         * state and not a defect.
+         */
+        poster: z
+          .object({
+            url: mediaLocation(),
+            width: z.number().int().positive(),
+            height: z.number().int().positive(),
+          })
+          .nullable()
+          .default(null),
       }),
     )
     .default([]),

@@ -109,6 +109,15 @@
      into a solid value (≈13:1 over `--ink`, and it stays that way if a poster
      frame ever backs the facade). */
   --video-host-fg: oklch(0.93 0.006 250);
+  /* Pill under the host badge once a POSTER frame backs the facade (Issue #33).
+     Same reasoning as the lightbox controls below: the badge then composites
+     over an arbitrary photograph — congress frames are mostly bright halls and
+     white slides — so its contrast must not depend on the pixels underneath.
+     Measured composites of --video-host-fg over this pill: 10.11:1 on pure
+     white, 14.82:1 on pure black, against the 4.5:1 WCAG 1.4.3 asks of its 10px
+     uppercase text. Over the bare ink plate the badge needs no pill and, being
+     a sibling selector, does not get one. */
+  --scrim-video-badge: oklch(0.21 0.02 250 / 0.88);
   /* Photo lightbox: full-screen scrim plus the controls that sit on it. */
   --scrim-lightbox: oklch(0.17 0.02 250 / 0.93);
   --lightbox-caption: oklch(0.87 0.008 250);

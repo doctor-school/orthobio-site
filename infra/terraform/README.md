@@ -79,6 +79,18 @@ aws s3 sync <staging_root> "s3://$TIMEWEB_S3_BUCKET/" \
 - Verify after upload: object count vs manifest, spot SHA-256 checks against
   `docs/assets-checksums.txt`.
 
+### Later rescues: one prefix at a time
+
+The Issue #2 sync above ran once. Everything added since goes in under its own
+prefix and touches nothing else — `logos/` (Issue #22) and `posters/`
+(Issue #33, `node scripts/rescue-video-posters.mjs --upload`). That script does
+not shell out to the AWS CLI: it signs a per-object `PUT` itself, because a
+`sync` reasons about a whole prefix and may delete, and this bucket holds 2.3k
+rescued archive objects that exist nowhere else. It reads
+`TIMEWEB_S3_ENDPOINT` / `TIMEWEB_S3_BUCKET` / `TIMEWEB_S3_ACCESS_KEY` /
+`TIMEWEB_S3_SECRET_KEY` from the environment (same values as the table above)
+and verifies every object by fetching it back and comparing SHA-256.
+
 Public object URL (path-style; hostname output already carries `https://`):
 `<media_s3_hostname>/<media_bucket_full_name>/<key>`
 (live: `https://s3.twcstorage.ru/orthobio-media/<key>`)

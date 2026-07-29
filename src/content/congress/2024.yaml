@@ -95,12 +95,28 @@ posters: []
 videos:
   - url: https://www.youtube.com/watch?v=nMNyfUS2buI
     title: "Отчётный ролик с V Конгресса «Ортобиология» #2024"
+    poster:
+      url: /media/posters/yt-nMNyfUS2buI.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=xspid1JTqv4
     title: Отчётный ролик о V конгрессе Ортобиология 2024 - глазами партнёров
+    poster:
+      url: /media/posters/yt-xspid1JTqv4.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=e7o0F-qBGbA
     title: Приглашение к участию от Президента V Конгресса ОРТОБИОЛОГИЯ | Загородний Н.В.
+    poster:
+      url: /media/posters/yt-e7o0F-qBGbA.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=RRW4aKfXp44
     title: Приглашение к участию от члена оргкомитета V Конгресса ОРТОБИОЛОГИЯ | Страхов М. А.
+    poster:
+      url: /media/posters/yt-RRW4aKfXp44.webp
+      width: 800
+      height: 450
 
 theses:
   pdf: /media/2024/docs/theses-2024.pdf

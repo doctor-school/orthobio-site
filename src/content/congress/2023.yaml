@@ -78,14 +78,34 @@ posters: []
 videos:
   - url: https://www.youtube.com/watch?v=r4fVPFAfk18
     title: Отчётное видео ОРТОБИОЛОГИЯ 2023
+    poster:
+      url: /media/posters/yt-r4fVPFAfk18.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=a0oU5_WYvSI
     title: ОРТОБИОЛОГИЯ 2023 / 21 АПРЕЛЯ - 1 ЗАЛ
+    poster:
+      url: /media/posters/yt-a0oU5_WYvSI.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=YMJQy8s-kTM
     title: ОРТОБИОЛОГИЯ 2023 / 22 АПРЕЛЯ - 1 ЗАЛ
+    poster:
+      url: /media/posters/yt-YMJQy8s-kTM.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=Me6ohmwqd7w
     title: Президент Конгресса Ортобиология 2023 Н.В. Загородний приглашает к участию
+    poster:
+      url: /media/posters/yt-Me6ohmwqd7w.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=9XYaeBYyiYE
     title: Член Оргкомитета Конгресса Ортобиология 2023 М. А. Страхов приглашает к участию
+    poster:
+      url: /media/posters/yt-9XYaeBYyiYE.webp
+      width: 800
+      height: 450
 
 # TODO(Антон): сборник тезисов 2023 существует, но лежит на Bitrix24-диске
 # (https://b24-ieosll.bitrix24.ru/~bwfFy) за авторизацией — 403 без неё.

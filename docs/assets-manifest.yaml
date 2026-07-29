@@ -1,8 +1,10 @@
 # Assets rescue manifest — Congress ОРТОБИОЛОГИЯ archive 2021–2026 (Issue #2)
 #
-# Two sections, two rescues: `years:` is the Issue #2 photo/PDF/video sweep
-# below; `logos:` at the end of this file is the Issue #22 partner-logo library
-# (2026-07-29) and has its own counters and header.
+# Three sections, three rescues, each with its own counters and header:
+#   years:    the Issue #2 photo/PDF/video sweep (2026-07-27), below;
+#   logos:    the Issue #22 partner-logo library (2026-07-29), 49 objects;
+#   profiles: the Issue #24 company-profile rescue (2026-07-29) — TEXT only,
+#             zero objects uploaded, and the reason why is recorded there.
 #
 # Rescued on 2026-07-27 from seven external platforms before link rot.
 # Local staging: C:\Users\sidor\orthobio-assets\<year>\... (outside the repo;
@@ -1108,3 +1110,265 @@ logos:
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
       object: { w: 240, h: 240, bytes: 6356, sha256: '7932ba8aec339307a0e168f8e08a391f904e3a384133215b383aed5633af73ff' }
+
+
+# ── Company profiles — Issue #24 (2026-07-29) ───────────────────────────────
+#
+# The 22 exhibitor profile pages of the 2026 site, `orthobio.ru/company?i=<id>`.
+# Reproduce with `node scripts/rescue-partner-profiles.mjs` (Playwright: the
+# /exhibition catalogue renders its «Подробнее…» links from JS, so the URLs
+# cannot be enumerated from plain HTML).
+#
+# THIS SECTION UPLOADED NOTHING. It is the first rescue in this repo whose
+# payload is entirely TEXT: the captured content (address, phone, email, site,
+# description) lives in `src/content/congress/2026.yaml`, which is the durable
+# copy. Every item is therefore `status: recorded` — provenance-only, `local`
+# null by design, per the status vocabulary at the top of this file.
+#
+# ── Why no poster or video objects ──────────────────────────────────────────
+# Each profile page ships modal markup for three posters
+# (`.../exhib/<id>/poster1..3.jpg`) and one video (`.../exhib/<id>/video.mp4`).
+# That markup is an unconditional server-side TEMPLATE, not evidence of an
+# asset: the `.model` block that would hold the buttons opening those modals is
+# EMPTY on all 22 pages, and every one of the 66 poster URLs and 22 video URLs
+# returns HTTP 404 from cdn.congress-ph.online. The same CDN directory serves
+# each company's `logo.png` with HTTP 200 (rescued in Issue #22), which is what
+# proves the 404s are genuine absence rather than a blocked crawl.
+#
+# So `posters`/`video` below record what the page DECLARED against what could
+# be retrieved (always 0), and the recon line «изображения-постеры» in
+# docs/recon/orthobio-ru-main.md describes markup, not files.
+#
+# The 9 info partners and the 21 organizing bodies had no profile pages at all —
+# only the 22 exhibitors did, so only they carry a `slug` in the content YAML.
+profiles:
+  rescued_at: '2026-07-29'
+  s3_prefix: null # nothing was uploaded — see the note above
+  counters:
+    profiles: 22
+    objects: 0
+    posters_declared: 66
+    posters_retrieved: 0
+    videos_declared: 22
+    videos_retrieved: 0
+  items:
+    - id: profile-dr-reddys
+      org: 'Dr. Reddy’s Laboratories'
+      source: 'https://orthobio.ru/company?i=dr.reddys'
+      legacy_id: 'dr.reddys'
+      route: '/partners/dr-reddys/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 4 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-promomed
+      org: 'ПРОМОМЕД, ПАО'
+      source: 'https://orthobio.ru/company?i=promomed'
+      legacy_id: 'promomed'
+      route: '/partners/promomed/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: false, paragraphs: 6 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-berlin-chemie
+      org: 'Берлин-Хеми/А. Менарини, ООО'
+      source: 'https://orthobio.ru/company?i=berlin'
+      legacy_id: 'berlin'
+      route: '/partners/berlin-chemie/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 4 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-viatris
+      org: 'Виатрис, ООО'
+      source: 'https://orthobio.ru/company?i=viatris'
+      legacy_id: 'viatris'
+      route: '/partners/viatris/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: false, paragraphs: 3 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-nizhpharm
+      org: 'НИЖФАРМ, ГК'
+      source: 'https://orthobio.ru/company?i=nizhpharm'
+      legacy_id: 'nizhpharm'
+      route: '/partners/nizhpharm/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 11 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-panbio-pharm
+      org: 'ПанБио Фарм, ООО'
+      source: 'https://orthobio.ru/company?i=panbio'
+      legacy_id: 'panbio'
+      route: '/partners/panbio-pharm/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: false, paragraphs: 11 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-haleon
+      org: 'Хелеон Рус, АО'
+      source: 'https://orthobio.ru/company?i=heleon'
+      legacy_id: 'heleon'
+      route: '/partners/haleon/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: false, phone: true, site: false, paragraphs: 3 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-csc-pharma
+      org: 'CSC Pharma Russia'
+      source: 'https://orthobio.ru/company?i=CSCPharmaRussia'
+      legacy_id: 'CSCPharmaRussia'
+      route: '/partners/csc-pharma/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 1 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-biomir-servis
+      org: 'БИОМИР сервис'
+      source: 'https://orthobio.ru/company?i=biomir'
+      legacy_id: 'biomir'
+      route: '/partners/biomir-servis/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 6 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-generium
+      org: 'ГЕНЕРИУМ, АО'
+      source: 'https://orthobio.ru/company?i=generium'
+      legacy_id: 'generium'
+      route: '/partners/generium/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: false, phone: true, site: true, paragraphs: 3 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-kem
+      org: 'КЭМ, ООО'
+      source: 'https://orthobio.ru/company?i=kem'
+      legacy_id: 'kem'
+      route: '/partners/kem/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: false, phone: true, site: true, paragraphs: 1 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-rompharma
+      org: 'Ромфарма, ООО'
+      source: 'https://orthobio.ru/company?i=rompharma'
+      legacy_id: 'rompharma'
+      route: '/partners/rompharma/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 5 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-servier
+      org: 'Сервье, АО'
+      source: 'https://orthobio.ru/company?i=serve'
+      legacy_id: 'serve'
+      route: '/partners/servier/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: false, phone: true, site: false, paragraphs: 2 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-arm
+      org: 'АРМ, ООО'
+      source: 'https://orthobio.ru/company?i=apm'
+      legacy_id: 'apm'
+      route: '/partners/arm/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 1 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-bionoltra
+      org: 'БИОНОЛТРА ЭС ЭЙ, ООО'
+      source: 'https://orthobio.ru/company?i=bionoltra'
+      legacy_id: 'bionoltra'
+      route: '/partners/bionoltra/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: false, paragraphs: 4 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-kardiomed
+      org: 'КардиоМед, ООО'
+      source: 'https://orthobio.ru/company?i=kardiomed'
+      legacy_id: 'kardiomed'
+      route: '/partners/kardiomed/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 2 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-multi-systems-technology
+      org: 'Малти-Системс Текнолоджи, ООО'
+      source: 'https://orthobio.ru/company?i=malty'
+      legacy_id: 'malty'
+      route: '/partners/multi-systems-technology/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 4 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-mt-tehnika
+      org: 'МТ Техника'
+      source: 'https://orthobio.ru/company?i=mtteh'
+      legacy_id: 'mtteh'
+      route: '/partners/mt-tehnika/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 2 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-oksiterra
+      org: 'ОКСИТЕРРА, ООО'
+      source: 'https://orthobio.ru/company?i=oxyterma'
+      legacy_id: 'oxyterma'
+      route: '/partners/oksiterra/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 1 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-orfan-grupp
+      org: 'Орфан групп, ООО'
+      source: 'https://orthobio.ru/company?i=ofran'
+      legacy_id: 'ofran'
+      route: '/partners/orfan-grupp/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 6 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-severnaya-zvezda
+      org: 'Северная звезда, НАО'
+      source: 'https://orthobio.ru/company?i=star'
+      legacy_id: 'star'
+      route: '/partners/severnaya-zvezda/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: false, phone: false, site: true, paragraphs: 2 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }
+    - id: profile-fbk
+      org: 'ФБК, ООО'
+      source: 'https://orthobio.ru/company?i=fbk'
+      legacy_id: 'fbk'
+      route: '/partners/fbk/'
+      type: profile
+      status: recorded
+      captured: { address: true, email: true, phone: true, site: true, paragraphs: 6 }
+      posters: { declared: 3, retrieved: 0, status: not-found }
+      video: { declared: 1, retrieved: 0, status: not-found }

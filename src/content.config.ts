@@ -16,11 +16,14 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 
-import { congressSchema, pageSchemaChecked } from './content/schemas';
+import { congressSchemaChecked, pageSchemaChecked } from './content/schemas';
 
 const congress = defineCollection({
   loader: glob({ pattern: '*.yaml', base: './src/content/congress' }),
-  schema: congressSchema,
+  // The `Checked` variant adds the cross-field refinements the plain object
+  // schema cannot express (today: partner profile slugs are unique within a
+  // year). Same split as `pageSchemaChecked` below.
+  schema: congressSchemaChecked,
 });
 
 /**

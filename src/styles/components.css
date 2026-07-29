@@ -1746,12 +1746,12 @@ details[open] > .ob-faq__q::after {
 
 /* Breadcrumb back to the hub — the year page is otherwise a dead end for
    anyone who arrived from search. */
-.ob-yh__crumb {
+.ob-crumb {
   font-size: var(--fs-small);
   margin: 0 0 var(--sp-5);
 }
 
-.ob-yh__crumb a {
+.ob-crumb a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1760,21 +1760,21 @@ details[open] > .ob-faq__q::after {
   text-decoration: none;
 }
 
-.ob-yh__crumb a::before {
+.ob-crumb a::before {
   content: '←';
   transition: translate var(--t-state);
 }
 
-.ob-yh__crumb a:hover {
+.ob-crumb a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.ob-yh__crumb a:hover::before {
+.ob-crumb a:hover::before {
   translate: -3px 0;
 }
 
-.ob-yh__crumb a:active {
+.ob-crumb a:active {
   color: var(--ob-sky-text);
 }
 
@@ -1806,4 +1806,117 @@ details[open] > .ob-faq__q::after {
   font-weight: var(--fw-semibold);
   color: var(--error);
   margin: 0 0 var(--sp-3);
+}
+
+/* ── Company profile (/partners/<slug>) ──────────────────────────────────── */
+
+/* Logo beside the identity block, stacking under it on a phone. `min-width: 0`
+   on the text column is the AGENTS.md flex invariant — without it a long legal
+   name («Малти-Системс Текнолоджи») would push the row wider than 360px. */
+.ob-cp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.ob-cp__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+}
+
+.ob-cp__logo img {
+  display: block;
+  width: 120px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.ob-cp__id {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.ob-cp__tier {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-sky-text);
+  margin: 0 0 var(--sp-2);
+}
+
+.ob-cp__title {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-bold);
+  /* Mandatory on display headings (AGENTS.md): these are brand names, and a
+     360px column cannot hyphenate «БИОНОЛТРА ЭС ЭЙ» for us. */
+  overflow-wrap: break-word;
+  margin: 0 0 var(--sp-2);
+}
+
+.ob-cp__years {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Address / phone / email / site as a definition list: each fact keeps its own
+   label, which is what a screen reader announces alongside the value. */
+.ob-cp__facts {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.ob-cp__fact {
+  display: grid;
+  /* `minmax(0, …)` on both tracks — a bare `auto`/`1fr` pair lets a long email
+     address widen the grid past the viewport. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+.ob-cp__fact dt {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ob-cp__fact dd {
+  margin: 0;
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+
+.ob-cp__fact dd a {
+  text-decoration: none;
+}
+
+.ob-cp__fact dd a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ob-cp__fact dd a:active {
+  color: var(--ob-sky-text);
+}
+
+@media (min-width: 768px) {
+  .ob-cp__fact {
+    grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--sp-4);
+  }
 }

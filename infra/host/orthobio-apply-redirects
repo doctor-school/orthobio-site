@@ -29,13 +29,50 @@ STAGED=$(mktemp /tmp/orthobio-redirects.XXXXXX)
 trap 'rm -f "$STAGED"' EXIT INT TERM
 cat "$SRC" > "$STAGED"
 
-# Allowlist: blank lines, comments, and the two block shapes the generator
-# emits. Any other line — a bare `}`, an `include`, a `root` — is a refusal.
-# The character classes mirror SAFE_PATH in scripts/redirects.mjs and exclude
-# every nginx metacharacter: no `;` (a second directive), no `#` (a comment
-# swallowing our own `;` and `}`), no quotes, no `$`, no whitespace.
-if grep -nvE '^[[:space:]]*(#.*)?$|^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$|^location \^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ rewrite \^[A-Za-z0-9._~/%!&()*+,=:@\\-]+\(\.\*\)\$ [A-Za-z0-9._~/%!&()*+,=:@?-]+\$1 (permanent|redirect); \}$|^location ~ \^/\(\?!\\\.\)\(\.\*\)\$ \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+\$1; \}$' "$STAGED"; then
+# Allowlist: blank lines, comments, and the block shapes the generator emits.
+# Any other line — an `include`, a `root`, a `server` — is a refusal. The
+# character classes mirror SAFE_PATH / SAFE_QUERY_VALUE in
+# scripts/redirects.mjs and exclude every nginx metacharacter: no `;` (a second
+# directive), no `#` (a comment swallowing our own `;` and `}`), no stray
+# quotes, no `$`, no whitespace.
+#
+# Since Issue #24 the generator also emits MULTI-LINE blocks, for the
+# query-conditional redirects that carry `/company?i=<id>` to the partner
+# profiles: an opening `location = /x {`, one indented `if ($arg_… = "…")` per
+# condition, an optional indented fallthrough `return`, and a closing `}`. A
+# bare `}` therefore had to become an allowed line, which on its own would let a
+# crafted snippet close the vhost's `server {}` early — so brace balance is now
+# asserted separately, below. (Even without that check the blast radius was a
+# rejected config rather than a served one: every line after such a `}` would
+# still have to match this allowlist, and `location` at http level fails
+# `nginx -t`. The balance check makes it a refusal here instead, which is where
+# the error belongs.)
+# Each alternative is SINGLE-quoted so the bytes here are the bytes grep sees.
+# Double quotes would be a trap: sh expands `\$` to `$` inside them, silently
+# turning the literal `$` of a rewrite pattern into an end-of-line anchor.
+A_BLANK='^[[:space:]]*(#.*)?$'
+A_EXACT='^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$'
+A_PREFIX='^location \^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ rewrite \^[A-Za-z0-9._~/%!&()*+,=:@\\-]+\(\.\*\)\$ [A-Za-z0-9._~/%!&()*+,=:@?-]+\$1 (permanent|redirect); \}$'
+A_ROOT='^location ~ \^/\(\?!\\\.\)\(\.\*\)\$ \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+\$1; \}$'
+# Multi-line query-conditional block (Issue #24): open, conditions, optional
+# fallthrough, close.
+A_OPEN='^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{$'
+A_IF='^    if \(\$arg_[A-Za-z0-9_]+ = "[A-Za-z0-9._~/%!&()*+,=:@-]+"\) \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$'
+A_RETURN='^    return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+;$'
+A_CLOSE='^\}$'
+
+if grep -nvE "$A_BLANK|$A_EXACT|$A_PREFIX|$A_ROOT|$A_OPEN|$A_IF|$A_RETURN|$A_CLOSE" "$STAGED"; then
     echo "orthobio-apply-redirects: refused — line(s) above are not generator output" >&2
+    exit 1
+fi
+
+# Brace balance: the snippet is `include`d INSIDE `server {}`, so it must open
+# and close exactly as many blocks as it declares. An unbalanced file would
+# either close the vhost's own block or leave it open.
+OPEN=$(tr -cd '{' < "$STAGED" | wc -c)
+CLOSE=$(tr -cd '}' < "$STAGED" | wc -c)
+if [ "$OPEN" -ne "$CLOSE" ]; then
+    echo "orthobio-apply-redirects: refused — $OPEN '{' vs $CLOSE '}'; the snippet must not open or close a block it does not own" >&2
     exit 1
 fi
 

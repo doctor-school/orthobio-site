@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseRedirects, renderNginxRedirects, assertRenderable } from '../../scripts/redirects.mjs';
+import { parse } from 'yaml';
+
 import { ROUTES } from '../e2e/_routes';
 
 /**
@@ -21,16 +23,16 @@ describe('parseRedirects', () => {
     expect(parseRedirects('')).toEqual([]);
   });
 
-  it('defaults status to 301 and match to exact', () => {
+  it('defaults status to 301, match to exact and query to null', () => {
     expect(parseRedirects(yaml('  - from: /old\n    to: /new\n'))).toEqual([
-      { from: '/old', to: '/new', status: 301, match: 'exact' },
+      { from: '/old', to: '/new', status: 301, match: 'exact', query: null },
     ]);
   });
 
   it('keeps an explicit status and match', () => {
     expect(
       parseRedirects(yaml('  - from: /a\n    to: /b\n    status: 302\n    match: prefix\n')),
-    ).toEqual([{ from: '/a', to: '/b', status: 302, match: 'prefix' }]);
+    ).toEqual([{ from: '/a', to: '/b', status: 302, match: 'prefix', query: null }]);
   });
 
   it('accepts an absolute https target (the platform migration case)', () => {
@@ -248,5 +250,169 @@ describe('infra/redirects.yaml', () => {
     expect(renderNginxRedirects(entries)).toBe(
       readFileSync('infra/nginx/redirects.generated.conf', 'utf8'),
     );
+  });
+});
+
+/**
+ * Query-conditional redirects (Issue #24).
+ *
+ * The old site addressed all 22 company profiles through ONE path,
+ * `/company?i=<id>`. nginx matches `location` on the path alone, so without
+ * this feature every one of those entries would have collapsed onto the same
+ * `location = /company` and nginx would refuse the config outright. What is
+ * pinned here is what no other check can see: that the conditions land in ONE
+ * block, in author order, with the unconditional entry last, and that a value
+ * able to break out of the generated nginx string is rejected.
+ */
+describe('parseRedirects → query conditions', () => {
+  const withQuery = (body: string) => parseRedirects(yaml(body));
+
+  it('parses a single-argument condition', () => {
+    expect(
+      withQuery('  - from: /company\n    query: { i: dr.reddys }\n    to: /partners/dr-reddys/\n'),
+    ).toEqual([
+      {
+        from: '/company',
+        to: '/partners/dr-reddys/',
+        status: 301,
+        match: 'exact',
+        query: { name: 'i', value: 'dr.reddys' },
+      },
+    ]);
+  });
+
+  it('allows the same path with different conditions', () => {
+    const entries = withQuery(
+      '  - from: /company\n    query: { i: a }\n    to: /partners/a/\n' +
+        '  - from: /company\n    query: { i: b }\n    to: /partners/b/\n',
+    );
+    expect(entries.map((e) => e.query?.value)).toEqual(['a', 'b']);
+  });
+
+  it('rejects the same path with the SAME condition — the second is unreachable', () => {
+    expect(() =>
+      withQuery(
+        '  - from: /company\n    query: { i: a }\n    to: /partners/a/\n' +
+          '  - from: /company\n    query: { i: a }\n    to: /partners/b/\n',
+      ),
+    ).toThrow(/duplicate source/);
+  });
+
+  it('rejects more than one argument — nginx cannot "and" two conditions here', () => {
+    expect(() => withQuery('  - from: /c\n    query: { i: a, j: b }\n    to: /x\n')).toThrow(
+      /exactly one argument/,
+    );
+  });
+
+  it('rejects an argument name that is not a bare nginx identifier', () => {
+    expect(() => withQuery('  - from: /c\n    query: { "i-x": a }\n    to: /x\n')).toThrow(
+      /bare identifier/,
+    );
+  });
+
+  it('rejects a value that would escape the generated nginx string', () => {
+    for (const bad of ['a"b', 'a$b', 'a;b', 'a b', 'a}b', 'a#b', '']) {
+      expect(
+        () => withQuery(`  - from: /c\n    query: { i: ${JSON.stringify(bad)} }\n    to: /x\n`),
+        bad,
+      ).toThrow(/safe URL characters/);
+    }
+  });
+
+  it('rejects query combined with match: prefix', () => {
+    expect(() =>
+      withQuery('  - from: /c\n    query: { i: a }\n    to: /x\n    match: prefix\n'),
+    ).toThrow(/requires match "exact"/);
+  });
+});
+
+describe('renderNginxRedirects → query conditions', () => {
+  const render = (body: string) => renderNginxRedirects(parseRedirects(yaml(body)));
+
+  it('groups conditions of one path into a single location per slash form', () => {
+    const conf = render(
+      '  - from: /company\n    query: { i: a }\n    to: /partners/a/\n' +
+        '  - from: /company\n    query: { i: b }\n    to: /partners/b/\n',
+    );
+    // One block per slash form, never one per condition: nginx allows a single
+    // `location =` per URI, so a block per entry would not load at all.
+    expect(conf.match(/location = \/company \{/g)).toHaveLength(1);
+    expect(conf.match(/location = \/company\/ \{/g)).toHaveLength(1);
+    expect(conf).toContain('if ($arg_i = "a") { return 301 /partners/a/; }');
+    expect(conf).toContain('if ($arg_i = "b") { return 301 /partners/b/; }');
+  });
+
+  it('renders the unconditional entry of the same path as the fallthrough return', () => {
+    const conf = render(
+      '  - from: /company\n    query: { i: a }\n    to: /partners/a/\n' +
+        '  - from: /company\n    to: /partners\n',
+    );
+    const block = conf.slice(conf.indexOf('location = /company {'));
+    const body = block.slice(0, block.indexOf('\n}'));
+    // The bare return must come AFTER every `if`, or it would answer first and
+    // no condition would ever be evaluated.
+    expect(body.indexOf('if ($arg_i = "a")')).toBeLessThan(body.indexOf('return 301 /partners;'));
+  });
+
+  it('omits the fallthrough when the map has no unconditional entry', () => {
+    const conf = render('  - from: /company\n    query: { i: a }\n    to: /partners/a/\n');
+    expect(conf).toContain('if ($arg_i = "a")');
+    // No bare `return` — an unmatched id falls through to try_files, i.e. 404,
+    // rather than being sent somewhere merely plausible.
+    expect(conf).not.toMatch(/^ {4}return /m);
+  });
+
+  it('leaves path-only entries rendering exactly as before', () => {
+    expect(render('  - from: /old\n    to: /new\n')).toContain(
+      'location = /old { return 301 /new; }',
+    );
+  });
+});
+
+/**
+ * The LIVE map: every old company URL resolves to a profile page the build
+ * actually emits, and every profile keeps its old URL. This pairing is what no
+ * other check covers — the schema proves a slug is well-formed and the e2e
+ * suite proves a page renders, but only this asserts the redirect targets and
+ * the routes are the same set. A slug renamed on one side alone fails here.
+ */
+describe('infra/redirects.yaml — the live company map', () => {
+  const entries = parseRedirects(readFileSync('infra/redirects.yaml', 'utf8'));
+  const company = entries.filter((e) => e.from === '/company' && e.query !== null);
+  // Read from the RAW yaml, not through the schema: a partner with no profile
+  // omits the key entirely there, so the guard is «is a string», not «is not
+  // null» — the schema's default is what turns the absent key into null.
+  const profileSlugs = (
+    parse(readFileSync('src/content/congress/2026.yaml', 'utf8')) as {
+      partners: { slug?: string | null }[];
+    }
+  ).partners
+    .map((p) => p.slug)
+    .filter((s): s is string => typeof s === 'string');
+
+  it('maps all 22 company profiles of the old site', () => {
+    expect(company).toHaveLength(22);
+    expect(profileSlugs).toHaveLength(22);
+  });
+
+  it('sends every old id to a profile route the content declares', () => {
+    const routes = new Set(profileSlugs.map((s) => `/partners/${s}/`));
+    for (const entry of company) {
+      expect(routes, `${entry.query?.value} -> ${entry.to}`).toContain(entry.to);
+    }
+  });
+
+  it('covers every declared profile — no page is left without its old URL', () => {
+    const targets = new Set(company.map((e) => e.to));
+    for (const slug of profileSlugs) {
+      expect(targets, `/partners/${slug}/ has no /company?i= entry`).toContain(
+        `/partners/${slug}/`,
+      );
+    }
+  });
+
+  it('ends the /company group with the unconditional fallthrough', () => {
+    const group = entries.filter((e) => e.from === '/company');
+    expect(group.at(-1)?.query).toBeNull();
   });
 });

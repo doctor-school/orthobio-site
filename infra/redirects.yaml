@@ -23,17 +23,106 @@
 #           remainder to `to` (so `/archive/` -> `/arhiv/` sends
 #           `/archive/2025/` to `/arhiv/2025/`).
 #
-# The list is intentionally EMPTY today: nothing has moved yet, and inventing
-# speculative redirects would ship 301s to pages that do not exist. The
-# skeleton — schema, generator, tests, host wiring — is what Issue #5 needed in
-# place before November, and it is all live and exercised.
+# query   optional. A single query-argument condition, `{ <name>: <value> }`,
+#         matched with nginx's `$arg_<name>`. Requires `match: exact`. Entries
+#         that share a `from` path but differ in `query` are rendered as ONE
+#         location block, one `if` per condition, in list order.
+#
+# ── What is in the list today (Issue #24) ───────────────────────────────────
+# The 22 company profile pages of the OLD site. They lived at `/company?i=<id>`
+# — ONE path, 22 URLs told apart by a query argument — and they now live at
+# `/partners/<slug>/`. Those URLs are published, indexed and linked from the
+# 2026 catalogue, so they must keep resolving after the domain switchover.
+#
+# The `<id>`s are the operator's internal keys, which is why they look nothing
+# like our slugs (`dr.reddys` -> `dr-reddys`, `serve` -> `servier`,
+# `CSCPharmaRussia` -> `csc-pharma`). That translation exists only here: the
+# content model knows one slug per organization, and this file is where legacy
+# identifiers are allowed to live.
+#
+# ── Why `query` had to be added to the mechanism ────────────────────────────
+# nginx matches `location` on the PATH only, so the original skeleton (path in,
+# path out) could not express these at all — every one of the 22 would have
+# collapsed onto the same `location = /company`. The `query` key closes that
+# gap by rendering `if ($arg_i = "<id>") { return 301 <target>; }` inside a
+# single location block. `if` + `return` is the one form nginx documents as
+# safe inside a location, and it is the only mechanism available here: the
+# usual alternative, `map`, is an `http`-context directive, while this snippet
+# is `include`d inside `server {}`.
+#
+# The bare `/company` entry at the end is that block's fallthrough: an id we
+# never captured, or a bare `/company` with no argument, lands on the partner
+# list instead of a 404 — the closest honest answer.
 
-redirects: []
-# Example of what a November entry will look like (keep commented until real):
-#   - from: /program
-#     to: https://doctor.school/orthobio-2027/program
-#     status: 301
-#   - from: /archive
-#     to: https://doctor.school/orthobio-2027/archive
-#     status: 301
-#     match: prefix
+redirects:
+  - from: /company
+    query: { i: "dr.reddys" }
+    to: /partners/dr-reddys/
+  - from: /company
+    query: { i: "promomed" }
+    to: /partners/promomed/
+  - from: /company
+    query: { i: "berlin" }
+    to: /partners/berlin-chemie/
+  - from: /company
+    query: { i: "viatris" }
+    to: /partners/viatris/
+  - from: /company
+    query: { i: "nizhpharm" }
+    to: /partners/nizhpharm/
+  - from: /company
+    query: { i: "panbio" }
+    to: /partners/panbio-pharm/
+  - from: /company
+    query: { i: "heleon" }
+    to: /partners/haleon/
+  - from: /company
+    query: { i: "CSCPharmaRussia" }
+    to: /partners/csc-pharma/
+  - from: /company
+    query: { i: "biomir" }
+    to: /partners/biomir-servis/
+  - from: /company
+    query: { i: "generium" }
+    to: /partners/generium/
+  - from: /company
+    query: { i: "kem" }
+    to: /partners/kem/
+  - from: /company
+    query: { i: "rompharma" }
+    to: /partners/rompharma/
+  - from: /company
+    query: { i: "serve" }
+    to: /partners/servier/
+  - from: /company
+    query: { i: "apm" }
+    to: /partners/arm/
+  - from: /company
+    query: { i: "bionoltra" }
+    to: /partners/bionoltra/
+  - from: /company
+    query: { i: "kardiomed" }
+    to: /partners/kardiomed/
+  - from: /company
+    query: { i: "malty" }
+    to: /partners/multi-systems-technology/
+  - from: /company
+    query: { i: "mtteh" }
+    to: /partners/mt-tehnika/
+  - from: /company
+    query: { i: "oxyterma" }
+    to: /partners/oksiterra/
+  - from: /company
+    query: { i: "ofran" }
+    to: /partners/orfan-grupp/
+  - from: /company
+    query: { i: "star" }
+    to: /partners/severnaya-zvezda/
+  - from: /company
+    query: { i: "fbk" }
+    to: /partners/fbk/
+  # Fallthrough for /company with an unknown or absent ?i=. MUST stay last of
+  # the /company group: it renders as the block's final `return`, after every
+  # `if`, and an entry placed after it would be unreachable.
+  - from: /company
+    to: /partners

@@ -204,6 +204,41 @@ export const PARTNER_TIER_LABELS: Record<PartnerTier, string> = {
   info: 'Информационные партнёры',
 };
 
+/**
+ * Profile slug — the last segment of `/partners/<slug>/` (Issue #24).
+ *
+ * Lowercase kebab-case, deliberately NOT the old site's `?i=` key: those are
+ * the operator's internal ids and carry dots and mixed case (`dr.reddys`,
+ * `CSCPharmaRussia`). Ours are the same slugs the rescued logo objects already
+ * use (`/media/logos/dr-reddys.png`, Issue #22), so one organization has ONE
+ * identifier across media and routes. The old ids survive only in
+ * `infra/redirects.yaml`, which is where migration mappings belong.
+ */
+const PROFILE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/**
+ * Contact channels a partner profile publishes.
+ *
+ * `email` and `phone` ONLY, matching the structured contact row the source
+ * platform itself models (the company website is `partnerSchema.url`, which
+ * predates this block). The exhibitor free-text on the old pages sometimes also
+ * carried a fax number, a second switchboard line or a messenger handle; those
+ * are deliberately NOT modelled. They are 2026 artefacts of a page that is
+ * being retired, not information a 2027 reader acts on, and inventing three
+ * more nullable fields to carry four total values across 22 companies would
+ * cost the loader-swap contract more than it returns. Nothing is lost: the
+ * crawl output (`scripts/rescue-partner-profiles.mjs` → index.json) keeps every
+ * captured line verbatim and is reproducible.
+ *
+ * `phone` is a plain string, not a normalized number: it is printed as the
+ * source printed it («+7 495 955 52 57 / 58 / 40» is one company's real entry).
+ */
+const partnerContactsSchema = z.object({
+  email: z.email().nullable().default(null),
+  /** Verbatim as published — a display token, never prose-routed. */
+  phone: z.string().nullable().default(null),
+});
+
 const partnerSchema = z.object({
   /** Organization name, verbatim (brand — not prose-routed). */
   name: z.string(),
@@ -216,6 +251,32 @@ const partnerSchema = z.object({
    * after the CMS loader swap) and bare `z.url()` accepts `javascript:`.
    */
   url: z.url({ protocol: /^https?$/ }).nullable().default(null),
+  /**
+   * Profile page slug (Issue #24). `null` — the DEFAULT and the common case —
+   * means this organization had no profile on the old site, so NO page is
+   * generated for it and its card stays a plain roster entry. A slug is set
+   * only where rescued content exists to fill a page: a route with nothing
+   * behind it is worse than no route (ТЗ §4 «честные заглушки»).
+   */
+  slug: z
+    .string()
+    .regex(PROFILE_SLUG, 'slug must be lowercase kebab-case: a-z, 0-9 and single hyphens')
+    .nullable()
+    .default(null),
+  /** Postal address, one line as published; null when the profile printed none. */
+  address: proseOrNull(),
+  /** Contact channels; null when the profile published neither email nor phone. */
+  contacts: partnerContactsSchema.nullable().default(null),
+  /**
+   * Profile prose, ONE ENTRY PER PARAGRAPH — the organization's own description
+   * of itself. An array rather than one blob because the sources run to ten
+   * paragraphs including bulleted runs, and a single string would force the
+   * renderer to re-invent paragraph breaks it had already been given.
+   *
+   * Empty (the default) is the «нет данных» state for a list, matching every
+   * other collection field here; there is no separate null.
+   */
+  description: z.array(prose()).default([]),
 });
 
 /**
@@ -325,6 +386,38 @@ export const congressSchema = z.object({
 });
 
 export type Congress = z.infer<typeof congressSchema>;
+
+/**
+ * Two partners of the SAME year may not claim the same profile slug — that is
+ * a copy-paste artifact, and it would silently make one roster entry's page
+ * unreachable behind the other's (Issue #24).
+ *
+ * Scope is deliberately one year: a Zod schema validates one entry, and it
+ * cannot see the collection. Cross-year agreement — the same slug appearing in
+ * 2025 and 2026 must describe the same organization — is asserted where the
+ * whole collection IS visible, in `partnerProfiles()` (`src/lib/partners.ts`).
+ * Both checks are needed; neither subsumes the other.
+ *
+ * Kept as a separate export for the same reason as `pageSchemaChecked`: the
+ * plain object schema stays composable (`.extend`, `.shape`) for tests and
+ * future callers, and `content.config.ts` wires up the refined one.
+ */
+export const congressSchemaChecked = congressSchema.superRefine((c, ctx) => {
+  const seen = new Map<string, number>();
+  c.partners.forEach((p, i) => {
+    if (p.slug === null) return;
+    const first = seen.get(p.slug);
+    if (first !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['partners', i, 'slug'],
+        message: `duplicate profile slug "${p.slug}" — also used by partners[${first}] («${c.partners[first].name}»); one slug is one page`,
+      });
+      return;
+    }
+    seen.set(p.slug, i);
+  });
+});
 
 /* ────────────────────────────────────────────────────────────────────────────
  * `page` collection — editorial copy of the static ТЗ §4 sections

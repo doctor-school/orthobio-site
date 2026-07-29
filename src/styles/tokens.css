@@ -43,6 +43,18 @@
      decision — it is made in Claude.design and ported here, never invented in a
      CSS edit; deleting them would only make the next port re-add them. */
 
+  /* Brand chrome ribbon — one token because the header and the footer must
+     paint the SAME sequence; two copies of the stop list would drift the first
+     time one of them is touched. Equal thirds: each colour owns 1/3 once its
+     half of each ~17% blend is counted, and the blends leave no hard edge.
+     Diverges from Claude.design v2 chrome (hard 46/78 stops) — see issue #31. */
+  --grad-ribbon: linear-gradient(
+    90deg,
+    var(--ob-sky) 0 25%,
+    var(--ob-green) 42% 58%,
+    var(--ob-lime) 75% 100%
+  );
+
   /* --- Doctor.School base (parent brand): actions, links, focus ------------ */
   --ds-blue: #2d84f2;
   --ds-blue-dark: #114d9e;

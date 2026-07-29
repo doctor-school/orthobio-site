@@ -1,8 +1,13 @@
 ---
 /**
  * PartnerTier — one tier of partners/organizers (bundle
- * components/partners/PartnerTier). Nobody has a logo asset yet (`logo: null`
- * everywhere): the TEXT card is the primary, finished state, not a fallback.
+ * components/partners/PartnerTier).
+ *
+ * Logo and text cards are BOTH finished states, and the grid mixes them on
+ * purpose. Since Issue #22 the 84 partners whose mark survives on a source
+ * site render their logo; the remaining 19 have no mark anywhere and keep the
+ * text card — which is why the text branch is not a loading fallback and must
+ * not be styled as a degraded one.
  *
  * Major tiers (organizers / strategic / general) get the larger card grid.
  */
@@ -58,7 +63,7 @@ const heading = year ? `${label} · ${year}` : label;
                      from reflowing once real logos land in the bucket — every
                      partner is `logo: null` today, which is why no test would
                      have caught it (PR #14 review). */
-                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="44" loading="lazy" />
+                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
                 ) : (
                   p.name
                 )
@@ -74,7 +79,7 @@ const heading = year ? `${label} · ${year}` : label;
                      from reflowing once real logos land in the bucket — every
                      partner is `logo: null` today, which is why no test would
                      have caught it (PR #14 review). */
-                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="44" loading="lazy" />
+                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
                 ) : (
                   p.name
                 )

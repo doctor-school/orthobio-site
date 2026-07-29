@@ -1,5 +1,9 @@
 # Assets rescue manifest — Congress ОРТОБИОЛОГИЯ archive 2021–2026 (Issue #2)
 #
+# Two sections, two rescues: `years:` is the Issue #2 photo/PDF/video sweep
+# below; `logos:` at the end of this file is the Issue #22 partner-logo library
+# (2026-07-29) and has its own counters and header.
+#
 # Rescued on 2026-07-27 from seven external platforms before link rot.
 # Local staging: C:\Users\sidor\orthobio-assets\<year>\... (outside the repo;
 # binaries are NEVER committed to git).
@@ -446,3 +450,537 @@ years:
         status: at-risk
         local: null
         s3_key: null
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Partner / organizer logos (Issue #22) — rescued 2026-07-29
+#
+# Why they are here and not in `years:` above: a logo is a BRAND MARK, not a
+# fact about one congress. The library is keyed by organization and one object
+# serves every edition that organization took part in — which is what lets the
+# 2024/2025 sponsor rosters (whose own archive pages carry no logos at all)
+# show a mark. Which year references which object is decided in
+# `src/content/congress/<year>.yaml`, not here.
+#
+# Sources — all JS-rendered, which is why the 2026 recon pass (plain WebFetch,
+# docs/recon/orthobio-ru-main.md) reported no logos and archive-2021.md marked
+# the logo sources «Сохранять? → нет». Owner reversed that call in Issue #22.
+#   https://orthobio.ru/orgs — 5
+#   https://orthobio2021.creatium.site/archive/2025 — 13
+#   https://orthobio.ru/exhibition — 22
+#   https://orthobio.ru/partners — 9
+#
+# Reproduce the staging tree with `node scripts/rescue-partner-logos.mjs`
+# (Playwright; writes <out>/ originals and <out>/web/ derivatives + index.json).
+# Local staging lives in a gitignored worktree dir — binaries are NEVER
+# committed; the bucket is the durable copy.
+#
+# `original` = the file as the source site serves it. `object` = what is in
+# the bucket: resize to a 240px long side + re-encode, nothing else. No
+# recolouring and no background removal — the congress-ph tiles are
+# heterogeneous (white knockout marks on the old site's green field alongside
+# companies' own logos pasted onto that field), so a blanket "make the
+# background transparent" pass would mangle the second group. The originals are
+# 512×512 PNGs stored uncompressed (1.03 MB each, 37.3 MiB for the set);
+# shipping them unresized would put tens of megabytes on /partners.
+#
+# 19 partners across 2021/2024/2025/2026 keep `logo: null` — no mark exists on
+# any surviving source (see the per-year comments in the content YAML).
+logos:
+  rescued_at: '2026-07-29'
+  s3_prefix: 'logos/'
+  s3_uploaded_at: '2026-07-29'
+  counters:
+    objects: 49
+    original_bytes: 39136525
+    object_bytes: 292126
+  items:
+      - id: logo-orto
+        org: 'Общество регенеративной травматологии и ортопедии (ОРТО)'
+        source: https://orthobio.ru/orgs
+        source_url: 'https://cdn.congress-ph.online/261/orgs/1.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/orto.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 12510, sha256: 'fda9099628e4e821b746dfa85b43ecd6c91700f2639e9f1bdd585546c01e4afc' }
+      - id: logo-ator
+        org: 'Ассоциация травматологов-ортопедов России (АТОР)'
+        source: https://orthobio.ru/orgs
+        source_url: 'https://cdn.congress-ph.online/261/orgs/2.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/ator.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 9077, sha256: '968095b33b1d7baa981d1a84a36446647d9dfb0112ef38444b554f7aa0ee9847' }
+      - id: logo-mapo
+        org: 'Медицинская ассоциация по остеонекрозу (МАПО)'
+        source: https://orthobio.ru/orgs
+        source_url: 'https://cdn.congress-ph.online/261/orgs/3.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/mapo.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5830, sha256: '07aa9bc0e19c919495e79b3fdba3d8865a256178bad3e8370e5f763052a054d1' }
+      - id: logo-cito
+        org: 'НМИЦ ТО им. Н.Н. Приорова (ЦИТО)'
+        source: https://orthobio.ru/orgs
+        source_url: 'https://cdn.congress-ph.online/261/orgs/4.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/cito.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6420, sha256: 'fef88989252e0dfbbd38a4fc4d37cfb0fb8e2fa37b17704457e284838a4cd10c' }
+      - id: logo-fnkc-fmba-kafedra
+        org: 'Кафедра травматологии и ортопедии ФНКЦ ФМБА России'
+        source: https://orthobio.ru/orgs
+        source_url: 'https://cdn.congress-ph.online/261/orgs/5.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/fnkc-fmba-kafedra.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 17925, sha256: 'a78d3e1fd416284025d2941803534a8e1489d38562296e47253d72c3e78ea265' }
+      - id: logo-minzdrav
+        org: 'Министерство здравоохранения РФ'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/6a/18/4e/83c95d1ba039a4eba33c6c3354a1097b19/%D0%9C%D0%B8%D0%BD%D0%B8%D1%81%D1%82%D0%B5%D1%80%D1%81%D1%82%D0%B2%D0%BE.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/minzdrav.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 18563 }
+        object: { w: 240, h: 101, bytes: 2443, sha256: 'd576f4d36dc801431af8db299038f6d0f4355281891fe99cf14e3066f58a2b63' }
+      - id: logo-fmba
+        org: 'Федеральное медико-биологическое агентство России'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/65/7f/df/57fa9a8f84e5e823b42e6bf74cc1613f9a/%D0%A4%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D0%BB%D1%8C%D0%BD%D0%BE%D0%B5%20%D0%BC%D0%B5%D0%B4%D0%B8%D0%BA%D0%BE-%D0%B1%D0%B8%D0%BE%D0%BB%D0%BE%D0%B3%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B5%20%D0%B0%D0%B3%D0%B5%D0%BD%D1%82%D1%81%D1%82%D0%B2%D0%BE%20%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B8.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/fmba.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 22501 }
+        object: { w: 240, h: 101, bytes: 2738, sha256: '156c6c85180dacce313476653eb692dbed5494bc1ce562a1bea9eda5c3243d0c' }
+      - id: logo-vreden
+        org: 'НМИЦ ТО им. Р.Р. Вредена'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/df/93/a6/4be3075abfec22c3401e58e3ce16fe501c/%D0%A0%20%D0%9D%20%D0%98%20%D0%98%20%D0%A2%20%D0%9E%20%D0%B8%D0%BC.%20%D0%A0.%D0%A0.%20%D0%92%D1%80%D0%B5%D0%B4%D0%B5%D0%BD%D0%B0.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/vreden.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 21890 }
+        object: { w: 240, h: 101, bytes: 2531, sha256: 'df4e1444ca272cb446aa1d5af00f9eeeba11f006d93f6a097cd1588819b29f31' }
+      - id: logo-niir-nasonovoy
+        org: 'НИИР им. В.А. Насоновой'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/df/57/80/af7ee57d1c9bb3b60b97e18432b14d2029/%D0%9D%D0%98%D0%98%D0%A0%20%D0%B8%D0%BC.%20%D0%92.%D0%90.%20%D0%9D%D0%B0%D1%81%D0%BE%D0%BD%D0%BE%D0%B2%D0%BE%D0%B9.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/niir-nasonovoy.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 18747 }
+        object: { w: 240, h: 101, bytes: 2547, sha256: '831402fa3cc00647e66b9e0f1b1df9d41272ab561980ac789e5258c2ceceea8f' }
+      - id: logo-rudn
+        org: 'Российский университет дружбы народов'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/c6/52/8b/a317ca8223f10a97eeb55e9693cb4c32a2/%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D0%B9%D1%81%D0%BA%D0%B8%D0%B9%20%D0%A3%D0%BD%D0%B8%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%82%D0%B5%D1%82%20%D0%94%D1%80%D1%83%D0%B6%D0%B1%D1%8B%20%D0%9D%D0%B0%D1%80%D0%BE%D0%B4%D0%BE%D0%B2.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/rudn.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 20752 }
+        object: { w: 240, h: 101, bytes: 2719, sha256: '094ab96c0ccdaea443762a31a38759f35ebea9835203e92769722c9d1672e1cd' }
+      - id: logo-msu
+        org: 'МГУ им. М.В. Ломоносова'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/08/7c/48/1b5cdb8cf943cd70981ed3738fc93b92b7/%D0%9C%D0%93%D0%A3.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/msu.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 21489 }
+        object: { w: 240, h: 101, bytes: 3162, sha256: 'a97a18d09c2a7d9f960251d6c1259084b992bcfa4eb5f6449b9b41092649b02f' }
+      - id: logo-rnimu
+        org: 'РНИМУ им. Н.И. Пирогова'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/db/45/95/44e9b982f4b6d1e2d72356096d26d05152/%D0%A0%D0%9D%D0%98%D0%9C%D0%A3.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/rnimu.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 19358 }
+        object: { w: 240, h: 101, bytes: 2129, sha256: '0c3c4bc255edb3cb6dd01802fe96833385b5dc833154b2fe86d5ff187b815829' }
+      - id: logo-sechenov
+        org: 'Первый МГМУ им. И.М. Сеченова'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/0b/02/6f/b6c8e527e62841e6834c2c8f1c89b8d37c/%D0%9F%D0%B5%D1%80%D0%B2%D1%8B%D0%B9%20%D0%9C%D0%93%D0%9C%D0%A3%20%D0%B8%D0%BC.%20%D0%98.%20%D0%9C.%20%D0%A1%D0%B5%D1%87%D0%B5%D0%BD%D0%BE%D0%B2%D0%B0.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/sechenov.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 21431 }
+        object: { w: 240, h: 101, bytes: 2206, sha256: '6df2b936782ee11f082d531786de25fbd83982ff395e9ab5fd0a01c0f89e4755' }
+      - id: logo-mgmsu
+        org: 'МГМСУ им. А.И. Евдокимова'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/7e/a4/48/280c33d560d7895543f8b017eceadb05b2/%D0%9C%D0%93%D0%9C%D0%A1%D0%A3%20%D0%B8%D0%BC.%20%D0%90.%D0%98.%20%D0%95%D0%B2%D0%B4%D0%BE%D0%BA%D0%B8%D0%BC%D0%BE%D0%B2%D0%B0.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/mgmsu.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 27497 }
+        object: { w: 240, h: 101, bytes: 3745, sha256: '8a2dc6b725378c188fbd2487d46fbff229afc4827c4c27053621bcb175630197' }
+      - id: logo-fnkc-fmba
+        org: 'ФНКЦ ФМБА России'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/a6/5d/de/fd237d43e30218030cf77b41c82fc8fe09/%D0%A4%D0%9D%D0%9A%D0%A6.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/fnkc-fmba.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 30082 }
+        object: { w: 240, h: 101, bytes: 3802, sha256: '962843050dcfb62281acc5ac11059b3751244d035c9efef4cf9533f158a7bd14' }
+      - id: logo-rmanpo
+        org: 'РМАНПО'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/22/b9/6f/5eb42be08e2cb2aeb3af6a428a69726c04/%D0%A0%D0%9C%D0%90%D0%9D%D0%9F%D0%9E.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/rmanpo.jpg'
+        s3_status: uploaded
+        original: { w: 286, h: 120, bytes: 22545 }
+        object: { w: 240, h: 101, bytes: 2764, sha256: '9d1ce73154fc978947d26b637e207678ee5284f59899b2bc0e84e7e8c14e799b' }
+      - id: logo-vmeda
+        org: 'Военно-медицинская академия им. С.М. Кирова'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/31/7e/40/191bbd76581243b1927747de9990654066/vmeda.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/vmeda.jpg'
+        s3_status: uploaded
+        original: { w: 1200, h: 1530, bytes: 990110 }
+        object: { w: 188, h: 240, bytes: 14617, sha256: 'b9115d480715072c74725f740669fe81d532438d818f89203977b6eb39eda418' }
+      - id: logo-rnch-petrovskogo
+        org: 'РНЦХ им. акад. Б.В. Петровского'
+        source: https://orthobio2021.creatium.site/archive/2025
+        source_url: 'https://img1.creatium.ru/disk2/b1/1f/66/dd65e8fffb3cd06ebd62d9ff86f3a49f9b/logo_rnch.jpg'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/rnch-petrovskogo.jpg'
+        s3_status: uploaded
+        original: { w: 400, h: 400, bytes: 70132 }
+        object: { w: 240, h: 240, bytes: 16607, sha256: '98e8e2dc3a73b7ff02813b7c2d938265464eaa131fa5465afbd108c60df36a01' }
+      - id: logo-dr-reddys
+        org: 'Dr. Reddy’s Laboratories'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/dr.reddys/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/dr-reddys.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4660, sha256: '057170b1290fd296fa8534063b9f5c328299fde4a7f17578d657dadd004433bb' }
+      - id: logo-promomed
+        org: 'ПРОМОМЕД, ПАО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/promomed/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/promomed.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6471, sha256: 'ab5b3477998b81e9ecc639ab0db8f29019cafd3dea308a6133fcfa6074b93557' }
+      - id: logo-berlin-chemie
+        org: 'Берлин-Хеми/А. Менарини, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/berlin/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/berlin-chemie.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5398, sha256: '2463d8cccf8e436eba00726c63c26126832ccdd91903cad232e9a2d679af482f' }
+      - id: logo-viatris
+        org: 'Виатрис, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/viatris/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/viatris.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5313, sha256: '138c4e75b91420ead604f01b06a3a5f38eef46d431b71a66bcc7effa8ef55a88' }
+      - id: logo-nizhpharm
+        org: 'НИЖФАРМ, ГК'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/nizhpharm/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/nizhpharm.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4320, sha256: 'e3f3c2a8e84c9d66207364f19c89f176aa3ea6fa9ee3bbe479f8cf7ed9588c62' }
+      - id: logo-panbio-pharm
+        org: 'ПанБио Фарм, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/panbio/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/panbio-pharm.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6722, sha256: 'b95c95a27784befd86ba67f93dad25531cca111611c273e796be42855830c61b' }
+      - id: logo-haleon
+        org: 'Хелеон Рус, АО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/heleon/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/haleon.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 3419, sha256: '23e2d07f20ff1752bb8d8c5f9e0d93e57da34d3e81b369281137ca31a56ecfd4' }
+      - id: logo-csc-pharma
+        org: 'CSC Pharma Russia'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/CSCPharmaRussia/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/csc-pharma.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4188, sha256: 'fad8550bcaf7a21a765dc6716444c223e0b2a11c556b4aa68b0f4e0e3104ddc2' }
+      - id: logo-biomir-servis
+        org: 'БИОМИР сервис'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/biomir/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/biomir-servis.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 7259, sha256: 'e619f25b14b197c2af756c9d4abab8c8decd4d62ac633bed5787e50cf7e02bb3' }
+      - id: logo-generium
+        org: 'ГЕНЕРИУМ, АО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/generium/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/generium.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5063, sha256: 'a38b6f04bc9674b00bff5e766d58779a4c4a70bf03bf011fe05c5e299cfa058a' }
+      - id: logo-kem
+        org: 'КЭМ, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/kem/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/kem.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6362, sha256: '3764bcee01929ed11fcaab4f77bab7045d5a82b097edc615fcad2968b03ed27f' }
+      - id: logo-rompharma
+        org: 'Ромфарма, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/rompharma/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/rompharma.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 8321, sha256: '9a09ea132366a13e447070513baa5e249e89caf66ef82abbbca248a65024a11a' }
+      - id: logo-servier
+        org: 'Сервье, АО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/serve/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/servier.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4825, sha256: '1e9ae8aff385942a36b2bf5417028b32f95ed62a09d71ccdd52d341fb4fdfe4f' }
+      - id: logo-arm
+        org: 'АРМ, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/apm/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/arm.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6211, sha256: 'da04727cf6530f478c31d1efb0dc4b802ac9712359cc252580abbc6c79c0bf5e' }
+      - id: logo-bionoltra
+        org: 'БИОНОЛТРА ЭС ЭЙ, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/bionoltra/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/bionoltra.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5966, sha256: '66e4421aa5d9d6eb1288eb9b9974cfe09b30580ebb99cb520434da2c15fefb50' }
+      - id: logo-kardiomed
+        org: 'КардиоМед, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/kardiomed/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/kardiomed.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5754, sha256: 'e60d515f9b7cee032337c1a14334ca2b6cc6d3ea25d053b97b415b3397fb837f' }
+      - id: logo-multi-systems-technology
+        org: 'Малти-Системс Текнолоджи, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/malty/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/multi-systems-technology.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4339, sha256: 'ce81185078521b2cf28b483a047cd6972f3beea113b89d70816013210681f3e6' }
+      - id: logo-mt-tehnika
+        org: 'МТ Техника'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/mtteh/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/mt-tehnika.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5263, sha256: 'c402179fa15d5cfd4fcaccdf82342dfbf3ab8b24ab5963c01082ceb1980666da' }
+      - id: logo-oksiterra
+        org: 'ОКСИТЕРРА, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/oxyterma/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/oksiterra.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 3037, sha256: '9607fa9ffe4a15f92713d5b968426c86945ca8908089bf96524cf3248b992391' }
+      - id: logo-orfan-grupp
+        org: 'Орфан групп, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/ofran/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/orfan-grupp.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6979, sha256: 'b5a22df9cea7f07b93eda588118d831af80e07f547b709cf7cd5dc8208cf4dfa' }
+      - id: logo-severnaya-zvezda
+        org: 'Северная звезда, НАО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/star/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/severnaya-zvezda.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 7663, sha256: 'bc6fc8c9e72b2cc49ac2b07babd3459f09a641216b7a4621e71b478c3258aee4' }
+      - id: logo-fbk
+        org: 'ФБК, ООО'
+        source: https://orthobio.ru/exhibition
+        source_url: 'https://cdn.congress-ph.online/261/exhib/fbk/logo.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/fbk.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4812, sha256: 'd46be39af720afaa9327c4f943ba2dd105cbf4e6f349365f79715a9393421620' }
+      - id: logo-pmp-agency
+        org: 'PMP Agency'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/pmp-agency.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/pmp-agency.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 8290, sha256: 'bf43431ad756ba731273a6465bd2072b219cca684ff5dd242461e7a628cbd15f' }
+      - id: logo-helpinver
+        org: 'Helpinver'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/helpinver.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/helpinver.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 5671, sha256: '5f191c04525e79230d08389641fdc034295bf72213899e79290f45f53eb89d56' }
+      - id: logo-omnidoctor
+        org: 'OmniDoctor'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/omnidoctor.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/omnidoctor.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4503, sha256: '3459e1945dd48cac992db58680a6e713955494c4912c5842477f91b25bdb95ea' }
+      - id: logo-space-health
+        org: 'Space Health'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/spacehealth.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/space-health.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 9835, sha256: '6f65ca77ca482bb6c61ccd278824c258d2c334438e5893a56a3a0a2710f981fd' }
+      - id: logo-lvrach
+        org: 'ЛВрач'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/lvrach.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/lvrach.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4347, sha256: 'b0968e4f80118daf52793ed65fceb9fec58245a15a72b065dfecafd7bd428bf8' }
+      - id: logo-rusvrach
+        org: 'РусВрач'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/rusvrach.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/rusvrach.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6084, sha256: '41843adba02c6ccd0b5efcb58c4c028cfaa32f2ef365c0be81152af21aef2d3c' }
+      - id: logo-innofarma
+        org: 'InnoFarma'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/innofarma.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/innofarma.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6548, sha256: '1bba05387dd3164e3caaf232bf0020d0d4ead29f436eb9d8910c9b2418197472' }
+      - id: logo-eco-vector
+        org: 'Eco-Vector'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/eco-vector.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/eco-vector.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 4375, sha256: '88b1d469fd7755f2c2778d8455cae22032d73027e2cbd78a90a8ad7e9415ab37' }
+      - id: logo-opinion-leader
+        org: 'Opinion Leader'
+        source: https://orthobio.ru/partners
+        source_url: 'https://cdn.congress-ph.online/261/partners/opleader.png'
+        type: logo
+        status: downloaded
+        s3_key: 'logos/opinion-leader.png'
+        s3_status: uploaded
+        original: { w: 512, h: 512, bytes: 1050873 }
+        object: { w: 240, h: 240, bytes: 6356, sha256: '7932ba8aec339307a0e168f8e08a391f904e3a384133215b383aed5633af73ff' }

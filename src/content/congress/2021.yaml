@@ -82,10 +82,18 @@ theses: null
 # The page shows three untiered partner/organizer logos (recon: «Логотипы
 # партнёров/организаторов»). The source assigns no tiers, so all three go into
 # the neutral `partner` bucket; evexcon is noted in recon as техорганизатор.
+#
+# `logo` points into the brand-mark library (docs/assets-manifest.yaml →
+# `logos:`), which is keyed by ORGANIZATION, not by year — the mark is the same
+# object wherever that organization appears.
+# Doctor.School and «Ивексикон» stay null on purpose: what /archive/2021 calls
+# their «logo» is an isometric trade-booth illustration (perspective-skewed
+# wall banners inside an SVG expo floor), not a mark that can be painted into a
+# card. Nothing else on any surviving source carries them.
 partners:
   - name: НМИЦ ТО им. Н.Н. Приорова
     tier: partner
-    logo: null
+    logo: /media/logos/cito.png
     url: https://www.cito-priorov.ru
   - name: Doctor.School
     tier: partner

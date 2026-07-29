@@ -144,90 +144,98 @@ videos:
 # No сборник тезисов was published on the 2025 archive page.
 theses: null
 
+# `logo` points into the brand-mark library (docs/assets-manifest.yaml →
+# `logos:`), keyed by ORGANIZATION rather than by year. The 18 организаторы /
+# соорганизаторы marks below are the 2025 page's OWN images; the sponsor marks
+# further down come from the 2026 exhibitor catalogue, because the 2025 page
+# prints its sponsors as «при поддержке …» text with no images.
+# 6 sponsors keep null — no mark on any surviving source.
 partners:
   # «ОРГАНИЗАТОРЫ» — 5 unique organizations from 7 cards (the АПО/ФНКЦ ФМБА
   # card is printed 3× with name/URL variants; the fullest variant kept).
   - name: Общество регенеративной травматологии и ортопедии (ОРТО)
     tier: organizer
-    logo: null
+    logo: /media/logos/orto.png
     url: https://orthobio.ru/
   - name: Ассоциация травматологов-ортопедов России (АТОР)
     tier: organizer
-    logo: null
+    logo: /media/logos/ator.png
     url: https://ator.su/
   - name: Медицинская Ассоциация по Остеонекрозу (МАПО)
     tier: organizer
-    logo: null
+    logo: /media/logos/mapo.png
     url: https://www.osteonecrosis.ru/
   - name: НМИЦ ТО им. Н.Н. Приорова (ЦИТО)
     tier: organizer
-    logo: null
+    logo: /media/logos/cito.png
     url: null
   - name: Кафедра травматологии и ортопедии АПО ФГБУ ФНКЦ ФМБА России
     tier: organizer
-    logo: null
+    logo: /media/logos/fnkc-fmba-kafedra.png
     url: https://www.medprofedu.ru/kafedry/kafedra-travmatologii-i-ortopedii/
   # «СООРГАНИЗАТОРЫ» — 13 cards on the page (recon counted 12), names verbatim
   # incl. the page's spaced-out «Р Н И И Т О»; only two cards carry links.
   - name: Министерство здравоохранения РФ
     tier: co-organizer
-    logo: null
+    logo: /media/logos/minzdrav.jpg
     url: null
   - name: Федеральное медико-биологическое агентство России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/fmba.jpg
     url: null
   - name: Р Н И И Т О им. Р.Р. Вредена
     tier: co-organizer
-    logo: null
+    logo: /media/logos/vreden.jpg
     url: null
   - name: НИИР им. В.А. Насоновой
     tier: co-organizer
-    logo: null
+    logo: /media/logos/niir-nasonovoy.jpg
     url: null
   - name: Российский Университет Дружбы Народов
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rudn.jpg
     url: null
   - name: МГУ им. М.В. Ломоносова
     tier: co-organizer
-    logo: null
+    logo: /media/logos/msu.jpg
     url: null
   - name: РНИМУ им. Н. И. Пирогова
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rnimu.jpg
     url: null
   - name: Первый МГМУ им. И. М. Сеченова
     tier: co-organizer
-    logo: null
+    logo: /media/logos/sechenov.jpg
     url: null
   - name: МГМСУ им. А.И. Евдокимова
     tier: co-organizer
-    logo: null
+    logo: /media/logos/mgmsu.jpg
     url: null
   - name: ФНКЦ специализированных видов медицинской помощи и медицинских технологий ФМБА
     tier: co-organizer
-    logo: null
+    logo: /media/logos/fnkc-fmba.jpg
     url: null
   - name: РМАНПО
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rmanpo.jpg
     url: null
   - name: Военно-медицинская академия им. С.М. Кирова
     tier: co-organizer
-    logo: null
+    logo: /media/logos/vmeda.jpg
     # The page prints http://; upgraded to https (host serves it) — PR #9 review.
     url: https://www.vmeda.org/
   - name: ФГБНУ РНЦХ им. акад. Б.В. Петровского
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rnch-petrovskogo.jpg
     url: https://med.ru
   # «СТРАТЕГИЧЕСКИЙ ПАРТНЕР» — the page shows only a logo linking to
   # promomed.ru (no printed name; the logo file is ambene_bio_logo.jpg).
   # Name per docs/recon/archive-2025.md: Promomed.
+  # The 2025 image is the Ambene Bio PRODUCT mark, so the card carries the
+  # ПРОМОМЕД corporate mark instead — that is what the entry is named after.
   - name: Promomed
     tier: strategic
-    logo: null
+    logo: /media/logos/promomed.png
     url: https://promomed.ru
   # Спонсоры сателлитных симпозиумов программы-2025 — 15 companies per
   # docs/recon/archive-2025.md. The page itself uses 18 spelling variants
@@ -243,15 +251,15 @@ partners:
     url: null
   - name: Viatris
     tier: partner
-    logo: null
+    logo: /media/logos/viatris.png
     url: null
   - name: Промомед МД
     tier: partner
-    logo: null
+    logo: /media/logos/promomed.png
     url: null
   - name: Др. Реддис
     tier: partner
-    logo: null
+    logo: /media/logos/dr-reddys.png
     url: null
   - name: Bayer
     tier: partner
@@ -259,7 +267,7 @@ partners:
     url: null
   - name: Сервье
     tier: partner
-    logo: null
+    logo: /media/logos/servier.png
     url: null
   - name: Heel
     tier: partner
@@ -271,15 +279,15 @@ partners:
     url: null
   - name: Нижфарм
     tier: partner
-    logo: null
+    logo: /media/logos/nizhpharm.png
     url: null
   - name: СиЭсСи
     tier: partner
-    logo: null
+    logo: /media/logos/csc-pharma.png
     url: null
   - name: Haleon
     tier: partner
-    logo: null
+    logo: /media/logos/haleon.png
     url: null
   - name: Cortexil
     tier: partner
@@ -287,11 +295,11 @@ partners:
     url: null
   - name: ПАНБИО ФАРМ
     tier: partner
-    logo: null
+    logo: /media/logos/panbio-pharm.png
     url: null
   - name: Биомир Сервис
     tier: partner
-    logo: null
+    logo: /media/logos/biomir-servis.png
     url: null
 
 # Программа 2025 — полное извлечение инлайн-программы страницы архива

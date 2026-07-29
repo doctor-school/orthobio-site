@@ -665,12 +665,17 @@
 }
 
 /* Brand pattern — decorative only; hidden on phones where there is no white
-   air to place it in (design: «не подкладывать под плотный текст»). */
+   air to place it in (design: «не подкладывать под плотный текст»).
+   The element ships with `fill="currentColor"`, so the pattern is tinted by a
+   token instead of the mark's own #7cba48: it is the graphic language, not the
+   «ОРТО» mark, and the brief's rule «знак не перекрашивать» does not cover it
+   (the design's own brand-pattern guideline recolours it over dark fields). */
 .ob-hero__pattern {
   display: none;
   position: absolute;
   pointer-events: none;
   user-select: none;
+  color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the
      CSS width or the artwork letterboxes inside its own box. */
   height: auto;
@@ -681,15 +686,15 @@
     display: block;
   }
 
-  /* The bundle places the artwork at full saturation. At hero scale on a white
-     page that reads as a graphic block rather than the design's «тональные
-     слои», so both instances render as tonal layers — same placement, same
-     shapes, lower presence. */
+  /* Saturation is the design's: on a white field the pattern runs at full
+     strength along the edge («на белом — по краям, много воздуха»), and only
+     the second, inward instance recedes to a tonal layer — bundle
+     `components/hero/Hero` places instance A with no opacity and instance B at
+     0.5. The former 0.22/0.12 override greyed the identity out of the page. */
   .ob-hero__pattern--a {
     width: 320px;
     top: -90px;
     right: -70px;
-    opacity: 0.22;
   }
 
   .ob-hero__pattern--b {
@@ -697,7 +702,7 @@
     bottom: -120px;
     right: 220px;
     transform: rotate(150deg);
-    opacity: 0.12;
+    opacity: 0.5;
   }
 }
 
@@ -1625,11 +1630,17 @@ details[open] > .ob-faq__q::after {
   background: var(--ob-sky-tint);
 }
 
+/* Same token tint as the home hero. The 0.45 here is the design's value for
+   this band (bundle `ui_kits/orthobio-site/Year`) and stays a tonal layer for
+   the same reason the home hero's second instance does: this pattern sits on
+   the sky-tinted plate, not on white, where the design calls for «тональные
+   слои» rather than full-strength artwork. */
 .ob-yh__pattern {
   position: absolute;
   right: -80px;
   top: -90px;
   width: 280px;
+  color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the CSS
      width or the artwork letterboxes inside its own box. */
   height: auto;

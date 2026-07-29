@@ -72,8 +72,15 @@ const referenced = new Set(withLogo.map((p) => p.logo));
 
 const manifest = parse(readFileSync(MANIFEST, 'utf8')) as {
   logos: {
-    counters: { objects: number };
-    items: { id: string; org: string; source_alt: string | null; s3_key: string; s3_status: string }[];
+    counters: { objects: number; object_bytes: number };
+    items: {
+      id: string;
+      org: string;
+      source_alt: string | null;
+      s3_key: string;
+      s3_status: string;
+      object: { w: number; h: number; bytes: number; sha256: string };
+    }[];
   };
 };
 
@@ -230,6 +237,36 @@ describe('manifest and content agree on what was uploaded', () => {
     const known = new Set(manifestPaths);
     const phantom = withLogo.filter((p) => !known.has(p.logo)).map((p) => `${p.year} ${p.name}`);
     expect(phantom).toEqual([]);
+  });
+
+  /**
+   * The per-item `object:` blocks and the section counters are edited by hand
+   * every time the objects are re-derived (49 of them in Issue #22, 47 rewritten
+   * again in Issue #39). Nothing else looks at both: the assertions above count
+   * KEYS, and a mistyped digit inside `bytes:` leaves every key intact. So a
+   * typo in a 68-line diff would ship, and the manifest — which is the repo's
+   * only record of what the bucket holds — would quietly stop describing it.
+   *
+   * The sum is the cheap end of the check. It cannot see a wrong sha256, but it
+   * catches every edit that touched `bytes:` without touching the counter, and
+   * every counter edited without the items — which is the shape the mistake
+   * actually takes.
+   */
+  it('has counters that add up to the items they count', () => {
+    const { counters, items } = manifest.logos;
+    expect(items).toHaveLength(counters.objects);
+    expect(items.reduce((sum, i) => sum + i.object.bytes, 0)).toBe(counters.object_bytes);
+  });
+
+  it('records a positive size and pinned sha256 for every object', () => {
+    // A dropped or zeroed field would otherwise make the sum above agree with a
+    // counter that was «fixed» to match it.
+    for (const i of manifest.logos.items) {
+      expect(i.object.bytes, i.id).toBeGreaterThan(0);
+      expect(i.object.w, i.id).toBeGreaterThan(0);
+      expect(i.object.h, i.id).toBeGreaterThan(0);
+      expect(i.object.sha256, i.id).toMatch(/^[0-9a-f]{64}$/);
+    }
   });
 
   it('has no uploaded object nobody references — that mark would be invisible', () => {

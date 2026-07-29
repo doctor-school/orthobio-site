@@ -6,12 +6,13 @@
  * (Issue #22) only downscaled each source to a 240px long side, so whatever
  * empty field the source baked in survived into the object: the congress-ph
  * marks are 512×512 tiles with the logo floating in the middle of the old
- * site's lime (#B9CE37) field, and the creatium соорганизатор marks are
- * 286×120 letterboxes with a crest in the middle of white. PartnerTier paints
- * those into a 120×72 `object-fit: contain` slot, and `contain` scales the
- * WHOLE frame — so «Берлин-Хеми», a 414px wordmark inside a 512px tile, was
- * drawn 58px wide inside a 120px slot. The fix is to crop the field down to the
- * mark and keep only a uniform margin.
+ * site's lime (#B9CE37) field, the five orthobio.ru/orgs organizer marks are
+ * 512×512 tiles with the same float on white, and the creatium соорганизатор
+ * marks are 286×120 letterboxes with a crest in the middle of white.
+ * PartnerTier paints those into a 120×72 `object-fit: contain` slot, and
+ * `contain` scales the WHOLE frame — so «Берлин-Хеми», a 414px wordmark inside
+ * a 512px tile, was drawn 58px wide inside a 120px slot. The fix is to crop the
+ * field down to the mark and keep only a uniform margin.
  *
  * What is deliberately NOT done: chroma-key. The lime field is the operator's
  * house style for the partner grid (Issue #39, owner ruling 2026-07-29) — every
@@ -30,8 +31,11 @@
  * whatever those URLs serve today.
  *
  * Output: <work>/original/<file> (the verified sources), <work>/object/<file>
- * (the new objects) and <work>/index.json — bytes / sha256 / w / h per item,
- * which is what the `object:` blocks in the manifest are rewritten from.
+ * (the new objects) and <work>/index.json — `{ tool, pad_ratio, items }`, where
+ * `items` carries bytes / sha256 / w / h per object (what the `object:` blocks
+ * in the manifest are rewritten from) and `tool` is the sharp/libvips build
+ * that produced those bytes (what the manifest's `tool:` field records, since
+ * the sha256 pins are only reproducible on the same codec build).
  *
  * Uploading is NOT part of this script, matching rescue-partner-logos.mjs: the
  * bucket is live paid infra, so the sync is a separate reviewed step (see
@@ -146,36 +150,50 @@ const argOf = (name, fallback) => {
   return i === -1 ? fallback : process.argv[i + 1];
 };
 const work = path.resolve(argOf('work', '.rescue/logos-retrim'));
-const PAD_RATIO = Number(argOf('pad', '0.08'));
+const padArg = argOf('pad', '0.08');
+const PAD_RATIO = Number(padArg);
+// Without this, `--pad abc` sends NaN into extract/extend and dies inside sharp
+// with an error that names neither the flag nor the value.
+if (!Number.isFinite(PAD_RATIO) || PAD_RATIO < 0) {
+  console.error(`--pad expects a finite non-negative number, got «${padArg}»`);
+  process.exit(2);
+}
 
 const manifest = parse(await readFile(MANIFEST, 'utf8'));
 const items = manifest.logos.items;
 
 /**
- * Which objects this pass rewrites, stated as a rule rather than a slug list —
- * a hand-written list is what left `vmeda.jpg` in the issue's enumeration of
- * «institutional .jpg with white margins» when it has none (its crest runs edge
- * to edge, so this script measures the margin and makes it a no-op).
+ * Scope: ALL 49 items, with no source-based and no colour-based exclusion.
  *
- *   - every mark on the old site's LIME field: the whole point of the issue;
- *   - the creatium 2025-archive соорганизатор scans: one class, one canvas
- *     (286×120), the same baked-in white letterbox around a small crest.
+ * It used to be «every mark on the old site's lime field, plus the creatium
+ * 2025 соорганизатор scans», with the five 512×512 organizer marks from
+ * orthobio.ru/orgs held back — the issue as originally written said «do not
+ * touch the white/transparent objects». That sentence belonged to the issue's
+ * first shape, where the work was chroma-keying the lime away and a white mark
+ * had nothing to key. After the owner's ruling of 2026-07-29 the lime stays and
+ * the only remaining complaint is that the marks are too small; leaving those
+ * five out would leave the «Организаторы» tier — the first block on
+ * /archive/2026 — as the single place where they still are (mapo fills 89% of a
+ * square frame painted into a 120×72 slot, cito 71%, orto and ator 69%).
  *
- * Left alone: the five white 512×512 organizer marks from orthobio.ru/orgs.
- * They carry the same kind of empty field, but «do not touch the white/
- * transparent objects» is the owner's standing scope for this issue, and they
- * are one visually self-contained tier. Their measured potential is printed at
- * the end so the decision to leave them can be revisited with numbers.
+ * The rule is written here once instead of being inferred from `isWhite(bg)`:
+ * a colour test decides by symptom, so a future white-field mark from any other
+ * source would have dropped out of the pass silently AND been reported with a
+ * reason («outside this issue's scope») that was never true of it.
+ *
+ * With the scope rule gone, the only thing that can keep an object untouched is
+ * the MEASUREMENT below — if the crop does not make the mark bigger in the
+ * slot, the object is left byte for byte. That is what keeps `vmeda.jpg` as it
+ * is even though the issue's hand-written list names it as a scan with white
+ * margins: it has none, its crest runs off the top edge.
  */
-const CREATIUM_2025 = 'https://orthobio2021.creatium.site/archive/2025';
-const isWhite = (bg) => bg.every((v) => v > 238);
-const inScope = (item, a) => !isWhite(a.bg) || a.alphaBg || item.source === CREATIUM_2025;
+const isWhite = (bg) => bg.every((v) => v > 238); // reporting only — the `field` column
 
 await mkdir(path.join(work, 'original'), { recursive: true });
 await mkdir(path.join(work, 'object'), { recursive: true });
 
 const rows = [];
-const outOfScope = [];
+const untouched = [];
 const problems = [];
 
 for (const item of items) {
@@ -204,13 +222,22 @@ for (const item of items) {
   }
 
   const a = await analyse(orig);
-  const before = { w: item.object.w, h: item.object.h, bw: (a.bw * item.object.w) / a.w, bh: (a.bh * item.object.h) / a.h };
-
-  if (!inScope(item, a)) {
-    const share = ((Math.max(a.bw, a.bh) / Math.max(a.w, a.h)) * 100).toFixed(0);
-    outOfScope.push({ file, a, reason: `white field, outside this issue's scope — mark fills ${share}% of ${a.w}×${a.h}` });
-    continue;
-  }
+  /*
+   * «Before» is measured on the ORIGINAL frame — the `original:` block of the
+   * manifest, already verified byte-identical a few lines up — and never on the
+   * current object. The object is what this script rewrites: after one pass it
+   * is already cropped, so scaling the source bbox by `item.object.w / a.w`
+   * would describe a frame that no longer exists, and the ×1.02 guard below
+   * would be comparing this run against its own previous output.
+   *
+   * Nothing is lost by measuring on the original instead: `rendered()` is
+   * scale-invariant — max(bw, bh) · min(120/w, 72/h) is unchanged when w, h, bw
+   * and bh are all scaled by the same factor — so the original's geometry gives
+   * exactly the size the untrimmed mark had in the slot, which is the honest
+   * «before». Every re-run therefore reaches the same verdict from the same
+   * numbers, whatever state the manifest's `object:` blocks are in.
+   */
+  const before = { w: item.original.w, h: item.original.h, bw: a.bw, bh: a.bh };
 
   // A uniform ring of PAD_RATIO × the mark's long side. Where the source has
   // less field than that on some side, the shortfall is added by replicating
@@ -267,7 +294,7 @@ for (const item of items) {
    * instead of trusting the list keeps the object untouched.
    */
   if (markAfter < markBefore * 1.02) {
-    outOfScope.push({ file, a, reason: `mark already fills the frame (${Math.round(markBefore)}px in slot; re-crop would give ${Math.round(markAfter)}px)` });
+    untouched.push({ file, a, reason: `mark already fills the frame (${Math.round(markBefore)}px in slot; re-crop would give ${Math.round(markAfter)}px)` });
     continue;
   }
 
@@ -285,10 +312,19 @@ for (const item of items) {
   });
 }
 
-await writeFile(path.join(work, 'index.json'), `${JSON.stringify(rows, null, 2)}\n`);
+/*
+ * The encoder identifies itself. `object.sha256` in the manifest pins exact
+ * bytes, and those bytes are only reproducible on the same codec build — a
+ * later libvips will re-encode the same pixels differently and the pins will
+ * look violated when nothing is wrong. This line is what the manifest's `tool:`
+ * field is copied from, so «who produced these bytes» stays answerable.
+ */
+const tool = `sharp ${sharp.versions.sharp} / libvips ${sharp.versions.vips} (mozjpeg ${sharp.versions.mozjpeg}, libpng ${sharp.versions.png})`;
+await writeFile(path.join(work, 'index.json'), `${JSON.stringify({ tool, pad_ratio: PAD_RATIO, items: rows }, null, 2)}\n`);
 
 const pad2 = (s, n) => String(s).padEnd(n);
-console.log(`\n${rows.length} object(s) re-derived into ${path.join(work, 'object')}  (pad ratio ${PAD_RATIO})\n`);
+console.log(`\n${rows.length} object(s) re-derived into ${path.join(work, 'object')}  (pad ratio ${PAD_RATIO})`);
+console.log(`encoder: ${tool}\n`);
 console.log(`${pad2('object', 30)}${pad2('field', 7)}${pad2('source bbox', 14)}${pad2('was', 10)}${pad2('now', 10)}${pad2('bytes', 16)}mark in slot`);
 for (const r of rows.sort((a, b) => a.mark_px.after / a.mark_px.before - b.mark_px.after / b.mark_px.before)) {
   const ratio = r.mark_px.after / r.mark_px.before;
@@ -300,9 +336,9 @@ for (const r of rows.sort((a, b) => a.mark_px.after / a.mark_px.before - b.mark_
   );
 }
 
-if (outOfScope.length) {
-  console.log(`\n${outOfScope.length} object(s) left byte-for-byte as they are:`);
-  for (const o of outOfScope) console.log(`  - ${pad2(o.file, 30)} ${o.reason}`);
+if (untouched.length) {
+  console.log(`\n${untouched.length} object(s) left byte-for-byte as they are:`);
+  for (const o of untouched) console.log(`  - ${pad2(o.file, 30)} ${o.reason}`);
 }
 if (problems.length) {
   console.error(`\n${problems.length} problem(s):`);

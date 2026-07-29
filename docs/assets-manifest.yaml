@@ -44,9 +44,12 @@
 # see item 2026-committee-portraits. This is the first rescue run after the
 # 2026-07-27 sweep; every other number in this file still describes that sweep.
 #
-# 2026-07-29 (Issue #39): 42 of the 49 `logos:` objects REPLACED IN PLACE —
+# 2026-07-29 (Issue #39): 47 of the 49 `logos:` objects REPLACED IN PLACE —
 # same keys, same count, new bytes (re-cropped so the mark fills the card
 # slot). Object totals moved, `s3_objects*` did not. See the `logos:` header.
+# Objects carry `Cache-Control: immutable` and the keys did not change, so the
+# replacement is invisible to anything that already cached them until the TTL
+# runs out — see infra/terraform/README.md → «Replacing an object in place».
 #
 # ⚠️ Year attribution: the Google Drive folders «15 апреля»/«16 апреля»
 # (1MaNlskHjkZpxm9XzYkgSky-Jfb2o3xGK / 1fJ5BoMr1Tc2jPPDFpNQ6jDk5eSzmryN1)
@@ -579,22 +582,45 @@ years:
 #
 # Backgrounds are NOT recoloured: the lime is the operator's house style for
 # the partner grid (owner ruling on #39), so it is kept — there is just less of
-# it. 42 of the 49 objects changed; the marks they paint grew ×1.23…×2.31. The
-# 7 untouched objects are the five white 512×512 orthobio.ru/orgs marks (out of
-# scope) plus vmeda.jpg and rnch-petrovskogo.jpg, whose marks already run to
-# the frame edge — measured, not assumed, which is why vmeda is here and not in
-# the issue's list of scans to trim. `object.w/h` are no longer a uniform 240px
-# long side: a cropped 286×120 scan has fewer pixels than that and is not
-# upscaled to fake them.
+# it. 47 of the 49 objects changed; the marks they paint grew ×1.07…×2.31.
+#
+# The pass covers ALL 49 items — there is no colour-based or source-based
+# exclusion. The five white 512×512 organizer marks from orthobio.ru/orgs
+# (orto, ator, mapo, cito, fnkc-fmba-kafedra) were held back on the first run,
+# because the issue as first written said «do not touch the white/transparent
+# objects» — a sentence from its earlier shape, when the work was chroma-keying
+# the lime away and a white mark had nothing to key. They are in now: they are
+# the «Организаторы» tier, the first block on /archive/2026, and leaving them
+# out would leave that tier as the one place where the marks are still small.
+#
+# Only 2 objects stay byte-for-byte: vmeda.jpg and rnch-petrovskogo.jpg, whose
+# marks already run to the frame edge, so the uniform ring would make them
+# SMALLER in the slot (72px → 62px and 69px → 62px). That is measured, not
+# assumed — which is why vmeda is here and not in the issue's hand-written list
+# of scans to trim.
+#
+# `object.w/h` are no longer a uniform 240px long side: a cropped 286×120 scan
+# has fewer pixels than that and is not upscaled to fake them. Institutional
+# .jpg marks now paint ~62px from a source bbox of ~85–95px and will be slightly
+# soft at DPR 2 — that is the whole of what those scans contain. Do NOT «fix»
+# it by upscaling; `withoutEnlargement: true` in the script is deliberate.
 logos:
   rescued_at: '2026-07-29'
   s3_prefix: 'logos/'
   s3_uploaded_at: '2026-07-29'
-  retrimmed_at: '2026-07-29' # Issue #39; 42 of 49 objects re-uploaded in place
+  retrimmed_at: '2026-07-29' # Issue #39; 47 of 49 objects re-uploaded in place
+  # The encoder that produced the `object.sha256` pins below. Those pins are
+  # exact bytes, and exact bytes are only reproducible on the same codec build:
+  # a later libvips re-encodes the same pixels differently and every pin will
+  # look violated when nothing is wrong. Both the #22 rescue and the #39 re-trim
+  # ran on this build; `scripts/retrim-partner-logos.mjs` prints it and writes
+  # it to its index.json, so this line is copied, not typed from memory.
+  tool: 'sharp 0.35.3 / libvips 8.18.3 (mozjpeg 0826579, libpng 1.6.58)'
   counters:
     objects: 49
     original_bytes: 39136525
-    object_bytes: 326190 # was 292126 before the Issue #39 re-crop
+    # Cropping is zooming: fewer pixels of flat field, more detail per pixel.
+    object_bytes: 335604 # 292126 before the Issue #39 re-crop, 326190 at its first 42
   items:
     - id: logo-orto
       org: 'Общество регенеративной травматологии и ортопедии (ОРТО)'
@@ -606,7 +632,7 @@ logos:
       s3_key: 'logos/orto.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 12510, sha256: 'fda9099628e4e821b746dfa85b43ecd6c91700f2639e9f1bdd585546c01e4afc' }
+      object: { w: 240, h: 239, bytes: 16695, sha256: 'c376135a88067cf3c6898b5efdba8098e68fb4f2f09737c5ce5ebb1765a3a3ab' }
     - id: logo-ator
       org: 'Ассоциация травматологов-ортопедов России (АТОР)'
       source: https://orthobio.ru/orgs
@@ -617,7 +643,7 @@ logos:
       s3_key: 'logos/ator.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 9077, sha256: '968095b33b1d7baa981d1a84a36446647d9dfb0112ef38444b554f7aa0ee9847' }
+      object: { w: 181, h: 240, bytes: 12019, sha256: 'f4b0a708e493fd5b9fa04a8de32db7d016909d3a1469eb69fc75f1d087611020' }
     - id: logo-mapo
       org: 'Медицинская ассоциация по остеонекрозу (МАПО)'
       source: https://orthobio.ru/orgs
@@ -628,7 +654,7 @@ logos:
       s3_key: 'logos/mapo.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 5830, sha256: '07aa9bc0e19c919495e79b3fdba3d8865a256178bad3e8370e5f763052a054d1' }
+      object: { w: 240, h: 148, bytes: 5466, sha256: '5229215995d242a9544ae4e8237006582fdec22fce1acb12c41c1ea5aebe2931' }
     - id: logo-cito
       org: 'НМИЦ ТО им. Н.Н. Приорова (ЦИТО)'
       source: https://orthobio.ru/orgs
@@ -639,7 +665,7 @@ logos:
       s3_key: 'logos/cito.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 6420, sha256: 'fef88989252e0dfbbd38a4fc4d37cfb0fb8e2fa37b17704457e284838a4cd10c' }
+      object: { w: 240, h: 118, bytes: 7653, sha256: '93ea4f3d8189233f3026235ea687fd69f144ad51b7ca0ebf09bbf7eacbb4062e' }
     - id: logo-fnkc-fmba-kafedra
       org: 'Кафедра травматологии и ортопедии ФНКЦ ФМБА России'
       source: https://orthobio.ru/orgs
@@ -650,7 +676,7 @@ logos:
       s3_key: 'logos/fnkc-fmba-kafedra.png'
       s3_status: uploaded
       original: { w: 512, h: 512, bytes: 1050873 }
-      object: { w: 240, h: 240, bytes: 17925, sha256: 'a78d3e1fd416284025d2941803534a8e1489d38562296e47253d72c3e78ea265' }
+      object: { w: 216, h: 240, bytes: 19343, sha256: '37b71b3fd0d2ef327a22e9d3080d92d07b8fb0a202022d79eee3198ddccdc9b7' }
     - id: logo-minzdrav
       org: 'Министерство здравоохранения РФ'
       source: https://orthobio2021.creatium.site/archive/2025

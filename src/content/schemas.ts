@@ -122,6 +122,27 @@ const greetingSchema = z.object({
   text: proseOrNull(),
 });
 
+/**
+ * Член оргкомитета (ТЗ §3 «оргкомитет с регалиями»).
+ *
+ * `photo` is a PLAIN SCALAR media location, deliberately shaped like
+ * `greetingSchema.photo` and unlike `photos[]`/`cover`: a person's portrait is
+ * one square derivative produced by the media pipeline, so the future CMS
+ * «конструктор» emits a single URL per person, not an image object with
+ * intrinsic dimensions (loader-swap invariant, AGENTS.md).
+ *
+ * Null is a first-class value, not a defect: «имя + регалии без фото» is the
+ * card state the design sanctions (PersonCard.prompt.md), and most archive
+ * years published no portraits at all.
+ */
+const committeeMemberSchema = z.object({
+  /** Full name, verbatim (identity token — never prose-routed). */
+  name: z.string(),
+  regalia: proseOrNull(),
+  /** Square portrait on our S3 / public path; null when none was published. */
+  photo: mediaLocation().nullable().default(null),
+});
+
 /** One talk inside a session (2024: 100+ докладчиков; 2025: 100+ докладов). */
 const talkSchema = z.object({
   title: prose(),
@@ -221,14 +242,7 @@ export const congressSchema = z.object({
   /** Президиум / обращения. Empty list = no greetings published that year. */
   greetings: z.array(greetingSchema).default([]),
   /** Оргкомитет с регалиями (2025: 9 персон; 2026: 12). */
-  committee: z
-    .array(
-      z.object({
-        name: z.string(),
-        regalia: proseOrNull(),
-      }),
-    )
-    .default([]),
+  committee: z.array(committeeMemberSchema).default([]),
   /**
    * Программа года: structured sessions AND/OR a local/S3 PDF. `null` = no
    * program survived for that year (2021–2023). A year may have both (2026:

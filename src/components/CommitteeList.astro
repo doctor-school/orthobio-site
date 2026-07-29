@@ -1,10 +1,19 @@
 ---
 /**
- * CommitteeList — оргкомитет с регалиями (bundle
- * components/people/CommitteeList). Regalia run to ~240 characters in the real
- * content; the card wraps them (`overflow-wrap: anywhere`) instead of widening.
- * A member with `regalia: null` renders the name alone — never an invented title.
+ * CommitteeList — оргкомитет с регалиями (bundle components/people/CommitteeList).
+ *
+ * The card body IS a PersonCard: a committee member and a президиум member are
+ * the same shape (portrait circle · name · one line of role/regalia), so the
+ * portrait circle, the initial-plate state and the no-CLS image handling live in
+ * one component rather than in two that drift apart. `regalia` maps onto
+ * PersonCard's `role`; a member with `regalia: null` renders the name alone —
+ * never an invented title.
+ *
+ * Regalia run to ~240 characters in the real content; the card wraps them
+ * (`overflow-wrap: anywhere`) instead of widening, and the grid floor is wide
+ * enough that the 72px circle does not squeeze the text column into a ribbon.
  */
+import PersonCard from '@/components/PersonCard.astro';
 import type { CongressEntry } from '@/content';
 
 interface Props {
@@ -19,8 +28,7 @@ const { members } = Astro.props;
     <ul class="ob-cl">
       {members.map((m) => (
         <li class="ob-cl__item">
-          <p class="ob-cl__name">{m.name}</p>
-          {m.regalia && <p class="ob-cl__regalia">{m.regalia}</p>}
+          <PersonCard name={m.name} role={m.regalia} photo={m.photo} />
         </li>
       ))}
     </ul>

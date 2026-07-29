@@ -15,16 +15,29 @@ interface Props {
   href?: string;
   /** Appends the decorative «→» used by invitation links. */
   arrow?: boolean;
+  /**
+   * Opt-in new tab for a link that leaves the site. Explicit rather than sniffed
+   * from the href: `mailto:`/`tel:` hand off to another app and must NOT get a
+   * target, and the CTA URL is a config value that may be a bare host string.
+   */
+  external?: boolean;
   type?: 'button' | 'submit';
 }
 
-const { variant = 'primary', size = 'md', href, arrow = false, type = 'button' } = Astro.props;
+const {
+  variant = 'primary',
+  size = 'md',
+  href,
+  arrow = false,
+  external = false,
+  type = 'button',
+} = Astro.props;
 const cls = `ob-btn ob-btn--${variant} ob-btn--${size}`;
 ---
 
 {
   href ? (
-    <a class={cls} href={href}>
+    <a class={cls} href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined}>
       <slot />
       {arrow && <span aria-hidden="true">→</span>}
     </a>

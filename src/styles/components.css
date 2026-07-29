@@ -433,6 +433,12 @@
   color: var(--text-link-hover);
 }
 
+/* Ghost has no fill to darken, so the pressed state borrows the text-link
+   family's accent (see the .ob-sh__link:active group below). */
+.ob-btn--ghost:active {
+  color: var(--ob-sky-text);
+}
+
 /* NB: the bundle's standalone Tag component is not ported — nothing on the
    current pages uses it (the archive card ships its own `.ob-yc__tag` pills),
    and unused CSS is a maintenance liability. The spec stays in the design
@@ -1083,6 +1089,26 @@ a.ob-pt__card:active {
   border-color: var(--ob-sky);
 }
 
+/* Interactive honesty: a partner without a site renders as a <span> that used to
+   be pixel-identical to the linked card, so the whole tier read as clickable and
+   a third of it did nothing. The static entry is a FILLED, borderless plate —
+   the outlined white card now means «this one opens».
+
+   CONSTRAINT, because the signal is «filled against the page» and therefore
+   depends on what the tier sits on: `--surface-section` is also `.ob-band`'s
+   background (see .ob-band above), so a tier placed inside a band would dissolve
+   into it. No tier does today — bands live only on the home page, tiers on plain
+   `.ob-section`. `interaction.spec.ts` asserts the plate differs from its own
+   painted ancestor so this cannot rot silently; if a tier ever does belong in a
+   band, that test fails first and the fill moves, rather than the distinction
+   quietly disappearing. */
+.ob-pt__card--static {
+  background: var(--surface-section);
+  border-color: transparent;
+  cursor: default;
+  transition: none;
+}
+
 /* Fixed slot: the logo box is reserved before the file loads, so a tier grid
    cannot reflow when logos finally land (no partner has one yet). */
 .ob-pt__card img {
@@ -1115,10 +1141,10 @@ a.ob-pt__card:active {
   background: var(--surface);
 }
 
-/* The rescued portraits are 16:9 stills, not square headshots: a centred crop
-   cuts the face out. Biasing the crop upward keeps the head in frame for the
-   whole set. Proper square crops belong to the media pipeline (Issue #2), not
-   to CSS — see the TODO in PersonCard.astro. */
+/* The оргкомитет derivatives are square (288×288), so `cover` crops nothing and
+   this bias is inert for them. It stays as the guard for any non-square
+   portrait that reaches the circle later: on a portrait-orientation source a
+   centred crop lands on the chest, an upward bias keeps the head in frame. */
 .ob-pc__photo {
   object-position: 50% 28%;
 }
@@ -1144,8 +1170,14 @@ a.ob-pt__card:active {
   overflow-wrap: anywhere;
 }
 
+/* `--lh-small`, not the inherited `--lh-body`: this line also renders оргкомитет
+   regalia (238 characters, up to a dozen lines in a 340px column) since
+   CommitteeList folded into PersonCard. The deleted `.ob-cl__regalia` was tuned
+   with the tighter leading and the consolidation must not change it silently
+   (PR #28 review). */
 .ob-pc__role {
   font-size: var(--fs-small);
+  line-height: var(--lh-small);
   color: var(--text-muted);
   margin: 0;
   overflow-wrap: anywhere;
@@ -1163,31 +1195,17 @@ a.ob-pt__card:active {
   padding: 0;
   display: grid;
   gap: var(--sp-3);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  /* 340px floor, not 300: the card now leads with a 72px portrait circle, and
+     regalia run to 238 characters — a narrower column turned the text into a
+     ribbon two or three words wide. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
 }
 
+/* The card chrome comes from `.ob-pc` (PersonCard) inside — the list item is
+   only a grid cell. */
 .ob-cl__item {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--r-md);
-  padding: var(--sp-4);
   min-width: 0;
-}
-
-.ob-cl__name {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  margin: 0 0 4px;
-  overflow-wrap: anywhere;
-}
-
-.ob-cl__regalia {
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  color: var(--text-muted);
-  margin: 0;
-  /* Regalia run to 238 characters — wrap anywhere rather than overflow. */
-  overflow-wrap: anywhere;
+  display: grid;
 }
 
 /* ── MediaGrid (disclosure over a card grid, zero client JS) ─────────────── */
@@ -1324,8 +1342,28 @@ a.ob-pt__card:active {
   transition: box-shadow var(--t-state);
 }
 
+/* The tile's only hover used to be `--shadow-lift`, and the photo covers the
+   whole tile at the same radius — the shadow fell entirely BEHIND the image and
+   nothing moved on hover (owner's report, Issue #20). Feedback now happens on
+   the pixels the pointer is actually over: the photo pushes past its frame,
+   which `overflow: hidden` above crops back to the tile. `zoom-in` names what
+   the click does — these tiles open the lightbox, they do not navigate. */
+a.ob-pg__it {
+  cursor: zoom-in;
+}
+
+.ob-pg__it img {
+  transition:
+    scale var(--t-state),
+    opacity var(--t-state);
+}
+
 a.ob-pg__it:hover {
   box-shadow: var(--shadow-lift);
+}
+
+a.ob-pg__it:hover img {
+  scale: 1.05;
 }
 
 a.ob-pg__it:active {
@@ -1333,6 +1371,10 @@ a.ob-pg__it:active {
      exactly the value `--shadow-card` names. */
   box-shadow: var(--shadow-card);
   opacity: 0.9;
+}
+
+a.ob-pg__it:active img {
+  scale: 1.01;
 }
 
 /* ── PhotoGrid lightbox (:target, no client JS) ──────────────────────────── */

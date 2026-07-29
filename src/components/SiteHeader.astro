@@ -28,7 +28,8 @@ const isCurrent = (href: string): boolean =>
 <header class="ob-head">
   <div class="ob-container ob-head__in">
     <a class="ob-head__logo" href="/">
-      <img src={markUrl} width="36" height="36" alt="Знак ОРТО" />
+      {/* Decorative: the wordmark beside it already names this link. */}
+      <img src={markUrl} width="36" height="36" alt="" />
       <span>
         <span class="ob-head__name">{SITE.name}</span>
         <span class="ob-head__sub">{SITE.tagline}</span>

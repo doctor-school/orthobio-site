@@ -17,6 +17,12 @@
  * 'self'`) the card still goes where it says it goes. The island upgrades the
  * link; it never replaces it.
  *
+ * Both hosts get `target="_blank" rel="noopener noreferrer"`, Rutube included:
+ * the site-wide rule is that a third-party host never takes over the tab the
+ * reader is in (PR #29), and it applies to the fallback path just as much. With
+ * the island running the attribute is inert — the click is intercepted before
+ * the browser acts on it.
+ *
  * YouTube cards are not upgraded at all: 20 of the 23 archive videos live there
  * and the RF cannot rely on that player loading, so the card says out loud that
  * it leaves the site instead of embedding a frame that may never paint.
@@ -47,8 +53,8 @@ const embedSrc = videoEmbedSrc(url);
   href={url}
   data-ob-video={embedSrc ?? undefined}
   data-ob-video-title={embedSrc ? label : undefined}
-  target={embedSrc ? undefined : '_blank'}
-  rel={embedSrc ? undefined : 'noopener noreferrer'}
+  target="_blank"
+  rel="noopener noreferrer"
 >
   <span class="ob-vc__facade">
     <span class="ob-vc__host">{host}</span>

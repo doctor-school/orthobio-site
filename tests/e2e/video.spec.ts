@@ -85,9 +85,11 @@ test.describe('without JavaScript', () => {
     await expect(page.locator('a.ob-vc[href^="https://rutube.ru/video/"]')).toHaveCount(3);
 
     // «Has an href» is not the claim; «the visitor gets to the video» is.
-    await card.click();
-    await page.waitForURL(WATCH_URL);
-    expect(page.url()).toBe(WATCH_URL);
+    // The card carries target="_blank" like every other third-party link on the
+    // site (PR #29), so the fallback lands in a new tab and the archive page
+    // the reader was on survives.
+    const [opened] = await Promise.all([page.waitForEvent('popup'), card.click()]);
+    expect(opened.url()).toBe(WATCH_URL);
   });
 });
 

@@ -126,20 +126,52 @@ posters: []
 videos:
   - url: https://www.youtube.com/watch?v=y-OqCEPDBxI
     title: ОРТОБИОЛОГИЯ 2022 - 15 Апреля (1 зал)
+    poster:
+      url: /media/posters/yt-y-OqCEPDBxI.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=ex2aSl8k_Jk
     title: ОРТОБИОЛОГИЯ 2022 - 15 Апреля (2 зал)
+    poster:
+      url: /media/posters/yt-ex2aSl8k_Jk.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=EmXZXKUpxiY
     title: ОРТОБИОЛОГИЯ 2022 - 15 Апреля (3 зал)
+    poster:
+      url: /media/posters/yt-EmXZXKUpxiY.webp
+      width: 480
+      height: 270
   - url: https://www.youtube.com/watch?v=QTFWvUUVtJQ
     title: ОРТОБИОЛОГИЯ 2022 - 16 Апреля (1 зал)
+    poster:
+      url: /media/posters/yt-QTFWvUUVtJQ.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=So19qQ172WM
     title: ОРТОБИОЛОГИЯ 2022 - 16 Апреля (2 зал)
+    poster:
+      url: /media/posters/yt-So19qQ172WM.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=gUVtmdKUrQ4
     title: Приглашение к участию от Президента конгресса ОРТОБИОЛОГИЯ | Загородний Н.В.
+    poster:
+      url: /media/posters/yt-gUVtmdKUrQ4.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=SW3QNj-TWoE
     title: Приглашение к участию от Сопрезидента конгресса конгресса ОРТОБИОЛОГИЯ | Губин А. В.
+    poster:
+      url: /media/posters/yt-SW3QNj-TWoE.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=Q6qO3OOSQfE
     title: Приглашение к участию от члена оргкомитета конгресса ОРТОБИОЛОГИЯ | Страхов М. А.
+    poster:
+      url: /media/posters/yt-Q6qO3OOSQfE.webp
+      width: 800
+      height: 450
 
 # No сборник тезисов was published on the 2022 archive page.
 theses: null

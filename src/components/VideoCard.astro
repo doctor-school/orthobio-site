@@ -4,9 +4,16 @@
  *
  * The card never ships a player up front: a year holds up to eight videos and
  * eight provider frames on one page is a minute of loading on a clinic
- * connection. The facade is the dark plate the design draws (host badge + play
- * glyph, no third-party thumbnail — hotlinking foreign CDNs is out per the
- * media rule), and the provider frame arrives only on click.
+ * connection. The facade is the design's plate — host badge + play glyph — and
+ * the provider frame arrives only on click.
+ *
+ * The plate is backed by the video's own poster frame (Issue #33). It is OUR
+ * copy of that frame: the 23 archive posters were fetched once and re-encoded
+ * into `posters/` in the Timeweb bucket (`scripts/rescue-video-posters.mjs`),
+ * so the card still asks no foreign CDN for a pixel — hotlinking `i.ytimg.com`
+ * is what the media rule forbids, not showing a thumbnail. A video whose
+ * provider publishes no frame keeps the bare dark plate, which is a finished
+ * state and not a defect.
  *
  * Every card is a LINK first. A Rutube card additionally carries
  * `data-ob-video` and is upgraded by the island below: a plain left-click swaps
@@ -27,6 +34,7 @@
  * and the RF cannot rely on that player loading, so the card says out loud that
  * it leaves the site instead of embedding a frame that may never paint.
  */
+import { mediaUrl } from '@/config/site';
 import { videoHost } from '@/lib/congress';
 import { videoEmbedSrc } from '@/lib/video';
 
@@ -34,9 +42,11 @@ interface Props {
   url: string;
   title?: string | null;
   year: number;
+  /** Poster frame on OUR storage; null → the facade keeps the dark plate. */
+  poster?: { url: string; width: number; height: number } | null;
 }
 
-const { url, title = null, year } = Astro.props;
+const { url, title = null, year, poster = null } = Astro.props;
 const host = videoHost(url);
 const label = title ?? `Видео конгресса ${year}`;
 const embedSrc = videoEmbedSrc(url);
@@ -58,6 +68,25 @@ const embedSrc = videoEmbedSrc(url);
   rel="noopener noreferrer"
 >
   <span class="ob-vc__facade">
+    {/* `alt=""`: the frame carries no information the card does not already
+        state in text, and an alt here would be read out ahead of the caption
+        that actually names the video. Explicit width/height are the intrinsic
+        size of the object in the bucket — the box is already reserved by the
+        facade's 16/9, and these keep it reserved correctly if the CSS has not
+        arrived yet. */}
+    {
+      poster && (
+        <img
+          class="ob-vc__poster"
+          src={mediaUrl(poster.url)}
+          alt=""
+          width={poster.width}
+          height={poster.height}
+          loading="lazy"
+          decoding="async"
+        />
+      )
+    }
     <span class="ob-vc__host">{host}</span>
     <span class="ob-vc__play">
       <svg viewBox="0 0 24 24" aria-hidden="true">

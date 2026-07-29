@@ -1,10 +1,11 @@
 # Assets rescue manifest — Congress ОРТОБИОЛОГИЯ archive 2021–2026 (Issue #2)
 #
-# Three sections, three rescues, each with its own counters and header:
-#   years:    the Issue #2 photo/PDF/video sweep (2026-07-27), below;
-#   logos:    the Issue #22 partner-logo library (2026-07-29), 49 objects;
-#   profiles: the Issue #24 company-profile rescue (2026-07-29) — TEXT only,
-#             zero objects uploaded, and the reason why is recorded there.
+# Four sections, four rescues, each with its own counters and header:
+#   years:         the Issue #2 photo/PDF/video sweep (2026-07-27), below;
+#   logos:         the Issue #22 partner-logo library (2026-07-29), 49 objects;
+#   profiles:      the Issue #24 company-profile rescue (2026-07-29) — TEXT
+#                  only, zero objects uploaded, reason recorded there;
+#   video_posters: the Issue #33 poster frames (2026-07-29), 23 objects.
 #
 # Rescued on 2026-07-27 from seven external platforms before link rot.
 # Local staging: C:\Users\sidor\orthobio-assets\<year>\... (outside the repo;
@@ -63,8 +64,9 @@ meta:
   # SHA-256 spot-checks against docs/assets-checksums.txt.
   s3_objects: 2241
   # The live bucket is larger than this sweep: +22 оргкомитет portraits
-  # (Issue #23) and +49 partner logos (Issue #22, `logos:` below).
-  s3_objects_total: 2312 # 2241 sweep + 22 portraits + 49 logos
+  # (Issue #23), +49 partner logos (Issue #22, `logos:` below) and +23 video
+  # posters (Issue #33, `video_posters:` below).
+  s3_objects_total: 2335 # 2241 sweep + 22 portraits + 49 logos + 23 posters
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -1372,3 +1374,324 @@ profiles:
       captured: { address: true, email: true, phone: true, site: true, paragraphs: 6 }
       posters: { declared: 3, retrieved: 0, status: not-found }
       video: { declared: 1, retrieved: 0, status: not-found }
+
+# ── Video posters — Issue #33 (2026-07-29) ───────────────────────────────
+#
+# Poster frames of the 23 archive videos (20 YouTube 2021–2024, 3 Rutube 2025).
+# The click-to-load facade (PR #30) drew a bare dark plate because hotlinking
+# i.ytimg.com / Rutube's CDN is out under the media rule; these are our own
+# copies of the same frames, so the rule holds and the cards show real previews.
+#
+# Reproduce with `node scripts/rescue-video-posters.mjs` (add `--upload` to PUT
+# to S3; credentials by env var NAME only — infra/terraform/README.md). The
+# script reads the video list out of src/content/congress/*.yaml, so it stays
+# correct when a year gains a video.
+#
+# `source` = the exact frame the provider served. YouTube publishes a ladder
+# (maxresdefault → hq720 → sddefault → hqdefault) and a missing rung answers 404
+# with a grey placeholder, so the script takes the best rung that returns HTTP
+# 200: 21 of 23 posters come from a 1280×720-or-larger frame, `yt-c-RvCZ2GPKM`
+# only has sddefault (640×480) and `yt-EmXZXKUpxiY` only hqdefault (480×360).
+# Rutube publishes no predictable thumbnail path — the frame URL comes from its
+# public video API (`https://rutube.ru/api/video/<id>/` → thumbnail_url).
+#
+# `object` = what the bucket holds: centre-cropped to 16:9 (which is what
+# removes the black bars of the 4:3 YouTube rungs), downscaled to at most 800px
+# wide (≈ a 390px card slot at 2×, never upscaled — hence the two smaller
+# objects) and re-encoded to WebP q78. No recolouring, no overlays.
+#
+# `poster-yt-a0oU5_WYvSI` and `poster-yt-YMJQy8s-kTM` are byte-identical: the
+# 2023 day-1 and day-2 streams were published under the same custom thumbnail.
+# Two objects, on purpose — a poster is keyed by the VIDEO, so the mapping stays
+# reproducible from the YAML rather than depending on a dedup table.
+#
+# 23 of 23 videos have a poster; nothing is `not-found`. The `poster: null`
+# branch in the schema and the bare-plate fallback in VideoCard are kept for the
+# video that one day has none.
+
+video_posters:
+  rescued_at: '2026-07-29'
+  s3_prefix: 'posters/'
+  s3_uploaded_at: '2026-07-29'
+  counters:
+    videos: 23
+    objects: 23
+    original_bytes: 2328361
+    object_bytes: 633700
+  items:
+    - id: poster-yt-c-RvCZ2GPKM
+      year: 2021
+      video: https://www.youtube.com/watch?v=c-RvCZ2GPKM
+      title: 'Отчётный ролик Ортобиология 2021'
+      source: https://i.ytimg.com/vi/c-RvCZ2GPKM/sddefault.jpg
+      source_variant: 'sddefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-c-RvCZ2GPKM.webp'
+      s3_status: uploaded
+      original: { w: 640, h: 480, bytes: 47762 }
+      object: { w: 640, h: 360, bytes: 19602, sha256: 'a3d7592aabfd7f6ca9fb4c971aa1146404e396fde2b2d5b500167401dd9c1aec' }
+    - id: poster-yt-IkDFPdYZbJw
+      year: 2021
+      video: https://www.youtube.com/watch?v=IkDFPdYZbJw
+      title: 'IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021'
+      source: https://i.ytimg.com/vi/IkDFPdYZbJw/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-IkDFPdYZbJw.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 66862 }
+      object: { w: 800, h: 450, bytes: 19044, sha256: 'b48f052e3ef65153b691bf079685fdf3ee3d38f1a5324102e652decb5d8443ef' }
+    - id: poster-yt-UArPFb4HjEY
+      year: 2021
+      video: https://www.youtube.com/watch?v=UArPFb4HjEY
+      title: 'IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021'
+      source: https://i.ytimg.com/vi/UArPFb4HjEY/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-UArPFb4HjEY.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 130028 }
+      object: { w: 800, h: 450, bytes: 30800, sha256: '97edab86de6d40f947bfff64ef22f9021a795783ef3a5139dda979a614035b3f' }
+    - id: poster-yt-y-OqCEPDBxI
+      year: 2022
+      video: https://www.youtube.com/watch?v=y-OqCEPDBxI
+      title: 'ОРТОБИОЛОГИЯ 2022 - 15 Апреля (1 зал)'
+      source: https://i.ytimg.com/vi/y-OqCEPDBxI/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-y-OqCEPDBxI.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 139256 }
+      object: { w: 800, h: 450, bytes: 33834, sha256: '140e0ebd7b9087a573a6bd4a313a6f4b1137e58f0bb8d458a3ad32032c707c59' }
+    - id: poster-yt-ex2aSl8k_Jk
+      year: 2022
+      video: https://www.youtube.com/watch?v=ex2aSl8k_Jk
+      title: 'ОРТОБИОЛОГИЯ 2022 - 15 Апреля (2 зал)'
+      source: https://i.ytimg.com/vi/ex2aSl8k_Jk/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-ex2aSl8k_Jk.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 143110 }
+      object: { w: 800, h: 450, bytes: 33976, sha256: '7df08baadaae40c05c498e96767ad94076932d814f5cd09d281fe0059f0ad918' }
+    - id: poster-yt-EmXZXKUpxiY
+      year: 2022
+      video: https://www.youtube.com/watch?v=EmXZXKUpxiY
+      title: 'ОРТОБИОЛОГИЯ 2022 - 15 Апреля (3 зал)'
+      source: https://i.ytimg.com/vi/EmXZXKUpxiY/hqdefault.jpg
+      source_variant: 'hqdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-EmXZXKUpxiY.webp'
+      s3_status: uploaded
+      original: { w: 480, h: 360, bytes: 14515 }
+      object: { w: 480, h: 270, bytes: 16510, sha256: 'c451ac2533e19b5a1fdb78fc2855e2d092e223f8d00442bbb0c1abd9cfa607df' }
+    - id: poster-yt-QTFWvUUVtJQ
+      year: 2022
+      video: https://www.youtube.com/watch?v=QTFWvUUVtJQ
+      title: 'ОРТОБИОЛОГИЯ 2022 - 16 Апреля (1 зал)'
+      source: https://i.ytimg.com/vi/QTFWvUUVtJQ/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-QTFWvUUVtJQ.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 141950 }
+      object: { w: 800, h: 450, bytes: 53274, sha256: '0627f7a2b2857a156bd12ea9cb38a736e1b90338e327ca1b80394620c5321ffd' }
+    - id: poster-yt-So19qQ172WM
+      year: 2022
+      video: https://www.youtube.com/watch?v=So19qQ172WM
+      title: 'ОРТОБИОЛОГИЯ 2022 - 16 Апреля (2 зал)'
+      source: https://i.ytimg.com/vi/So19qQ172WM/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-So19qQ172WM.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 120800 }
+      object: { w: 800, h: 450, bytes: 31118, sha256: '191efe534fcb3b0838a19fcf92c500d66aef368d4e52b89e7f9b068d362ba1b4' }
+    - id: poster-yt-gUVtmdKUrQ4
+      year: 2022
+      video: https://www.youtube.com/watch?v=gUVtmdKUrQ4
+      title: 'Приглашение к участию от Президента конгресса ОРТОБИОЛОГИЯ | Загородний Н.В.'
+      source: https://i.ytimg.com/vi/gUVtmdKUrQ4/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-gUVtmdKUrQ4.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 103753 }
+      object: { w: 800, h: 450, bytes: 31496, sha256: 'e3db9c93f943d6ac25c1fa924fc67d8062a93fe9d18aa9cd716289f806896c61' }
+    - id: poster-yt-SW3QNj-TWoE
+      year: 2022
+      video: https://www.youtube.com/watch?v=SW3QNj-TWoE
+      title: 'Приглашение к участию от Сопрезидента конгресса конгресса ОРТОБИОЛОГИЯ | Губин А. В.'
+      source: https://i.ytimg.com/vi/SW3QNj-TWoE/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-SW3QNj-TWoE.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 84077 }
+      object: { w: 800, h: 450, bytes: 20974, sha256: '655930a05a5de019285696eb12374070c4a16c6ba3b521d355a32270950fd589' }
+    - id: poster-yt-Q6qO3OOSQfE
+      year: 2022
+      video: https://www.youtube.com/watch?v=Q6qO3OOSQfE
+      title: 'Приглашение к участию от члена оргкомитета конгресса ОРТОБИОЛОГИЯ | Страхов М. А.'
+      source: https://i.ytimg.com/vi/Q6qO3OOSQfE/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-Q6qO3OOSQfE.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 93471 }
+      object: { w: 800, h: 450, bytes: 27044, sha256: '4baa3b4bd7141439332a56f4035f514e2b3a02e6837ea50b2bcd75746e4add53' }
+    - id: poster-yt-r4fVPFAfk18
+      year: 2023
+      video: https://www.youtube.com/watch?v=r4fVPFAfk18
+      title: 'Отчётное видео ОРТОБИОЛОГИЯ 2023'
+      source: https://i.ytimg.com/vi/r4fVPFAfk18/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-r4fVPFAfk18.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 100236 }
+      object: { w: 800, h: 450, bytes: 23654, sha256: '0703737ced12d346d85e29e147d0828f6aa68fff472295ddb6415a299f629179' }
+    - id: poster-yt-a0oU5_WYvSI
+      year: 2023
+      video: https://www.youtube.com/watch?v=a0oU5_WYvSI
+      title: 'ОРТОБИОЛОГИЯ 2023 / 21 АПРЕЛЯ - 1 ЗАЛ'
+      source: https://i.ytimg.com/vi/a0oU5_WYvSI/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-a0oU5_WYvSI.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 111272 }
+      object: { w: 800, h: 450, bytes: 27174, sha256: '3916d5d27a9caef7e0aa586af909e472c584e986e4624dd46b102bfc9b2d388a' }
+    - id: poster-yt-YMJQy8s-kTM
+      year: 2023
+      video: https://www.youtube.com/watch?v=YMJQy8s-kTM
+      title: 'ОРТОБИОЛОГИЯ 2023 / 22 АПРЕЛЯ - 1 ЗАЛ'
+      source: https://i.ytimg.com/vi/YMJQy8s-kTM/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-YMJQy8s-kTM.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 111272 }
+      object: { w: 800, h: 450, bytes: 27174, sha256: '3916d5d27a9caef7e0aa586af909e472c584e986e4624dd46b102bfc9b2d388a' }
+    - id: poster-yt-Me6ohmwqd7w
+      year: 2023
+      video: https://www.youtube.com/watch?v=Me6ohmwqd7w
+      title: 'Президент Конгресса Ортобиология 2023 Н.В. Загородний приглашает к участию'
+      source: https://i.ytimg.com/vi/Me6ohmwqd7w/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-Me6ohmwqd7w.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 121112 }
+      object: { w: 800, h: 450, bytes: 42972, sha256: '6283c72388964f76f4e8cef05ab6a2860eebb47772c3dbadf0e6f23ce386accd' }
+    - id: poster-yt-9XYaeBYyiYE
+      year: 2023
+      video: https://www.youtube.com/watch?v=9XYaeBYyiYE
+      title: 'Член Оргкомитета Конгресса Ортобиология 2023 М. А. Страхов приглашает к участию'
+      source: https://i.ytimg.com/vi/9XYaeBYyiYE/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-9XYaeBYyiYE.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 97040 }
+      object: { w: 800, h: 450, bytes: 30778, sha256: '753b423c924291aed3cbed9fb09696d9b69889aab826436d46c5ccf2dbc5de74' }
+    - id: poster-yt-nMNyfUS2buI
+      year: 2024
+      video: https://www.youtube.com/watch?v=nMNyfUS2buI
+      title: 'Отчётный ролик с V Конгресса «Ортобиология» #2024'
+      source: https://i.ytimg.com/vi/nMNyfUS2buI/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-nMNyfUS2buI.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 98652 }
+      object: { w: 800, h: 450, bytes: 23306, sha256: '6c13cc2ed4f4052c781d195e523c19d2c179b072f2a4973d1509251bbc83eba4' }
+    - id: poster-yt-xspid1JTqv4
+      year: 2024
+      video: https://www.youtube.com/watch?v=xspid1JTqv4
+      title: 'Отчётный ролик о V конгрессе Ортобиология 2024 - глазами партнёров'
+      source: https://i.ytimg.com/vi/xspid1JTqv4/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-xspid1JTqv4.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 95569 }
+      object: { w: 800, h: 450, bytes: 22756, sha256: 'e9df09719363bf977245e2c7a25ed58a6f24f0fa1ee1e7937c07bf91ad5c95a7' }
+    - id: poster-yt-e7o0F-qBGbA
+      year: 2024
+      video: https://www.youtube.com/watch?v=e7o0F-qBGbA
+      title: 'Приглашение к участию от Президента V Конгресса ОРТОБИОЛОГИЯ | Загородний Н.В.'
+      source: https://i.ytimg.com/vi/e7o0F-qBGbA/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-e7o0F-qBGbA.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 88267 }
+      object: { w: 800, h: 450, bytes: 22180, sha256: '00693c9f6323f9bcca8690bc28afc1b38ab52fe8d6f09fc5eeefa40cd7e34edd' }
+    - id: poster-yt-RRW4aKfXp44
+      year: 2024
+      video: https://www.youtube.com/watch?v=RRW4aKfXp44
+      title: 'Приглашение к участию от члена оргкомитета V Конгресса ОРТОБИОЛОГИЯ | Страхов М. А.'
+      source: https://i.ytimg.com/vi/RRW4aKfXp44/maxresdefault.jpg
+      source_variant: 'maxresdefault'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/yt-RRW4aKfXp44.webp'
+      s3_status: uploaded
+      original: { w: 1280, h: 720, bytes: 87321 }
+      object: { w: 800, h: 450, bytes: 21694, sha256: 'e946ea2097b6ba50615edc444c598a9ad3379c030d385b367eff6ce9f99380fb' }
+    - id: poster-rt-15094348253029651341d677331f4515
+      year: 2025
+      video: https://rutube.ru/video/15094348253029651341d677331f4515/
+      title: 'Отчетный ролик конгресса 2025'
+      source: https://pic.rtbcdn.ru/video/2025-05-14/cc/30/cc302318221583a6cca7b672f4c37cc4.jpg
+      source_variant: 'api/thumbnail_url'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/rt-15094348253029651341d677331f4515.webp'
+      s3_status: uploaded
+      original: { w: 1920, h: 1080, bytes: 103968 }
+      object: { w: 800, h: 450, bytes: 15342, sha256: 'd775418e92c2e4f912f6c7685561887716c85553302e389bf19de39cf99f7bd0' }
+    - id: poster-rt-938e909c140c9d918077ebcfa366e3d5
+      year: 2025
+      video: https://rutube.ru/video/938e909c140c9d918077ebcfa366e3d5/
+      title: 'Обращение к участникам, карточка 1 (Загородний Н. В.)'
+      source: https://pic.rtbcdn.ru/video/2025-01-21/3b/8e/3b8e2cc1fd6be4485e7fa3766206ffe8.jpg
+      source_variant: 'api/thumbnail_url'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/rt-938e909c140c9d918077ebcfa366e3d5.webp'
+      s3_status: uploaded
+      original: { w: 1536, h: 864, bytes: 116557 }
+      object: { w: 800, h: 450, bytes: 30240, sha256: 'd973cd58f83be760de0ada8cc3ebcef44c81ce8eab3fc838387c2b4d92827fcb' }
+    - id: poster-rt-a050a5bd7bc358faa8cc74b057738053
+      year: 2025
+      video: https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/
+      title: 'Обращение к участникам, карточка 2'
+      source: https://pic.rtbcdn.ru/video/2025-01-21/e5/c0/e5c07b19b06644d1d4e593728adaf383.jpg
+      source_variant: 'api/thumbnail_url'
+      type: video-poster
+      status: downloaded
+      s3_key: 'posters/rt-a050a5bd7bc358faa8cc74b057738053.webp'
+      s3_status: uploaded
+      original: { w: 1536, h: 864, bytes: 111511 }
+      object: { w: 800, h: 450, bytes: 28758, sha256: '69b31092276a7aadccd8001438e034334ed1d2dfb16954a2521e94b0ae7daa41' }

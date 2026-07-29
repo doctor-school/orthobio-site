@@ -69,10 +69,22 @@ posters: []
 videos:
   - url: https://www.youtube.com/watch?v=c-RvCZ2GPKM
     title: Отчётный ролик Ортобиология 2021
+    poster:
+      url: /media/posters/yt-c-RvCZ2GPKM.webp
+      width: 640
+      height: 360
   - url: https://www.youtube.com/watch?v=IkDFPdYZbJw
     title: IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021
+    poster:
+      url: /media/posters/yt-IkDFPdYZbJw.webp
+      width: 800
+      height: 450
   - url: https://www.youtube.com/watch?v=UArPFb4HjEY
     title: IX НПК ПРИОРОВСКИЕ ЧТЕНИЯ совместно с II конгрессом ОРТОБИОЛОГИЯ 2021
+    poster:
+      url: /media/posters/yt-UArPFb4HjEY.webp
+      width: 800
+      height: 450
 
 # The «ОТЧЕТ КОНГРЕССА ОРТОБИОЛОГИЯ 2021» button opens a modal saying the
 # report «будет доступен чуть позже» — the PDF was never published

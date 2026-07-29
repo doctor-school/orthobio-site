@@ -183,12 +183,12 @@ const description = `${title}. ${meta}. Программа, фотоотчёт �
             reachable either way. */}
         <MediaGrid total={c.videos.length} visible={VIDEOS_VISIBLE} noun="видео">
           {videoHead.map((v) => (
-            <VideoCard url={v.url} title={v.title} year={c.year} />
+            <VideoCard url={v.url} title={v.title} year={c.year} poster={v.poster} />
           ))}
           {videoRest.length > 0 && (
             <Fragment slot="rest">
               {videoRest.map((v) => (
-                <VideoCard url={v.url} title={v.title} year={c.year} />
+                <VideoCard url={v.url} title={v.title} year={c.year} poster={v.poster} />
               ))}
             </Fragment>
           )}

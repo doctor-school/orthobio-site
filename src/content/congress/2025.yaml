@@ -156,10 +156,22 @@ posters: []
 videos:
   - url: https://rutube.ru/video/15094348253029651341d677331f4515/
     title: Отчетный ролик конгресса 2025
+    poster:
+      url: /media/posters/rt-15094348253029651341d677331f4515.webp
+      width: 800
+      height: 450
   - url: https://rutube.ru/video/938e909c140c9d918077ebcfa366e3d5/
     title: Обращение к участникам, карточка 1 (Загородний Н. В.)
+    poster:
+      url: /media/posters/rt-938e909c140c9d918077ebcfa366e3d5.webp
+      width: 800
+      height: 450
   - url: https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/
     title: Обращение к участникам, карточка 2
+    poster:
+      url: /media/posters/rt-a050a5bd7bc358faa8cc74b057738053.webp
+      width: 800
+      height: 450
 
 # No сборник тезисов was published on the 2025 archive page.
 theses: null

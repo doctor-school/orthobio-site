@@ -1584,12 +1584,28 @@ html:has(.ob-pg__lb:target) {
   transition: background var(--t-state);
 }
 
+/* The video's own poster frame, served from our bucket (Issue #33). It fills
+   the plate rather than replacing it: `background: var(--ink)` above stays the
+   fallback for a video whose provider publishes no frame, and shows through
+   while the image is still loading. */
+.ob-vc__poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .ob-vc:hover .ob-vc__play,
 .ob-vc:focus-visible .ob-vc__play {
   background: var(--ds-blue-dark);
 }
 
+/* `position` is load-bearing, not cosmetic: the poster is absolutely
+   positioned, and a statically-positioned play button paints UNDERNEATH it. */
 .ob-vc__play {
+  position: relative;
   width: 64px;
   height: 64px;
   border-radius: var(--r-pill);
@@ -1616,6 +1632,20 @@ html:has(.ob-pg__lb:target) {
   letter-spacing: 0.04em;
   color: var(--video-host-fg);
   text-transform: uppercase;
+}
+
+/* Only the cards that actually have a poster behind the badge get the pill —
+   over the bare ink plate the recessed grey is the design's own value and needs
+   no plate of its own (--scrim-video-badge). `:has()` and not `.ob-vc__poster ~
+   .ob-vc__host`: the condition is «this facade has a poster», not «the badge
+   comes after the img», and the sibling form would silently drop the pill the
+   day someone reorders the facade. */
+.ob-vc__facade:has(.ob-vc__poster) .ob-vc__host {
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--scrim-video-badge);
 }
 
 /* `display: block` is load-bearing: the caption is a <span>, and on an inline

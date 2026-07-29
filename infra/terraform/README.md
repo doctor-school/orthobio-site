@@ -95,6 +95,34 @@ Public object URL (path-style; hostname output already carries `https://`):
 `<media_s3_hostname>/<media_bucket_full_name>/<key>`
 (live: `https://s3.twcstorage.ru/orthobio-media/<key>`)
 
+## Replacing an object in place
+
+Every object is uploaded with `Cache-Control: public, max-age=31536000,
+immutable` (issue #5). That header is a promise: a client that has fetched the
+object may keep it for a year and is entitled never to revalidate. So
+**overwriting a key does not reach anyone who already has it** — not the
+browser cache, not a CDN edge — until the year is out. There is no purge to run
+here: Timeweb S3 is a plain origin, and `immutable` defeats even a hard reload
+in some browsers.
+
+Two ways to actually ship a changed asset:
+
+- **Change the key.** A new key is a new object with a new cache entry — this is
+  the only method that reaches every client immediately. Costs an entry in
+  `docs/assets-manifest.yaml` and an edit everywhere the old key is referenced.
+- **Version the reference.** Append a query string in `mediaUrl` (`?v=2`). Same
+  effect for browsers and CDNs, no bucket-side rename.
+
+Overwriting the key anyway is legitimate when **stale is acceptable** — the old
+and new bytes depict the same thing and nobody is harmed by seeing the old one
+for a while. That was the call for the issue #39 logo re-trim (47 of 49
+`logos/` objects re-cropped, same keys): the marks are the same marks, just
+larger in their frame, the site is pre-launch so the audience is us, and
+renaming 47 keys would have churned the manifest and the content YAML for a
+purely cosmetic change. State the choice in the PR when you make it — the next
+person re-uploading `logos/` will hit exactly the same wall and deserves to
+know it is a known one, not a bug.
+
 ## State
 
 State is **local** and **gitignored** (may contain S3 secret keys — keep

@@ -1,0 +1,29 @@
+---
+/**
+ * NewTabHint — the visually hidden «(открывается в новой вкладке)» that every
+ * link leaving this site appends to its own accessible name (WCAG 3.2.5,
+ * Issue #37).
+ *
+ * A component rather than a copied `<span class="ob-sr-only">` because the
+ * string is the ASSERTION: `tests/e2e/interaction.spec.ts` sweeps every route
+ * for it, and five hand-written copies are five chances for one of them to
+ * drift a word and go quietly unannounced while the sweep still passes on the
+ * other four.
+ *
+ * It is a SUFFIX, so it renders as the last child inside the anchor and opens
+ * with a space: the accessible name is the concatenation of the link's text
+ * nodes, and without the leading space «Программа конгресса» и «(открывается…)»
+ * arrive as one word.
+ *
+ * Deliberately NOT an `aria-label` on the anchor: a label REPLACES the visible
+ * text, which costs speech-input users the ability to say what they see
+ * (WCAG 2.5.3) — the very trade-off VideoCard's header already refuses.
+ *
+ * Only where the `target` actually is. `PartnerTier` links МОО «ОРТО» to
+ * `https://orthobio.ru/` — an absolute URL to THIS origin, which opens no tab —
+ * so callers gate this on the same condition that writes the attribute, never
+ * on «the href looks external».
+ */
+---
+
+<span class="ob-sr-only"> (открывается в новой вкладке)</span>

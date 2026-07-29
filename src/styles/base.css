@@ -179,6 +179,40 @@ button {
    component's `:hover` without competing on specificity. See the file header.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* Visually hidden, still announced — the ONE utility class on this site
+   (`NewTabHint`, Issue #37). Text that is read out but never painted: the
+   composition below is the standard one, because each line covers a different
+   way a browser or an AT would otherwise betray it — a zero-sized box drops the
+   node from some accessibility trees, `display: none` and `visibility: hidden`
+   drop it from all of them, `clip` serves the engines that predate
+   `clip-path`, and `white-space: nowrap` stops a 1px box from wrapping the
+   string into a scrollable strip.
+
+   It lives HERE, unlayered, for the same reason the focus rules do: its whole
+   contract is «this never becomes visible», and inside a layer that contract is
+   defeasible. In `@layer base` any component selector would beat it outright;
+   in `@layer components` a descendant selector still would — `.ob-yc__nocover
+   span` (0,1,1) already outranks `.ob-sr-only` (0,1,0), and the hint sits
+   inside cards written exactly like that one. The failure mode is not a subtle
+   one: the losing side of that cascade paints «(открывается в новой вкладке)»
+   into the middle of a card. Unlayered, no future component can express it.
+
+   `position: absolute` with no offsets keeps the element at its static
+   position, so it never lands somewhere that would extend the page's scroll
+   width — the overflow ladder measures that claim on every route. */
+.ob-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Visible focus ring on EVERY interactive element (AGENTS.md hard rule).
    Composed of two parts, not one: the ring itself, plus whatever elevation the
    element's own state published into `--shadow-state`. Winning the cascade

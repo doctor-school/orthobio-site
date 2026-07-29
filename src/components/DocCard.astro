@@ -5,6 +5,7 @@
  * schema has already guaranteed the file is not a legacy cloud link.
  */
 import { mediaUrl } from '@/config/site';
+import NewTabHint from './NewTabHint.astro';
 
 interface Props {
   href: string;
@@ -36,4 +37,8 @@ const { href, title, meta = 'PDF' } = Astro.props;
     <span class="ob-dc__title">{title}</span>
     <span class="ob-dc__meta">{meta}</span>
   </span>
+  {/* The sharpest case of Issue #37: the reader believes they are opening the
+      program and arrives in a PDF viewer in a tab with no visible origin, so
+      the card has to say where it is taking them before they follow it. */}
+  <NewTabHint />
 </a>

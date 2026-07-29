@@ -51,6 +51,7 @@ import { mediaUrl } from '@/config/site';
 import type { CongressEntry, PartnerTier } from '@/content';
 import { MAJOR_TIERS } from '@/lib/congress';
 import { partnerCardHref } from '@/lib/partners';
+import NewTabHint from './NewTabHint.astro';
 
 interface Props {
   tier: PartnerTier;
@@ -142,6 +143,12 @@ const newTab = (url: string): Record<string, string> =>
                   name — «<Название> Подробнее →», since pseudo-element content
                   counts towards it (AccName §2F, as measured for .ob-arrow). */}
               {isProfile && <span class="ob-pt__more">Подробнее</span>}
+              {/* Keyed on `isExternal`, the SAME predicate `newTab` uses, not
+                  on `isProfile`: the two are not complements. МОО «ОРТО» has no
+                  profile and no `target` either — its `url` is this very origin
+                  — so «not a profile» would announce a tab that never opens
+                  (Issue #37). */}
+              {isExternal(href) && <NewTabHint />}
             </a>
           ) : (
             /* A partner with neither a profile nor a `url` is a plain roster

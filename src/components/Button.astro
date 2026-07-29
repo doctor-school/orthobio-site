@@ -6,6 +6,8 @@
  * (the «узнать первым» CTA); `ghost` + `arrow` is the standard «Посмотрите … →»
  * invitation link. Label comes from the default slot.
  */
+import NewTabHint from './NewTabHint.astro';
+
 type Variant = 'primary' | 'secondary' | 'ghost';
 type Size = 'md' | 'lg';
 
@@ -40,6 +42,10 @@ const cls = `ob-btn ob-btn--${variant} ob-btn--${size}`;
     <a class={cls} href={href} target={external ? '_blank' : undefined} rel={external ? 'noopener' : undefined}>
       <slot />
       {arrow && <span aria-hidden="true">→</span>}
+      {/* Gated on the same flag that writes the `target`, so the two can never
+          disagree — and after the arrow, which is `aria-hidden` and therefore
+          not part of the name it is appended to. */}
+      {external && <NewTabHint />}
     </a>
   ) : (
     <button class={cls} type={type}>

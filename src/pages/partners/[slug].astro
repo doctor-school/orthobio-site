@@ -13,6 +13,7 @@
  * markup referenced 404s on the operator's CDN (documented in
  * docs/assets-manifest.yaml → `profiles:`), so there was nothing to rescue.
  */
+import NewTabHint from '@/components/NewTabHint.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import { mediaUrl } from '@/config/site';
 import { getCongressYears } from '@/content';
@@ -127,8 +128,15 @@ const phoneHref = p.contacts?.phone ? telHref(p.contacts.phone) : null;
           <div class="ob-cp__fact">
             <dt>Сайт</dt>
             <dd>
-              {/* Always another origin — a partner's own site, never ours. */}
-              <a href={p.url} target="_blank" rel="noopener">{p.url.replace(/^https?:\/\//, '')}</a>
+              {/* Always another origin — a partner's own site, never ours.
+                  The one `target="_blank"` on this site that is written inline
+                  instead of coming from a link component, so Issue #37's
+                  announcement has to be repeated here by hand; the e2e sweep
+                  walks all 22 profiles precisely because nothing else would
+                  notice if it were dropped. */}
+              <a href={p.url} target="_blank" rel="noopener"
+                >{p.url.replace(/^https?:\/\//, '')}<NewTabHint /></a
+              >
             </dd>
           </div>
         )

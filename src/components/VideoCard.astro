@@ -37,6 +37,7 @@
 import { mediaUrl } from '@/config/site';
 import { videoHost } from '@/lib/congress';
 import { videoEmbedSrc } from '@/lib/video';
+import NewTabHint from './NewTabHint.astro';
 
 interface Props {
   url: string;
@@ -95,6 +96,17 @@ const embedSrc = videoEmbedSrc(url);
     </span>
   </span>
   <span class="ob-vc__title">{label}</span>
+  {/* The new-tab announcement (Issue #37) is CONDITIONAL here, where every
+      other link component states it unconditionally, because this is the only
+      card whose behaviour an island rewrites.
+
+      • Embeddable (Rutube): the markup promises a tab and so does the hint —
+        that is the truth with no JS, which is the state this anchor exists to
+        serve. The island retracts it below the moment it takes the click over.
+      • Not embeddable (YouTube): `.ob-vc__ext` already says «Откроется на
+        YouTube в новой вкладке» in VISIBLE copy, which is part of the
+        accessible name. A hidden suffix on top would read the promise twice. */}
+  {embedSrc && <NewTabHint />}
   {
     !embedSrc && (
       <span class="ob-vc__ext">
@@ -124,6 +136,20 @@ const embedSrc = videoEmbedSrc(url);
    * such headers — will stay green while click-to-load dies in production. The
    * anchor underneath is what keeps that failure survivable.
    */
+
+  /**
+   * Retract the new-tab announcement the markup ships (Issue #37): from the
+   * moment this file runs, a plain click on an embeddable card loads the player
+   * in place and opens nothing. Done here rather than by omitting the hint at
+   * build time, because THIS is the event that makes it false — if the module
+   * never executes, the card really does open a tab and the reader is still
+   * told. The `target` attribute stays: it is what a modified or middle click
+   * still uses, and those are announced by the browser's own affordances.
+   */
+  for (const hint of document.querySelectorAll('a[data-ob-video] .ob-sr-only')) {
+    hint.remove();
+  }
+
   document.addEventListener('click', (event) => {
     // Let the browser own every click that means «somewhere else, please».
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {

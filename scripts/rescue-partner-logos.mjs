@@ -120,12 +120,35 @@ async function collectPageImages(page, url) {
   await page.waitForTimeout(2500);
   return page.evaluate(() =>
     [...document.querySelectorAll('img')]
-      .map((i) => ({ src: i.currentSrc || i.src, w: i.naturalWidth, h: i.naturalHeight }))
+      .map((i) => ({ src: i.currentSrc || i.src, w: i.naturalWidth, h: i.naturalHeight, alt: i.alt }))
       .filter((i) => i.src.startsWith('http')),
   );
 }
 
 const EXT_BY_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/svg+xml': 'svg', 'image/webp': 'webp' };
+
+/**
+ * The source pages label most marks with the organization's name in `alt`. That
+ * is the only INDEPENDENT evidence that a hand-written LIBRARY row points at the
+ * right company — without it the URL→organization binding is asserted by this
+ * table and checked by nothing, which matters in six months when
+ * cdn.congress-ph.online is gone (PR #36 review). So `alt` is captured verbatim
+ * into index.json and disagreements are REPORTED, not enforced: an empty alt is
+ * common, and a product-line mark legitimately disagrees with its exhibitor's
+ * name («КЭМ» ↔ «regenlab»). A human reads the list; the run still succeeds.
+ */
+const norm = (s) => (s ?? '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+// 3 characters, not 4: «КЭМ, ООО» / «АРМ, ООО» / «ФБК, ООО» are whole legal
+// names built from three-letter words, and a 4-char floor made every one of
+// them disagree with ITSELF.
+const words = (s) => new Set(norm(s).split(' ').filter((w) => w.length >= 3));
+const altAgrees = (alt, org) => {
+  if (!alt?.trim()) return true;
+  if (norm(alt) === norm(org)) return true;
+  const [a, o] = [words(alt), words(org)];
+  return [...o].some((w) => a.has(w)) || [...a].some((w) => o.has(w));
+};
+const unverified = [];
 
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 1400, height: 1200 } });
@@ -165,6 +188,9 @@ for (const item of LIBRARY) {
     problems.push(`${item.slug}: unexpected content-type ${mime}`);
     continue;
   }
+  if (!altAgrees(match.alt, item.org)) {
+    unverified.push(`${item.slug}: alt «${match.alt.trim()}» shares no word with org «${item.org}»`);
+  }
   const file = `${item.slug}.${ext}`;
   await writeFile(path.join(outDir, file), body);
   index.push({
@@ -173,6 +199,7 @@ for (const item of LIBRARY) {
     file,
     source_page: item.page,
     source_url: match.src,
+    source_alt: match.alt?.trim() || null,
     content_type: mime,
     bytes: body.length,
     width: match.w,
@@ -224,6 +251,10 @@ const rawMb = index.reduce((s, e) => s + e.bytes, 0) / 1024 ** 2;
 const webMb = index.reduce((s, e) => s + e.web.bytes, 0) / 1024 ** 2;
 console.log(`\n${index.length}/${LIBRARY.length} logos staged in ${outDir}`);
 console.log(`originals ${rawMb.toFixed(1)} MiB → web derivatives ${webMb.toFixed(2)} MiB (${webDir})`);
+if (unverified.length) {
+  console.warn(`\n${unverified.length} binding(s) the source alt does not confirm — read before trusting:`);
+  for (const u of unverified) console.warn(`  - ${u}`);
+}
 if (problems.length) {
   console.error(`\n${problems.length} problem(s):`);
   for (const p of problems) console.error(`  - ${p}`);

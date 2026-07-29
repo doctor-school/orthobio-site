@@ -73,7 +73,7 @@ const referenced = new Set(withLogo.map((p) => p.logo));
 const manifest = parse(readFileSync(MANIFEST, 'utf8')) as {
   logos: {
     counters: { objects: number };
-    items: { id: string; org: string; s3_key: string; s3_status: string }[];
+    items: { id: string; org: string; source_alt: string | null; s3_key: string; s3_status: string }[];
   };
 };
 
@@ -143,6 +143,78 @@ describe('coverage per year is pinned', () => {
     // Fewer objects than cards because the library is keyed by ORGANIZATION:
     // one brand mark serves every edition that organization took part in.
     expect(referenced.size).toBe(49);
+  });
+});
+
+describe('each partner carries its OWN mark', () => {
+  /**
+   * The failure this catches is a SWAP: exchange `haleon.png` and
+   * `servier.png` between two partners and every other assertion in this file
+   * still passes — shapes valid, counts unchanged, both paths in the manifest,
+   * both objects referenced. Only «right company ↔ right logo» is violated
+   * (PR #36 review).
+   *
+   * The manifest records the organization each object was rescued for, so the
+   * partner's name and that `org` must share a word. 78 of the 84 pairings
+   * agree outright.
+   */
+  const orgOf = new Map(manifest.logos.items.map((i) => [`/media/${i.s3_key}`, i.org]));
+
+  const words = (s: string) =>
+    new Set(
+      s
+        .toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim()
+        .split(' ')
+        .filter((w) => w.length >= 3),
+    );
+
+  /**
+   * The other 6: the roster names the company as the source page spelled it,
+   * the manifest names the legal entity behind the mark, and the two are in
+   * different alphabets. Each pair is pinned WHOLE, so exchanging two of these
+   * six with each other is still caught — the resulting pair is not on the
+   * list.
+   */
+  const TRANSLITERATED: readonly (readonly [string, string])[] = [
+    ['Haleon', 'Хелеон Рус, АО'],
+    ['Promomed', 'ПРОМОМЕД, ПАО'],
+    ['Viatris', 'Виатрис, ООО'],
+    ['Др. Реддис', 'Dr. Reddy’s Laboratories'],
+    ['СиЭсСи', 'CSC Pharma Russia'],
+  ];
+
+  it.each(withLogo.map((p) => [`${p.year} ${p.name}`, p] as const))(
+    '%s wears the mark rescued for it',
+    (_label, p) => {
+      const org = orgOf.get(p.logo) as string;
+      const shared = [...words(p.name)].some((w) => words(org).has(w));
+      const listed = TRANSLITERATED.some(([name, o]) => name === p.name && o === org);
+      expect(shared || listed, `«${p.name}» wears a mark rescued for «${org}»`).toBe(true);
+    },
+  );
+
+  /**
+   * Known gap, stated rather than papered over: this proves a partner's name
+   * agrees with the name recorded for its object, NOT that either matches what
+   * the mark actually depicts. Two entries of the same brand can still be
+   * exchanged undetected — `promomed.png` under «Promomed» vs «Промомед МД» is
+   * the same object either way, so the swap is a no-op. The evidence that
+   * closes the remaining distance is `source_alt` in the manifest: the alt the
+   * source page itself put on the mark, agreeing with `org` on all 27 objects
+   * that carry one. The other 22 ship no alt at source and are bound by URL
+   * alone — no machine can do better from here, and this file says so instead
+   * of implying coverage it does not have.
+   */
+  it('pins the alt-confirmed bindings so a later edit cannot quietly drop them', () => {
+    const confirmed = manifest.logos.items.filter((i) => i.source_alt);
+    expect(confirmed).toHaveLength(27);
+    for (const item of confirmed) {
+      const shared = [...words(item.source_alt as string)].some((w) => words(item.org).has(w));
+      expect(shared, `${item.id}: alt «${item.source_alt}» vs org «${item.org}»`).toBe(true);
+    }
   });
 });
 

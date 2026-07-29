@@ -165,10 +165,13 @@ videos:
 theses: null
 
 # `logo` points into the brand-mark library (docs/assets-manifest.yaml →
-# `logos:`), keyed by ORGANIZATION rather than by year. The 18 организаторы /
-# соорганизаторы marks below are the 2025 page's OWN images; the sponsor marks
-# further down come from the 2026 exhibitor catalogue, because the 2025 page
-# prints its sponsors as «при поддержке …» text with no images.
+# `logos:`), keyed by ORGANIZATION rather than by year. Provenance is NOT
+# uniform below, and the difference is worth keeping straight: the 13
+# соорганизаторы marks are the 2025 page's OWN images, while the 5 организаторы
+# take theirs from orthobio.ru/orgs — the only place those five exist as images
+# at all. The sponsor marks further down come from the 2026 exhibitor
+# catalogue, because the 2025 page prints its sponsors as «при поддержке …»
+# text with no images.
 # 6 sponsors keep null — no mark on any surviving source.
 partners:
   # «ОРГАНИЗАТОРЫ» — 5 unique organizations from 7 cards (the АПО/ФНКЦ ФМБА
@@ -189,6 +192,16 @@ partners:
     tier: organizer
     logo: /media/logos/cito.png
     url: null
+  # ⚠️ TODO(Антон): оставить герб или вернуть текстовую карточку? Источник
+  # верен — orthobio.ru/orgs отдаёт под этой кафедрой именно двуглавого орла
+  # (orgs/5.png) и сам подписывает его alt=«Кафедра травматологии и ортопедии
+  # ФНКЦ ФМБА России» (docs/assets-manifest.yaml → logo-fnkc-fmba-kafedra.
+  # source_alt); собственной марки у кафедры там нет. Но в плитке этот герб
+  # оказывается через пару карточек от Минздрава (minzdrav.jpg — тот же орёл в
+  # рамке), так что две организации выглядят носителями одной марки, а
+  # скринридер читает над гербом «Кафедра травматологии и ортопедии». Марка
+  # самого ФНКЦ (fnkc-fmba.jpg) не подходит: это центр, а не кафедра. Текстовая
+  # карточка — законченное состояние, а не деградация (см. PartnerTier.astro).
   - name: Кафедра травматологии и ортопедии АПО ФГБУ ФНКЦ ФМБА России
     tier: organizer
     logo: /media/logos/fnkc-fmba-kafedra.png
@@ -251,8 +264,16 @@ partners:
   # «СТРАТЕГИЧЕСКИЙ ПАРТНЕР» — the page shows only a logo linking to
   # promomed.ru (no printed name; the logo file is ambene_bio_logo.jpg).
   # Name per docs/recon/archive-2025.md: Promomed.
-  # The 2025 image is the Ambene Bio PRODUCT mark, so the card carries the
-  # ПРОМОМЕД corporate mark instead — that is what the entry is named after.
+  # ⚠️ TODO(Антон): здесь единственная во всей библиотеке подмена НЕ по годам, а
+  # ПО БРЕНДАМ. Везде ещё один и тот же логотип организации переносится между
+  # выпусками конгресса; тут страница 2025 показывала продуктовую марку Ambene
+  # Bio (ambene_bio_logo.jpg), а карточка несёт корпоративную марку ПРОМОМЕД —
+  # под именем «Promomed», как записано в recon. Оставить корпоративную марку
+  # или вернуть продуктовую, как было на странице?
+  # Написание дочерней структуры различается по годам НАМЕРЕННО и дословно по
+  # источникам: 2024 печатает «Промомед ДМ», 2025 — «Промомед МД» (см. сноски
+  # программ в обоих файлах). Общая марка группы делает это расхождение
+  # заметным; сводить написания к одному — задача не этого PR.
   - name: Promomed
     tier: strategic
     logo: /media/logos/promomed.png

@@ -129,6 +129,8 @@ partners:
     tier: organizer
     logo: /media/logos/cito.png
     url: null
+  # ⚠️ TODO(Антон): тот же двуглавый орёл, что и в 2025 — решение по нему
+  # принимается один раз на обе записи, развёрнуто в src/content/congress/2025.yaml.
   - name: Кафедра травматологии и ортопедии ФНКЦ ФМБА России
     tier: organizer
     logo: /media/logos/fnkc-fmba-kafedra.png
@@ -242,6 +244,14 @@ partners:
     tier: partner
     logo: /media/logos/generium.png
     url: null
+  # ⚠️ TODO(Антон): плитка этого экспонента — марка его продуктовой линейки
+  # «regenlab · PRP & CELL THERAPY SPECIALISTS», слова «КЭМ» на изображении нет.
+  # Привязка подтверждена источником: сама страница подписывает эту плитку
+  # alt=«КЭМ, ООО» (docs/assets-manifest.yaml → logo-kem.source_alt), и 22
+  # каталожные директории exhib/ ложатся 1:1 на 22 записи здесь без остатка.
+  # Но это единственная из 49 карточек, где зрячий читатель и скринридер
+  # получают разные названия компании. Оставить продуктовую марку под именем
+  # «КЭМ» или переименовать карточку?
   - name: КЭМ
     tier: partner
     logo: /media/logos/kem.png

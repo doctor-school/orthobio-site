@@ -10,6 +10,15 @@
  * not be styled as a degraded one.
  *
  * Major tiers (organizers / strategic / general) get the larger card grid.
+ *
+ * The logo slot is 120×72, declared in CSS (.ob-pt__card img, `object-fit:
+ * contain`) and repeated as width/height on both <img> below: the schema
+ * carries no logo dimensions and the marks are fetched from S3, so the
+ * reserved box is what keeps the grid from reflowing while they lazy-load.
+ * Both branches render the same <img> — only the wrapper differs (<a> for a
+ * partner with a url, <span> without) — so the contract is stated here once
+ * rather than twice inside the markup. Its values are pinned in
+ * tests/unit/partner-logos.test.ts.
  */
 import { mediaUrl } from '@/config/site';
 import type { CongressEntry, PartnerTier } from '@/content';
@@ -83,12 +92,6 @@ const newTab = (url: string): Record<string, string> =>
             <a class="ob-pt__card" href={p.url} {...newTab(p.url)}>
               {
                 p.logo ? (
-                  /* The 120×72 slot is fixed in CSS (.ob-pt__card img,
-                     `object-fit: contain`) and repeated here as width/height:
-                     the schema carries no logo dimensions, and the marks are
-                     fetched from S3, so the reserved box is what keeps the tier
-                     grid from reflowing while they lazy-load. Values are pinned
-                     in tests/unit/partner-logos.test.ts. */
                   <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
                 ) : (
                   p.name
@@ -102,12 +105,6 @@ const newTab = (url: string): Record<string, string> =>
             <span class="ob-pt__card ob-pt__card--static">
               {
                 p.logo ? (
-                  /* The 120×72 slot is fixed in CSS (.ob-pt__card img,
-                     `object-fit: contain`) and repeated here as width/height:
-                     the schema carries no logo dimensions, and the marks are
-                     fetched from S3, so the reserved box is what keeps the tier
-                     grid from reflowing while they lazy-load. Values are pinned
-                     in tests/unit/partner-logos.test.ts. */
                   <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
                 ) : (
                   p.name

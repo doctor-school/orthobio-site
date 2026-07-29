@@ -11,6 +11,9 @@
  */
 import { Image } from 'astro:assets';
 
+// Must stay an inlined import, never `<img src=…>` (which is how the design
+// bundle renders it): the asset's fill is `currentColor`, tinted by
+// `.ob-yh__pattern`, and a referenced SVG would paint it silently black.
 import Metaball from '@/assets/metaball-element.svg';
 import CommitteeList from '@/components/CommitteeList.astro';
 import DocCard from '@/components/DocCard.astro';

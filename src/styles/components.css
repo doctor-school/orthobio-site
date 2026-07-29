@@ -661,12 +661,17 @@
 }
 
 /* Brand pattern — decorative only; hidden on phones where there is no white
-   air to place it in (design: «не подкладывать под плотный текст»). */
+   air to place it in (design: «не подкладывать под плотный текст»).
+   The element ships with `fill="currentColor"`, so the pattern is tinted by a
+   token instead of the mark's own #7cba48: it is the graphic language, not the
+   «ОРТО» mark, and the brief's rule «знак не перекрашивать» does not cover it
+   (the design's own brand-pattern guideline recolours it over dark fields). */
 .ob-hero__pattern {
   display: none;
   position: absolute;
   pointer-events: none;
   user-select: none;
+  color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the
      CSS width or the artwork letterboxes inside its own box. */
   height: auto;
@@ -677,23 +682,44 @@
     display: block;
   }
 
-  /* The bundle places the artwork at full saturation. At hero scale on a white
-     page that reads as a graphic block rather than the design's «тональные
-     слои», so both instances render as tonal layers — same placement, same
-     shapes, lower presence. */
+  /* Saturation is the design's: on a white field the pattern runs at full
+     strength along the edge («на белом — по краям, много воздуха»), and only
+     the second, inward instance recedes to a tonal layer — bundle
+     `components/hero/Hero` places instance A with no opacity and instance B at
+     0.5. The former 0.22/0.12 override greyed the identity out of the page. */
   .ob-hero__pattern--a {
     width: 320px;
     top: -90px;
     right: -70px;
-    opacity: 0.22;
   }
 
+  /* Instance B is rotated, so it paints a box 2.2× its CSS width — the bundle's
+     240px becomes 527px on screen. That geometry assumes the wide window it was
+     drawn at, and narrower ones fail it in two degrees (sampled against the path
+     itself with `isPointInFill` over every hero line box): up to ~1200 the
+     PAINTED shape crosses the lead copy, heavily at 1024 and thinning out as the
+     window widens, and from there to 1280 only the rotated BOUNDING BOX still
+     crowds the text column, its corners empty. The first breaks the design's
+     «не подкладывать под плотный текст» outright, the second is the same air
+     rule one degree milder; contrast passed throughout, so neither was ever an
+     a11y defect. The layer is therefore scaled to the free strip across the
+     whole band and returns to the bundle's own geometry at 1280 below, where
+     the window can hold it. */
+  .ob-hero__pattern--b {
+    width: 140px;
+    bottom: -120px;
+    right: 110px;
+    transform: rotate(150deg);
+    opacity: 0.5;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* The bundle's placement for instance B, restored as soon as the viewport has
+     room for it beside the text column (see the note above). */
   .ob-hero__pattern--b {
     width: 240px;
-    bottom: -120px;
     right: 220px;
-    transform: rotate(150deg);
-    opacity: 0.12;
   }
 }
 
@@ -1341,12 +1367,14 @@ a.ob-pg__it:hover img {
 }
 
 a.ob-pg__it:active {
-  box-shadow: none;
+  /* Drops the hover lift back to the design's resting card elevation, which is
+     exactly the value `--shadow-card` names. */
+  box-shadow: var(--shadow-card);
+  opacity: 0.9;
 }
 
 a.ob-pg__it:active img {
   scale: 1.01;
-  opacity: 0.9;
 }
 
 /* ── PhotoGrid lightbox (:target, no client JS) ──────────────────────────── */
@@ -1657,11 +1685,17 @@ details[open] > .ob-faq__q::after {
   background: var(--ob-sky-tint);
 }
 
+/* Same token tint as the home hero. The 0.45 here is the design's value for
+   this band (bundle `ui_kits/orthobio-site/Year`) and stays a tonal layer for
+   the same reason the home hero's second instance does: this pattern sits on
+   the sky-tinted plate, not on white, where the design calls for «тональные
+   слои» rather than full-strength artwork. */
 .ob-yh__pattern {
   position: absolute;
   right: -80px;
   top: -90px;
   width: 280px;
+  color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the CSS
      width or the artwork letterboxes inside its own box. */
   height: auto;

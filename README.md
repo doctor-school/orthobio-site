@@ -28,8 +28,12 @@ pnpm typecheck      # astro check + tsc --noEmit (строгий TS)
 pnpm test:e2e       # Playwright: overflow-лестница + axe на каждый маршрут
 ```
 
-`pnpm test:e2e` сам собирает проект и поднимает `astro preview` на порту 4331
-(первый запуск: `pnpm exec playwright install chromium`).
+`pnpm test:e2e` сам собирает проект и поднимает `astro preview` на порту,
+выведенном из пути checkout'а — параллельные worktree не мешают друг другу
+(первый запуск: `pnpm exec playwright install chromium`). Оверрайды:
+`PW_PORT=4331` — свой сервер на заданном порту, `PW_BASE_URL=http://…` — прогон
+против уже запущенного сервера, свой при этом не поднимается. Детали и
+обоснование: `tests/e2e/_port.ts`.
 
 Контент годов конгресса — YAML-файлы `src/content/congress/<year>.yaml`;
 схема и правила заполнения: `src/content/schemas.ts` + документированный

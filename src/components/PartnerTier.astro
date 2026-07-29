@@ -11,6 +11,24 @@
  *
  * Major tiers (organizers / strategic / general) get the larger card grid.
  *
+ * Every tier opens with a COLOURED DOT (`.ob-pt__dot`), the bundle's own
+ * hierarchy marker — restored in Issue #27 after the design port dropped it.
+ * Two deliberate departures from how the bundle's JSX writes it:
+ *
+ * • the colour comes from a per-tier CLASS, not an inline `style` — the
+ *   tier→token map belongs in components.css (AGENTS.md → Code style forbids
+ *   inline `style=`) and is pinned in tests/unit/partner-tier-markers.test.ts;
+ * • the dot lives INSIDE the heading, where the bundle makes it a flex sibling
+ *   of it. As a sibling it is a flex item of `.ob-pt__h`, and that row wraps
+ *   (long labels): measured at 360px on /partners, «Информационные партнёры ·
+ *   2026» pushed the heading to the next flex line and left the marker
+ *   stranded on a line of its own. Inline in the heading it rides the first
+ *   line of the text and cannot be separated from it at any width.
+ *
+ * The dot is decoration — the tier is spelled out in the heading it sits in —
+ * so it is `aria-hidden`, which also keeps it out of the heading's accessible
+ * name (AccName §4.1 excludes hidden nodes).
+ *
  * Since Issue #24 a card is also the way INTO a partner's profile page: where
  * the roster entry carries a `slug`, the card links to `/partners/<slug>/`
  * rather than to the company's own website (`partnerCardHref`). That keeps the
@@ -88,9 +106,15 @@ const newTab = (url: string): Record<string, string> =>
     <div class={cls}>
       <div class="ob-pt__h">
         {level === 'h2' ? (
-          <h2 class="ob-pt__title">{heading}</h2>
+          <h2 class="ob-pt__title">
+            <span class={`ob-pt__dot ob-pt__dot--${tier}`} aria-hidden="true" />
+            {heading}
+          </h2>
         ) : (
-          <h3 class="ob-pt__title">{heading}</h3>
+          <h3 class="ob-pt__title">
+            <span class={`ob-pt__dot ob-pt__dot--${tier}`} aria-hidden="true" />
+            {heading}
+          </h3>
         )}
         <span class="ob-pt__count">{partners.length}</span>
       </div>

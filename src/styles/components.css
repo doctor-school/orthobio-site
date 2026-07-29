@@ -1028,6 +1028,68 @@ a.ob-yc:active {
   flex-wrap: wrap;
 }
 
+/* Tier marker — bundle `components/partners/PartnerTier` (Issue #27).
+   Restores the hierarchy signal the design port dropped: it is the ONE place
+   the congress palette reaches the partner rosters, and without it the seven
+   tiers were seven identical grey headings.
+
+   Ramp, from the bundle's own `TIER_DOT` map: the people who RUN the congress
+   carry the parent brand's blues (`--ds-blue-dark` → `--ds-blue`), the paid
+   tiers descend the congress accents sky → green → lime, and the two tiers
+   below them (exhibition, info) take the neutral `--hairline` — the marker
+   still opens the row, but carries no identity colour. That the ramp DESCENDS
+   is the whole point; the pairs are pinned in
+   tests/unit/partner-tier-markers.test.ts and painted in tests/e2e/identity.spec.ts.
+
+   Inline rather than a flex item (see PartnerTier.astro for why): it therefore
+   aligns like a glyph. `vertical-align: middle` puts its centre half an
+   x-height above the baseline — where the optical centre of the heading's
+   capitals is — instead of on the baseline, where an empty inline box would
+   otherwise sit.
+
+   9px and 10px are literals, not tokens: this is a decorative diameter and the
+   space that follows it, not a step of the 4px spacing ramp (`--sp-2` is 8px
+   and would round the marker down). Same values as the bundle. */
+.ob-pt__dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-inline-end: 10px;
+  vertical-align: middle;
+  border-radius: var(--r-pill);
+  /* Fallback for a tier added to the schema before its rung is designed: a
+     neutral marker rather than an invisible 9px hole. */
+  background: var(--hairline);
+}
+
+.ob-pt__dot--organizer {
+  background: var(--ds-blue-dark);
+}
+
+.ob-pt__dot--co-organizer {
+  background: var(--ds-blue);
+}
+
+.ob-pt__dot--strategic {
+  background: var(--ob-sky);
+}
+
+.ob-pt__dot--general {
+  background: var(--ob-green);
+}
+
+.ob-pt__dot--partner {
+  background: var(--ob-lime);
+}
+
+.ob-pt__dot--exhibition {
+  background: var(--hairline);
+}
+
+.ob-pt__dot--info {
+  background: var(--hairline);
+}
+
 .ob-pt__title {
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);

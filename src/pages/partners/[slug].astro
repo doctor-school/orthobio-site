@@ -1,0 +1,178 @@
+---
+/**
+ * /partners/<slug>/ — профиль компании-партнёра (Issue #24).
+ *
+ * Replaces the old site's `/company?i=<slug>` (`infra/redirects.yaml` maps
+ * every old id onto these routes). Renders ONLY from the congress collection:
+ * a company gets a page exactly when its roster entry carries a `slug`, so
+ * adding or retiring a profile is a YAML edit, never markup.
+ *
+ * Deliberately no client JS: the whole page is text, one logo and a handful of
+ * links. The old page's poster/video/materials modals have no counterpart here
+ * because they had no content — every `poster*.jpg` and `video.mp4` the old
+ * markup referenced 404s on the operator's CDN (documented in
+ * docs/assets-manifest.yaml → `profiles:`), so there was nothing to rescue.
+ */
+import SectionHeading from '@/components/SectionHeading.astro';
+import { mediaUrl } from '@/config/site';
+import { getCongressYears } from '@/content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { PARTNER_TIER_LABELS } from '@/content/schemas';
+import { plural } from '@/lib/congress';
+import {
+  descriptionBlocks,
+  metaDescription,
+  partnerProfiles,
+  telHref,
+  type PartnerProfile,
+} from '@/lib/partners';
+
+export async function getStaticPaths() {
+  // Drafts are filtered inside getCongressYears() — a fixture must never get a
+  // public route, and that includes its partners.
+  const years = await getCongressYears();
+  return partnerProfiles(years.map((e) => ({ year: e.data.year, partners: e.data.partners }))).map(
+    (profile) => ({ params: { slug: profile.slug }, props: { profile } }),
+  );
+}
+
+interface Props {
+  profile: PartnerProfile;
+}
+
+const { profile } = Astro.props;
+const p = profile.partner;
+
+const tierLabel = PARTNER_TIER_LABELS[p.tier];
+const yearsLabel = `Участник ${plural(profile.years.length, [
+  'конгресса',
+  'конгрессов',
+  'конгрессов',
+])} ${profile.years.join(', ')}`;
+
+// The <meta description> is the organization's own opening line when it wrote
+// one; otherwise a factual sentence built from the roster — never a boast we
+// invented on its behalf. Trimmed to a sentence: several partners open with a
+// 450-character paragraph, which a search engine would cut mid-word.
+const description = p.description[0]
+  ? metaDescription(p.description[0])
+  : `${p.name} — партнёр конгресса ОРТОБИОЛОГИЯ ${profile.years[0]}.`;
+
+/** Prose entries, with runs of plain-text «·» items regrouped into real lists. */
+const blocks = descriptionBlocks(p.description);
+
+/** `null` when the published string holds several numbers — then it stays text. */
+const phoneHref = p.contacts?.phone ? telHref(p.contacts.phone) : null;
+---
+
+<BaseLayout title={`${p.name} — партнёр конгресса`} description={description}>
+  <div class="ob-container ob-section">
+    {/* Back to the roster the profile belongs to — the analog of the old
+        site's «К списку компаний», and the only way back for a reader who
+        landed here from search. */}
+    <p class="ob-crumb"><a href="/partners#p26">К списку компаний</a></p>
+
+    <div class="ob-cp__head">
+      {
+        p.logo && (
+          <div class="ob-cp__logo">
+            <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" />
+          </div>
+        )
+      }
+      <div class="ob-cp__id">
+        <p class="ob-cp__tier">{tierLabel}</p>
+        <h1 class="ob-cp__title">{p.name}</h1>
+        <p class="ob-cp__years">{yearsLabel}</p>
+      </div>
+    </div>
+
+    <dl class="ob-cp__facts">
+      {
+        p.address && (
+          <div class="ob-cp__fact">
+            <dt>Адрес</dt>
+            <dd>{p.address}</dd>
+          </div>
+        )
+      }
+      {
+        p.contacts?.phone && (
+          <div class="ob-cp__fact">
+            <dt>Телефон</dt>
+            {/* Linked only when the string denotes ONE number. «КардиоМед»
+                publishes «+7 495 955 52 57 / 58 / 40» — three extensions on one
+                switchboard — and any single tel: built from that would dial a
+                number that does not exist (see telHref). */}
+            <dd>
+              {phoneHref ? (
+                <a href={`tel:${phoneHref}`}>{p.contacts.phone}</a>
+              ) : (
+                p.contacts.phone
+              )}
+            </dd>
+          </div>
+        )
+      }
+      {
+        p.contacts?.email && (
+          <div class="ob-cp__fact">
+            <dt>Электронная почта</dt>
+            <dd><a href={`mailto:${p.contacts.email}`}>{p.contacts.email}</a></dd>
+          </div>
+        )
+      }
+      {
+        p.url && (
+          <div class="ob-cp__fact">
+            <dt>Сайт</dt>
+            <dd>
+              {/* Always another origin — a partner's own site, never ours. */}
+              <a href={p.url} target="_blank" rel="noopener">{p.url.replace(/^https?:\/\//, '')}</a>
+            </dd>
+          </div>
+        )
+      }
+    </dl>
+  </div>
+
+  {
+    p.description.length > 0 && (
+      <div class="ob-container ob-section">
+        <SectionHeading title="О компании" />
+        <div class="ob-prose">
+          {blocks.map((block) =>
+            block.kind === 'list' ? (
+              /* The source wrote these as «· ревматология,» lines; rendering
+                 them as paragraphs would leave a screen reader with no list to
+                 announce and a typographic glyph doing markup's job. */
+              <ul class="ob-list">
+                {block.items.map((item) => (
+                  <li>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>{block.text}</p>
+            ),
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  <div class="ob-container ob-section">
+    {/* No count beside this heading: «Конгрессы · 1 год» reads as a duration
+        of membership rather than as a number of editions, and the list right
+        below already states exactly which years those are. */}
+    <SectionHeading title="Конгрессы" />
+    <ul class="ob-list">
+      {
+        profile.years.map((year) => (
+          <li>
+            <a href={`/archive/${year}`}>Конгресс ОРТОБИОЛОГИЯ {year} — программа и материалы</a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</BaseLayout>

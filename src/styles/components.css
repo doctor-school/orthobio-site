@@ -64,6 +64,17 @@
   margin-bottom: 0;
 }
 
+/* A list inside running prose (partner profiles render «· …» source lines as a
+   real <ul>) needs the same rhythm as the paragraphs around it — `.ob-list`
+   itself carries `margin: 0` because its other callers sit alone in a section. */
+.ob-prose .ob-list {
+  margin: 0 0 var(--sp-4);
+}
+
+.ob-prose .ob-list:last-child {
+  margin-bottom: 0;
+}
+
 .ob-note {
   font-size: var(--fs-small);
   color: var(--text-muted);
@@ -1109,6 +1120,51 @@ a.ob-pt__card:active {
   transition: none;
 }
 
+/* Since Issue #24 a linked card can lead to a PROFILE ON THIS SITE instead of
+   the partner's own website, and the two were pixel-identical — nothing told
+   the reader which one keeps them here. The profile card therefore names its
+   action in words, stacked under the mark.
+
+   The label lives INSIDE the card's own <a>: a «Подробнее» link placed beside a
+   card that is already an anchor would be a nested link — invalid HTML, and
+   unreachable by keyboard. So the card stays exactly one tab stop. */
+.ob-pt__card--profile {
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.ob-pt__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* WCAG 2.2 §2.5.8 floor, same as the other standalone text links — even
+     though the whole card is the target, the row reads as one. */
+  min-height: 24px;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-link);
+  /* The label is the one part of the card that must never wrap or be broken:
+     it is a fixed two-word action, and `overflow-wrap: anywhere` on the card
+     would happily split it mid-word. */
+  white-space: nowrap;
+}
+
+/* Mirrors `a.ob-arrow`, which cannot be reused here: that rule is scoped to
+   `a` elements and this label is a <span> inside one. */
+.ob-pt__more::after {
+  content: '→';
+  transition: translate var(--t-state);
+}
+
+a.ob-pt__card--profile:hover .ob-pt__more {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a.ob-pt__card--profile:hover .ob-pt__more::after {
+  translate: 3px 0;
+}
+
 /* Fixed slot: the logo box is reserved before the file loads, so a tier grid
    cannot reflow as logos stream in. The box is 120×72, not the 120×44 that was
    reserved while every partner was `logo: null` (Issue #22): the rescued marks
@@ -1746,12 +1802,12 @@ details[open] > .ob-faq__q::after {
 
 /* Breadcrumb back to the hub — the year page is otherwise a dead end for
    anyone who arrived from search. */
-.ob-yh__crumb {
+.ob-crumb {
   font-size: var(--fs-small);
   margin: 0 0 var(--sp-5);
 }
 
-.ob-yh__crumb a {
+.ob-crumb a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1760,21 +1816,21 @@ details[open] > .ob-faq__q::after {
   text-decoration: none;
 }
 
-.ob-yh__crumb a::before {
+.ob-crumb a::before {
   content: '←';
   transition: translate var(--t-state);
 }
 
-.ob-yh__crumb a:hover {
+.ob-crumb a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.ob-yh__crumb a:hover::before {
+.ob-crumb a:hover::before {
   translate: -3px 0;
 }
 
-.ob-yh__crumb a:active {
+.ob-crumb a:active {
   color: var(--ob-sky-text);
 }
 
@@ -1806,4 +1862,117 @@ details[open] > .ob-faq__q::after {
   font-weight: var(--fw-semibold);
   color: var(--error);
   margin: 0 0 var(--sp-3);
+}
+
+/* ── Company profile (/partners/<slug>) ──────────────────────────────────── */
+
+/* Logo beside the identity block, stacking under it on a phone. `min-width: 0`
+   on the text column is the AGENTS.md flex invariant — without it a long legal
+   name («Малти-Системс Текнолоджи») would push the row wider than 360px. */
+.ob-cp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.ob-cp__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+}
+
+.ob-cp__logo img {
+  display: block;
+  width: 120px;
+  height: 72px;
+  object-fit: contain;
+}
+
+.ob-cp__id {
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.ob-cp__tier {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-sky-text);
+  margin: 0 0 var(--sp-2);
+}
+
+.ob-cp__title {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-bold);
+  /* Mandatory on display headings (AGENTS.md): these are brand names, and a
+     360px column cannot hyphenate «БИОНОЛТРА ЭС ЭЙ» for us. */
+  overflow-wrap: break-word;
+  margin: 0 0 var(--sp-2);
+}
+
+.ob-cp__years {
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Address / phone / email / site as a definition list: each fact keeps its own
+   label, which is what a screen reader announces alongside the value. */
+.ob-cp__facts {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.ob-cp__fact {
+  display: grid;
+  /* `minmax(0, …)` on both tracks — a bare `auto`/`1fr` pair lets a long email
+     address widen the grid past the viewport. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+.ob-cp__fact dt {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ob-cp__fact dd {
+  margin: 0;
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+
+.ob-cp__fact dd a {
+  text-decoration: none;
+}
+
+.ob-cp__fact dd a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ob-cp__fact dd a:active {
+  color: var(--ob-sky-text);
+}
+
+@media (min-width: 768px) {
+  .ob-cp__fact {
+    grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--sp-4);
+  }
 }

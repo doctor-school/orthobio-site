@@ -11,6 +11,13 @@
  *
  * Major tiers (organizers / strategic / general) get the larger card grid.
  *
+ * Since Issue #24 a card is also the way INTO a partner's profile page: where
+ * the roster entry carries a `slug`, the card links to `/partners/<slug>/`
+ * rather than to the company's own website (`partnerCardHref`). That keeps the
+ * card a SINGLE link — a «Подробнее» anchor added next to a card that is
+ * already an `<a>` would have been a nested link, which is invalid HTML and
+ * unreachable by keyboard.
+ *
  * The logo slot is 120×72, declared in CSS (.ob-pt__card img, `object-fit:
  * contain`) and repeated as width/height on both <img> below: the schema
  * carries no logo dimensions and the marks are fetched from S3, so the
@@ -23,6 +30,7 @@
 import { mediaUrl } from '@/config/site';
 import type { CongressEntry, PartnerTier } from '@/content';
 import { MAJOR_TIERS } from '@/lib/congress';
+import { partnerCardHref } from '@/lib/partners';
 
 interface Props {
   tier: PartnerTier;
@@ -87,9 +95,19 @@ const newTab = (url: string): Record<string, string> =>
         <span class="ob-pt__count">{partners.length}</span>
       </div>
       <div class="ob-pt__grid">
-        {partners.map((p) =>
-          p.url ? (
-            <a class="ob-pt__card" href={p.url} {...newTab(p.url)}>
+        {partners.map((p) => {
+          /* A profile page wins over the partner's own website (Issue #24):
+             the card opens what WE can show, and the external site is offered
+             from inside the profile. `newTab` then correctly resolves an
+             internal profile href to «same tab». */
+          const href = partnerCardHref(p);
+          const isProfile = p.slug !== null;
+          return href ? (
+            <a
+              class={`ob-pt__card${isProfile ? ' ob-pt__card--profile' : ''}`}
+              href={href}
+              {...newTab(href)}
+            >
               {
                 p.logo ? (
                   <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
@@ -97,11 +115,19 @@ const newTab = (url: string): Record<string, string> =>
                   p.name
                 )
               }
+              {/* The visible affordance the AC asks for, INSIDE the single <a>:
+                  a profile card and an external-site card were pixel-identical,
+                  so nothing told the reader that one keeps them on this site and
+                  the other leaves it. It also gives the link a fuller accessible
+                  name — «<Название> Подробнее →», since pseudo-element content
+                  counts towards it (AccName §2F, as measured for .ob-arrow). */}
+              {isProfile && <span class="ob-pt__more">Подробнее</span>}
             </a>
           ) : (
-            /* A partner with no `url` is a plain roster entry. It must not LOOK
-               like the linked cards beside it: `--static` drops the card fill and
-               the pointer affordances (see components.css). */
+            /* A partner with neither a profile nor a `url` is a plain roster
+               entry. It must not LOOK like the linked cards beside it:
+               `--static` drops the card fill and the pointer affordances (see
+               components.css). */
             <span class="ob-pt__card ob-pt__card--static">
               {
                 p.logo ? (
@@ -111,8 +137,8 @@ const newTab = (url: string): Record<string, string> =>
                 )
               }
             </span>
-          ),
-        )}
+          );
+        })}
       </div>
     </div>
   )

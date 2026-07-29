@@ -99,8 +99,9 @@ const embedSrc = videoEmbedSrc(url);
     frame.className = 'ob-vc__frame';
     frame.src = src;
     frame.title = button.dataset.obVideoTitle ?? 'Видеозапись конгресса';
+    // `fullscreen` rides in `allow`; adding the legacy `allowfullscreen`
+    // attribute next to it only earns a console warning about which one wins.
     frame.allow = 'clipboard-write; autoplay; encrypted-media; fullscreen; picture-in-picture';
-    frame.allowFullscreen = true;
     button.replaceWith(frame);
     frame.focus();
   });

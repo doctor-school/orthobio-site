@@ -140,6 +140,31 @@ test('the pointer path is untouched by the island', async ({ page }) => {
   expect(page.url()).toContain(GALLERY);
 });
 
+test('a modified click is left to the browser and never becomes a stale trigger', async ({
+  page,
+}) => {
+  await page.goto('/archive/2025');
+  const tiles = page.locator('a.ob-pg__it');
+
+  // Ctrl-click opens the photo beside the page; THIS tab does not navigate, so
+  // no frame opens — and nothing may be remembered as the tile that opened one.
+  await tiles.nth(4).click({ modifiers: ['ControlOrMeta'] });
+  await expect(page.locator('#pg2025-5')).toBeHidden();
+  expect(page.url()).not.toContain('#pg2025-5');
+
+  // Now open a frame WITHOUT a click, the way a deep link or the Back gesture
+  // does. A trigger recorded by the modified click would win here — the island
+  // only derives one when it has none — and Escape would hand focus to a photo
+  // the reader never opened (audit of PR #43: tile 5 instead of tile 1).
+  await page.evaluate((hash) => {
+    window.location.hash = hash;
+  }, FIRST_FRAME);
+  await expect(page.locator(FIRST_FRAME)).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(tiles.first()).toBeFocused();
+});
+
 test('an open frame has no axe violations', async ({ page }) => {
   await page.goto('/archive/2025');
   await openFirst(page);

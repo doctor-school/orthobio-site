@@ -243,6 +243,14 @@ const altOf = (
   const openFrame = () => document.querySelector<HTMLElement>('.ob-pg__lb:target');
 
   document.addEventListener('click', (event) => {
+    // A modified or middle click opens the photo in another tab and leaves THIS
+    // one where it is — no navigation, no `hashchange`. Recording a trigger for
+    // it would leave a stale tile behind that `trigger ??=` then prefers over
+    // the real one, and the next Escape would hand focus to a photo the reader
+    // never opened. Same guard, same reason as the VideoCard island.
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof Element)) return;
     // Runs for keyboard activation too: Enter on an anchor dispatches a click.

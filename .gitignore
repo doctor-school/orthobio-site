@@ -23,3 +23,6 @@ Thumbs.db
 # Playwright test artifacts
 test-results/
 playwright-report/
+# Asset-rescue staging (scripts/rescue-partner-logos.mjs) — rescued binaries
+# live in the S3 bucket, never in git; regenerate the tree from the script.
+.rescue/

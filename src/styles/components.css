@@ -1110,10 +1110,15 @@ a.ob-pt__card:active {
 }
 
 /* Fixed slot: the logo box is reserved before the file loads, so a tier grid
-   cannot reflow when logos finally land (no partner has one yet). */
+   cannot reflow as logos stream in. The box is 120×72, not the 120×44 that was
+   reserved while every partner was `logo: null` (Issue #22): the rescued marks
+   are overwhelmingly SQUARE (240×240 from the old catalogue), and `contain`
+   fits a square to the SHORT side — at 44px tall they painted as illegible
+   thumbnails. 72px is what makes the square marks readable while still letting
+   the wide 240×101 institutional logos use the full 120px width. */
 .ob-pt__card img {
   width: 120px;
-  height: 44px;
+  height: 72px;
   max-width: 80%;
   object-fit: contain;
 }

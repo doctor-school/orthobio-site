@@ -111,10 +111,17 @@ theses:
 # «при поддержке компании …» on /archive/program2024, names verbatim — note
 # «Промомед ДМ», not plain «Промомед»). The page assigns no partner tiers, so
 # they go into the neutral `partner` bucket.
+#
+# /archive/2024 publishes NO logos at all (video, portraits and photos only),
+# so every mark here comes from the brand-mark library keyed by organization
+# (docs/assets-manifest.yaml → `logos:`) — 7 of the 14 sponsors also exhibited
+# in 2026 and were rescued from that catalogue. «Промомед ДМ» takes the
+# ПРОМОМЕД group mark (the ДМ entity is the group's, and the group publishes
+# one mark). The other 7 have no mark on any surviving source.
 partners:
   - name: Нижфарм
     tier: partner
-    logo: null
+    logo: /media/logos/nizhpharm.png
     url: null
   - name: Bayer
     tier: partner
@@ -122,11 +129,11 @@ partners:
     url: null
   - name: Панбио Фарм
     tier: partner
-    logo: null
+    logo: /media/logos/panbio-pharm.png
     url: null
   - name: Биомир Сервис
     tier: partner
-    logo: null
+    logo: /media/logos/biomir-servis.png
     url: null
   - name: Система Плюс
     tier: partner
@@ -150,19 +157,19 @@ partners:
     url: null
   - name: Промомед ДМ
     tier: partner
-    logo: null
+    logo: /media/logos/promomed.png
     url: null
   - name: Сервье
     tier: partner
-    logo: null
+    logo: /media/logos/servier.png
     url: null
   - name: CSC
     tier: partner
-    logo: null
+    logo: /media/logos/csc-pharma.png
     url: null
   - name: Haleon
     tier: partner
-    logo: null
+    logo: /media/logos/haleon.png
     url: null
   - name: Гедеон Рихтер
     tier: partner

@@ -102,57 +102,68 @@ theses:
   pdf: /media/2026/docs/material.pdf
   title: VII Конгресс ОРТОБИОЛОГИЯ 2026. Сборник тезисов
 
+# `logo` points into the brand-mark library (docs/assets-manifest.yaml →
+# `logos:`), keyed by ORGANIZATION rather than by year. Организаторы,
+# экспоненты and инфопартнёры come from orthobio.ru's own /orgs, /exhibition
+# and /partners; соорганизаторы are text in prog.pdf and take their marks from
+# the 2025 archive page, the only place they exist as images.
+# 4 keep null: «Российский университет медицины» is МГМСУ им. Евдокимова
+# renamed (2024) — the surviving image is the retired МГМСУ mark, so painting
+# it under the new name would be wrong; «Человек и его здоровье», «Ивекскон»
+# and «Академия Доктор Скул» have no mark on any surviving source.
 partners:
   # Организаторы-юрлица (orthobio.ru/orgs; same 5 in prog.pdf, стр. 3).
   - name: МОО «Общество регенеративной травматологии и ортопедии» (ОРТО)
     tier: organizer
-    logo: null
+    logo: /media/logos/orto.png
     url: null
   - name: Общероссийская общественная организация «Ассоциация травматологов-ортопедов России» (АТОР)
     tier: organizer
-    logo: null
+    logo: /media/logos/ator.png
     url: null
   - name: «Медицинская ассоциация специалистов по лечению и изучению остеонекроза» (МАПО)
     tier: organizer
-    logo: null
+    logo: /media/logos/mapo.png
     url: null
   - name: НМИЦ ТО им. Н.Н. Приорова
     tier: organizer
-    logo: null
+    logo: /media/logos/cito.png
     url: null
+  # ⚠️ TODO(Антон): тот же двуглавый орёл, что и в 2025 — решение по нему
+  # принимается один раз на обе записи, развёрнуто в src/content/congress/2025.yaml.
   - name: Кафедра травматологии и ортопедии ФНКЦ ФМБА России
     tier: organizer
-    logo: null
+    logo: /media/logos/fnkc-fmba-kafedra.png
     url: null
   # «ПРИ ПОДДЕРЖКЕ» — 16 организаций из PDF-программы (стр. 3), mapped to the
   # co-organizer tier (same semantic slot as «СООРГАНИЗАТОРЫ» on the 2025 page).
   - name: Министерство здравоохранения Российской Федерации
     tier: co-organizer
-    logo: null
+    logo: /media/logos/minzdrav.jpg
     url: null
   - name: Федеральное медико-биологическое агентство России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/fmba.jpg
     url: null
   - name: ФГБУ «НМИЦ ТО им. Р.Р. Вредена» Минздрава России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/vreden.jpg
     url: null
   - name: ФГБНУ НИИР им. В.А. Насоновой
     tier: co-organizer
-    logo: null
+    logo: /media/logos/niir-nasonovoy.jpg
     url: null
   - name: Российский университет дружбы народов им. Патриса Лумумбы
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rudn.jpg
     url: null
   - name: ФГБОУ ВО «МГУ имени М.В. Ломоносова»
     tier: co-organizer
-    logo: null
+    logo: /media/logos/msu.jpg
     url: null
   - name: ФГБНУ «РНЦХ им. акад. Б.В. Петровского»
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rnch-petrovskogo.jpg
     url: null
   - name: ФГБОУ ВО «Российский университет медицины» Минздрава России
     tier: co-organizer
@@ -160,23 +171,23 @@ partners:
     url: null
   - name: ФГАОУ ВО Первый МГМУ им. И.М. Сеченова Минздрава России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/sechenov.jpg
     url: null
   - name: ФГАОУ ВО РНИМУ им. Н.И. Пирогова Минздрава России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rnimu.jpg
     url: null
   - name: ФГБУ ФНКЦ ФМБА России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/fnkc-fmba.jpg
     url: null
   - name: ФГБОУ ДПО РМАНПО Минздрава России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/rmanpo.jpg
     url: null
   - name: ФГБВОУ ВО «Военно-медицинская академия имени С.М. Кирова» Минобороны России
     tier: co-organizer
-    logo: null
+    logo: /media/logos/vmeda.jpg
     url: null
   - name: СПбОО «Человек и его здоровье»
     tier: co-organizer
@@ -195,126 +206,134 @@ partners:
   # Выставка (/exhibition): 22 экспонента в 4 уровнях.
   - name: Dr. Reddy's
     tier: strategic
-    logo: null
+    logo: /media/logos/dr-reddys.png
     url: null
   - name: ПРОМОМЕД
     tier: strategic
-    logo: null
+    logo: /media/logos/promomed.png
     url: null
   - name: Берлин-Хеми/А. Менарини
     tier: general
-    logo: null
+    logo: /media/logos/berlin-chemie.png
     url: null
   - name: Виатрис
     tier: general
-    logo: null
+    logo: /media/logos/viatris.png
     url: null
   - name: НИЖФАРМ
     tier: general
-    logo: null
+    logo: /media/logos/nizhpharm.png
     url: null
   - name: ПанБио Фарм
     tier: general
-    logo: null
+    logo: /media/logos/panbio-pharm.png
     url: null
   - name: Хелеон Рус
     tier: general
-    logo: null
+    logo: /media/logos/haleon.png
     url: null
   - name: CSC Pharma Russia
     tier: partner
-    logo: null
+    logo: /media/logos/csc-pharma.png
     url: null
   - name: БИОМИР сервис
     tier: partner
-    logo: null
+    logo: /media/logos/biomir-servis.png
     url: null
   - name: ГЕНЕРИУМ
     tier: partner
-    logo: null
+    logo: /media/logos/generium.png
     url: null
+  # ⚠️ TODO(Антон): плитка этого экспонента — марка его продуктовой линейки
+  # «regenlab · PRP & CELL THERAPY SPECIALISTS», слова «КЭМ» на изображении нет.
+  # Привязка подтверждена источником: сама страница подписывает эту плитку
+  # alt=«КЭМ, ООО» (docs/assets-manifest.yaml → logo-kem.source_alt), и 22
+  # каталожные директории exhib/ ложатся 1:1 на 22 записи здесь без остатка.
+  # Но это единственная из 49 карточек, где зрячий читатель и скринридер
+  # получают разные названия компании. Оставить продуктовую марку под именем
+  # «КЭМ» или переименовать карточку?
   - name: КЭМ
     tier: partner
-    logo: null
+    logo: /media/logos/kem.png
     url: null
   - name: Ромфарма
     tier: partner
-    logo: null
+    logo: /media/logos/rompharma.png
     url: null
   - name: Сервье
     tier: partner
-    logo: null
+    logo: /media/logos/servier.png
     url: null
   - name: АРМ
     tier: exhibition
-    logo: null
+    logo: /media/logos/arm.png
     url: null
   - name: БИОНОЛТРА ЭС ЭЙ
     tier: exhibition
-    logo: null
+    logo: /media/logos/bionoltra.png
     url: null
   - name: КардиоМед
     tier: exhibition
-    logo: null
+    logo: /media/logos/kardiomed.png
     url: null
   - name: Малти-Системс Текнолоджи
     tier: exhibition
-    logo: null
+    logo: /media/logos/multi-systems-technology.png
     url: null
   - name: МТ Техника
     tier: exhibition
-    logo: null
+    logo: /media/logos/mt-tehnika.png
     url: null
   - name: ОКСИТЕРРА
     tier: exhibition
-    logo: null
+    logo: /media/logos/oksiterra.png
     url: null
   - name: Орфан групп
     tier: exhibition
-    logo: null
+    logo: /media/logos/orfan-grupp.png
     url: null
   - name: Северная звезда
     tier: exhibition
-    logo: null
+    logo: /media/logos/severnaya-zvezda.png
     url: null
   - name: ФБК
     tier: exhibition
-    logo: null
+    logo: /media/logos/fbk.png
     url: null
   # Информационные партнёры (/partners): 9.
   - name: PMP Agency
     tier: info
-    logo: null
+    logo: /media/logos/pmp-agency.png
     url: null
   - name: Helpinver
     tier: info
-    logo: null
+    logo: /media/logos/helpinver.png
     url: null
   - name: OmniDoctor
     tier: info
-    logo: null
+    logo: /media/logos/omnidoctor.png
     url: null
   - name: Space Health
     tier: info
-    logo: null
+    logo: /media/logos/space-health.png
     url: https://healthglobal.ru
   - name: ЛВрач
     tier: info
-    logo: null
+    logo: /media/logos/lvrach.png
     url: null
   - name: РусВрач
     tier: info
-    logo: null
+    logo: /media/logos/rusvrach.png
     url: null
   - name: InnoFarma
     tier: info
-    logo: null
+    logo: /media/logos/innofarma.png
     url: null
   - name: Eco-Vector
     tier: info
-    logo: null
+    logo: /media/logos/eco-vector.png
     url: null
   - name: Opinion Leader
     tier: info
-    logo: null
+    logo: /media/logos/opinion-leader.png
     url: null

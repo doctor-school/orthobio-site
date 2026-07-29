@@ -5,6 +5,11 @@
  * No portrait → an initial plate (decorative: the name is right next to it).
  * Greeting texts were never published for any year, so `text` is usually null.
  *
+ * BOTH circle states are decorative — `alt=""` on the portrait, `aria-hidden`
+ * on the plate. The person's name sits in `.ob-pc__name` immediately after, so
+ * a descriptive alt («Фото: <ФИО>») made a screen reader announce the same name
+ * twice per card — twelve times over on /orgs (a11y audit, PR #28).
+ *
  * The portrait is served through `<Image>`: build-time resizing keeps a page
  * openable on mobile data. `inferSize` reads the intrinsic size at build —
  * unlike photos/cover, the schema carries a person's portrait as a plain scalar
@@ -45,7 +50,7 @@ const { name, role = null, photo = null, text = null, priority = false } = Astro
       <Image
         class="ob-pc__photo"
         src={mediaUrl(photo)}
-        alt={`Фото: ${name}`}
+        alt=""
         inferSize
         widths={[72, 144, 216]}
         sizes="72px"

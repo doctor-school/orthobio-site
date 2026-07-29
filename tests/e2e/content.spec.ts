@@ -146,6 +146,41 @@ test('media past the fold is disclosed without JavaScript', async ({ browser }) 
   await context.close();
 });
 
+test('/orgs actually renders the оргкомитет portraits, not the fallback plate', async ({
+  page,
+}) => {
+  // Regression guard for Issue #23. Every other suite stays green if the
+  // portraits vanish: drop a `photo:` key, break `mediaUrl()`, or move the
+  // bucket objects, and PersonCard silently falls back to the initials plate —
+  // valid DOM, valid a11y, zero overflow, zero CLS. The COUNT is the assertion.
+  await page.goto('/orgs');
+  const portraits = page.locator('#orgs26 img.ob-pc__photo');
+  await expect(portraits).toHaveCount(11);
+
+  // Explicit intrinsic dimensions on every tag: the schema carries a portrait
+  // as a bare URL, so the box is reserved only because <Image> measured the
+  // file at build. A missing attribute here IS the CLS regression.
+  const boxes = await portraits.evaluateAll((nodes) =>
+    nodes.map((n) => ({
+      w: n.getAttribute('width'),
+      h: n.getAttribute('height'),
+      alt: n.getAttribute('alt'),
+      src: n.getAttribute('src'),
+    })),
+  );
+  for (const box of boxes) {
+    expect(Number(box.w), `width must be a positive number, got ${box.w}`).toBeGreaterThan(0);
+    expect(Number(box.h), `height must be a positive number, got ${box.h}`).toBeGreaterThan(0);
+    // Decorative: the name is the adjacent .ob-pc__name (see PersonCard.astro).
+    expect(box.alt).toBe('');
+    expect(box.src, 'portraits must be served from our own build output').toMatch(/^\/_astro\//);
+  }
+
+  // The twelfth member, Загородний Н. В., has no portrait anywhere on the old
+  // site — his plate is the honest state and must NOT quietly gain a photo.
+  await expect(page.locator('#orgs26 .ob-pc__initial')).toHaveCount(1);
+});
+
 test('FAQ answers open without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();

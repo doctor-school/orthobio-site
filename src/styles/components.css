@@ -1434,14 +1434,43 @@ html:has(.ob-pg__lb:target) {
     border-color var(--t-state);
 }
 
-a.ob-vc:hover {
+/* Not qualified with `a`: the embeddable card is a <div> holding a <button>. */
+.ob-vc:hover {
   box-shadow: var(--shadow-lift);
   border-color: var(--hairline-strong);
   color: var(--text-body);
 }
 
-a.ob-vc:active {
+.ob-vc:active {
   border-color: var(--ob-sky);
+}
+
+/* Facade trigger of the click-to-load player: a button that must look like the
+   plate it replaces, so every UA button default is stripped. */
+.ob-vc__btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The card clips its corners (`overflow: hidden`), which would eat the global
+   outer focus ring — so this one is drawn inside the button. */
+.ob-vc__btn:focus-visible {
+  box-shadow: none;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+.ob-vc__frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
 }
 
 .ob-vc__facade {
@@ -1456,7 +1485,8 @@ a.ob-vc:active {
 }
 
 .ob-vc:hover .ob-vc__play,
-.ob-vc:focus-visible .ob-vc__play {
+.ob-vc:focus-visible .ob-vc__play,
+.ob-vc__btn:focus-visible .ob-vc__play {
   background: var(--ds-blue-dark);
 }
 
@@ -1485,17 +1515,39 @@ a.ob-vc:active {
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
   letter-spacing: 0.04em;
-  color: var(--on-dark);
-  opacity: 0.75;
+  color: var(--video-host-fg);
   text-transform: uppercase;
 }
 
+/* `display: block` is load-bearing: the caption is a <span>, and on an inline
+   box the vertical padding paints outside the line box without moving anything
+   — the text sat flush against the plate while the padding hung over it. */
 .ob-vc__title {
+  display: block;
   padding: 10px 14px;
   font-size: var(--fs-small);
   color: var(--text-body);
   margin: 0;
-  overflow-wrap: anywhere;
+  /* `anywhere` (was here) breaks Russian mid-word — «ортобиоло/гия» — because
+     these captions have no unbreakable tokens to justify it. */
+  overflow-wrap: break-word;
+}
+
+/* Outbound marker: only YouTube cards carry it, and only they leave the site. */
+.ob-vc__ext {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 14px 10px;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.ob-vc__ext svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
 }
 
 /* ── DocCard ─────────────────────────────────────────────────────────────── */

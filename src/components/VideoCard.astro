@@ -1,15 +1,23 @@
 ---
 /**
- * VideoCard — видеоотчёт года.
+ * VideoCard — видеоотчёт года: click-to-load фасад (design brief §3.5).
  *
- * DEVIATION from the design bundle (components/archive/VideoCard), deliberate:
- * the mockup swaps the facade for a click-loaded <iframe>, which needs a client
- * island. Here the facade is a plain link to the video on its host, so the page
- * ships ZERO client JS (AGENTS.md default) and no third-party player frame is
- * embedded for RF users. Visual facade — dark plate, host badge, play glyph —
- * is unchanged; the link text is the video title, so the target is announced.
+ * The card never ships a player up front: a year holds up to eight videos and
+ * eight provider frames on one page is a minute of loading on a clinic
+ * connection. The facade is the dark plate the design draws (host badge + play
+ * glyph, no third-party thumbnail — hotlinking foreign CDNs is out per the
+ * media rule), and the provider frame arrives only on click.
+ *
+ * Two card shapes, decided by `videoEmbedSrc()`:
+ * • Rutube — a <button> that swaps itself for the player <iframe> in place.
+ *   This is the one sanctioned client island in the archive (AGENTS.md:49
+ *   allows islands where interactivity is genuinely required); it is ~15 lines
+ *   of delegated listener, shared by every card on the page.
+ * • YouTube — no frame at all: the RF cannot rely on YouTube loading, so the
+ *   card stays an outbound link that says where it leads before it is clicked.
  */
 import { videoHost } from '@/lib/congress';
+import { videoEmbedSrc } from '@/lib/video';
 
 interface Props {
   url: string;
@@ -20,15 +28,80 @@ interface Props {
 const { url, title = null, year } = Astro.props;
 const host = videoHost(url);
 const label = title ?? `Видео конгресса ${year}`;
+const embedSrc = videoEmbedSrc(url);
 ---
 
-{/* Same-tab navigation: `rel="noopener"` would be inert without a target. */}
-<a class="ob-vc" href={url}>
-  <span class="ob-vc__facade">
-    <span class="ob-vc__host">{host}</span>
-    <span class="ob-vc__play">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"></path></svg>
-    </span>
-  </span>
-  <span class="ob-vc__title">{label}</span>
-</a>
+{
+  embedSrc ? (
+    <div class="ob-vc">
+      {/* The accessible name repeats the visible caption, so «label in name»
+          holds for voice control (WCAG 2.5.3). */}
+      <button
+        type="button"
+        class="ob-vc__btn"
+        data-ob-video={embedSrc}
+        data-ob-video-title={label}
+        aria-label={`Смотреть на странице: ${label}`}
+      >
+        <span class="ob-vc__facade">
+          <span class="ob-vc__host">{host}</span>
+          <span class="ob-vc__play">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5.5v13l11-6.5z" />
+            </svg>
+          </span>
+        </span>
+      </button>
+      <span class="ob-vc__title">{label}</span>
+    </div>
+  ) : (
+    <a class="ob-vc" href={url} target="_blank" rel="noopener noreferrer">
+      <span class="ob-vc__facade">
+        <span class="ob-vc__host">{host}</span>
+        <span class="ob-vc__play">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5.5v13l11-6.5z" />
+          </svg>
+        </span>
+      </span>
+      <span class="ob-vc__title">{label}</span>
+      <span class="ob-vc__ext">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14 3h7v7h-2V6.4l-8.3 8.3-1.4-1.4L17.6 5H14V3zM5 5h5v2H6v11h11v-4h2v6H5V5z" />
+        </svg>
+        Откроется на {host} в новой вкладке
+      </span>
+    </a>
+  )
+}
+
+<script>
+  /**
+   * Click-to-load: replace the facade button with the provider frame.
+   *
+   * Delegated once per page rather than per card — a year page carries up to
+   * eight of these. Astro hoists the island statically, so a YouTube-only year
+   * (2021-2024) also carries these ~0.4 KB; they attach one listener that never
+   * matches, which is cheaper than any way of conditioning them away.
+   *
+   * Focus moves into the frame because the element the visitor
+   * activated is gone by the next tick; without it a keyboard user is dropped
+   * back to the top of the document.
+   */
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const button = target.closest<HTMLButtonElement>('button[data-ob-video]');
+    const src = button?.dataset.obVideo;
+    if (!button || !src) return;
+
+    const frame = document.createElement('iframe');
+    frame.className = 'ob-vc__frame';
+    frame.src = src;
+    frame.title = button.dataset.obVideoTitle ?? 'Видеозапись конгресса';
+    frame.allow = 'clipboard-write; autoplay; encrypted-media; fullscreen; picture-in-picture';
+    frame.allowFullscreen = true;
+    button.replaceWith(frame);
+    frame.focus();
+  });
+</script>

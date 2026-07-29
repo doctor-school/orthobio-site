@@ -697,12 +697,29 @@
     right: -70px;
   }
 
+  /* Instance B is rotated, so it paints a box 2.2× its CSS width — the bundle's
+     240px becomes 527px on screen. That geometry assumes the wide window it was
+     drawn at: between 1024 and 1279 the free strip to the right of the 640px
+     text column is narrower than the box, and the layer lands under the lead
+     copy — which the same design forbids («не подкладывать под плотный текст»).
+     Contrast still passed there; the rule is what broke. So the layer is scaled
+     to the strip across this band and returns to the bundle's own geometry at
+     1280 below, where the window can hold it. */
   .ob-hero__pattern--b {
-    width: 240px;
+    width: 140px;
     bottom: -120px;
-    right: 220px;
+    right: 110px;
     transform: rotate(150deg);
     opacity: 0.5;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* The bundle's placement for instance B, restored as soon as the viewport has
+     room for it beside the text column (see the note above). */
+  .ob-hero__pattern--b {
+    width: 240px;
+    right: 220px;
   }
 }
 

@@ -74,19 +74,28 @@ test.describe('responsive', () => {
    */
   const HERO_PATTERNS = ['.ob-hero__pattern--a', '.ob-hero__pattern--b'] as const;
 
-  async function probeHeroPattern(page: Page, width: number) {
+  /**
+   * Measures decorative pattern layers against the copy of the band they sit
+   * in. Written once and driven by `band` + `selectors` because the year header
+   * carries the very same motif under the very same design rule (#38) — a
+   * second copy of this probe would be a second place to fix.
+   */
+  async function probePattern(
+    page: Page,
+    { path, band, selectors, width }: { path: string; band: string; selectors: readonly string[]; width: number },
+  ) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto('/');
+    await page.goto(path);
 
-    return page.evaluate((selectors) => {
-      // EVERY text node of the hero, not a hand-listed set of tags: the `stats`
+    return page.evaluate(({ band, selectors }) => {
+      // EVERY text node of the band, not a hand-listed set of tags: the `stats`
       // and `statsNote` slots can render figures as div/span/li, and a selector
       // list would drop them and quietly start measuring less than it claims.
       // Line boxes, not element boxes — a 640px block can have every line end
       // far short of 640px.
       const lines: DOMRect[] = [];
       const walker = document.createTreeWalker(
-        document.querySelector('.ob-hero') as Node,
+        document.querySelector(band) as Node,
         NodeFilter.SHOW_TEXT,
       );
       for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -135,8 +144,11 @@ test.describe('responsive', () => {
       });
 
       return { textRight: lines.reduce((max, r) => Math.max(max, r.right), 0), patterns };
-    }, HERO_PATTERNS as unknown as string[]);
+    }, { band, selectors: selectors as unknown as string[] });
   }
+
+  const probeHeroPattern = (page: Page, width: number) =>
+    probePattern(page, { path: '/', band: '.ob-hero', selectors: HERO_PATTERNS, width });
 
   for (const width of [1024, 1120, 1279, 1280, 1440]) {
     test(`no hero pattern paints under the hero copy at ${width}px`, async ({ page }) => {
@@ -174,6 +186,59 @@ test.describe('responsive', () => {
             `column at ${width}px`,
         ).toBeGreaterThanOrEqual(textRight);
       }
+    });
+  }
+
+  /**
+   * The year header carries the same metaball motif, and the same rule applies
+   * to it (#38): decorative artwork must not sit under the header copy. It got
+   * there by a different route than the hero's — the layer is anchored to the
+   * viewport's right edge (`right: -80px; width: 280px`, the design's own
+   * placement), so the strip it occupies is «viewport − 200px» and eats into
+   * the text column as soon as the window is narrow: at 360px it started at
+   * 160px while the copy ran to 328px — 168px of the year number, the H1 and
+   * the dates painted over. The band's own copy sets the bar, one probe run per
+   * width across the full canonical ladder.
+   *
+   * Below 1024 the assertion is «hidden OR clear», not «hidden»: the guard
+   * exists to protect the copy, and a future placement that keeps the motif on
+   * a phone with real air is a legitimate way to satisfy it. At 1024 and up the
+   * layer must be THERE and clear — otherwise deleting the decoration outright
+   * would pass this suite.
+   */
+  for (const width of OVERFLOW_WIDTHS) {
+    test(`the year header pattern stays off the header copy at ${width}px`, async ({ page }) => {
+      const { textRight, patterns } = await probePattern(page, {
+        path: '/archive/2025',
+        band: '.ob-yh',
+        selectors: ['.ob-yh__pattern'],
+        width,
+      });
+      expect(textRight).toBeGreaterThan(0);
+      const [p] = patterns;
+
+      if (width >= 1024) {
+        expect(
+          p.display,
+          `${p.selector} is "${p.display}" at ${width}px — the year header must keep the brand ` +
+            `motif at the widths that have room for it`,
+        ).toBe('block');
+        expect(p.pathFound, `${p.selector} has no <path> — the probe measured nothing`).toBe(true);
+      }
+
+      if (p.display === 'none') return;
+
+      expect(
+        p.hits,
+        `${p.selector} paints over ${p.hits} of ${p.samples} points sampled inside year-header ` +
+          `line boxes at ${width}px — decorative artwork is sitting under the copy`,
+      ).toBe(0);
+      expect(
+        p.left,
+        `${p.selector} starts at ${Math.round(p.left)}px while the widest line of the year ` +
+          `header ends at ${Math.round(textRight)}px — the decorative layer is crowding the ` +
+          `text column at ${width}px`,
+      ).toBeGreaterThanOrEqual(textRight);
     });
   }
 

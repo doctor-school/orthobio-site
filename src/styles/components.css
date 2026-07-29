@@ -1780,8 +1780,20 @@ details[open] > .ob-faq__q::after {
    this band (bundle `ui_kits/orthobio-site/Year`) and stays a tonal layer for
    the same reason the home hero's second instance does: this pattern sits on
    the sky-tinted plate, not on white, where the design calls for «тональные
-   слои» rather than full-strength artwork. */
+   слои» rather than full-strength artwork.
+
+   Hidden below 1024 exactly like `.ob-hero__pattern`, and for the same design
+   rule — «не подкладывать под плотный текст». The bundle's placement anchors
+   the layer to the band's right edge (`right: -80px` over a 280px width), so
+   the strip it occupies is «viewport − 200px»: it clears the copy on a desktop
+   and walks into it as the window narrows, painting over the year number, the
+   H1 and the dates by 181px at 360 and 155px at 390 (#38). Trimming it to fit
+   a phone would leave a sliver of a motif that is meant to read as a large
+   organic shape, so the band drops it on the widths that have no air for it —
+   which is also what #18's AC 3 asks for: one decor rule for the home hero and
+   the year header, not two. */
 .ob-yh__pattern {
+  display: none;
   position: absolute;
   right: -80px;
   top: -90px;
@@ -1793,6 +1805,12 @@ details[open] > .ob-faq__q::after {
   opacity: 0.45;
   pointer-events: none;
   user-select: none;
+}
+
+@media (min-width: 1024px) {
+  .ob-yh__pattern {
+    display: block;
+  }
 }
 
 .ob-yh__in {

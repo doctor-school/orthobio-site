@@ -34,10 +34,13 @@
   --ob-green-tint: #eef8e8;
 
   /* DELIBERATELY DECLARED WITHOUT A CONSUMER: --ob-green-deep, --ob-lime-tint,
-     --ob-green-tint and --sp-9 further down. They are ramp members of the design
-     bundle's own token files, and this file is their 1:1 port — the green/lime
-     rungs exist so the ramps are symmetrical, not because a component was
-     dropped. Sky is the lead accent (brief §6.1), so green and lime live in the
+     --ob-green-tint, --ds-blue, --ds-blue-light and --sp-9 further down. They
+     are ramp members of the design bundle's own token files, and this file is
+     their 1:1 port — the green/lime rungs exist so the ramps are symmetrical,
+     not because a component was dropped. The two blue rungs are the same kind of
+     entry with one extra caveat recorded at their declaration: --ds-blue-light
+     is the value issue #35 took the focus ring OFF, and it must not be reached
+     for as a state colour again. Sky is the lead accent (brief §6.1), so green and lime live in the
      identity layer (brand ribbon, metaball pattern, hero overline) and own no
      tinted surface yet. Giving them one is a design decision — it is made in
      Claude.design and ported here, never invented in a CSS edit; deleting them
@@ -60,6 +63,11 @@
   /* --- Doctor.School base (parent brand): actions, links, focus ------------ */
   --ds-blue: #2d84f2;
   --ds-blue-dark: #114d9e;
+  /* Ramp member with no consumer since issue #35 took the focus ring off it: at
+     2.27:1 on white it cannot carry ANY non-text meaning WCAG measures (1.4.11
+     wants 3:1), so it stays as the light rung of the Doctor.School ramp and is
+     not to be reached for as a state colour. Kept rather than deleted for the
+     same reason as the green/lime tints below — this file is a 1:1 port. */
   --ds-blue-light: #6bb1f7;
   --ds-blue-pressed: #0d3a77;
 
@@ -95,7 +103,36 @@
   --surface-section: var(--surface);
   --surface-tinted: var(--surface-faint);
   --border-card: var(--hairline);
-  --focus-ring: var(--ds-blue-light);
+  /* Focus indicator — TWO tokens, because one colour cannot do the job.
+     `:focus-visible` is global (base.css), so the ring renders over the WHOLE
+     luminance range this site paints: white cards, the `--surface`/`--ob-sky-tint`
+     bands, the `--ds-blue-dark` primary button and skip link, the `--ink` video
+     facade, and the near-black lightbox scrim. Measured against those surfaces
+     (WCAG relative luminance, 3:1 floor of SC 1.4.11):
+
+       surface                       #6BB1F7   #114D9E
+       white / card                   2.27:1    8.14:1
+       --surface-faint (footer)       2.17:1    7.80:1
+       --surface / --ob-sky-tint      2.07:1    7.44:1
+       --ds-blue-dark (button)        3.59:1    1.00:1
+       --ink (video facade)           7.80:1    2.17:1
+       --scrim-lightbox               7.18:1    2.00:1
+
+     The old single light value failed everywhere the page is light — which is
+     most of it (issue #35). Its obvious inverse, the dark blue, then fails on
+     every dark surface. So the indicator is a pair: a 2px `--focus-ring-halo`
+     next to the element, a 2px `--focus-ring` outside it. The two carry 8.14:1
+     BETWEEN THEM, which is what makes the ring background-independent — on a
+     light surface the dark rung is the visible one, on a dark surface the light
+     rung is, and neither case depends on knowing which surface it landed on.
+     Same reasoning as the lightbox pills above: fix the contrast in the token,
+     not in an assumption about the pixels underneath.
+
+     They are `--ds-blue-dark`/`--bg` and not new values on purpose — the ring
+     is an action colour, and the design's action colour is the Doctor.School
+     dark blue that the primary button already uses. */
+  --focus-ring: var(--ds-blue-dark);
+  --focus-ring-halo: var(--bg);
   --btn-primary-bg: var(--ds-blue-dark);
   --btn-primary-bg-hover: var(--ds-blue-pressed);
   --btn-primary-bg-active: oklch(0.24 0.09 258);
@@ -182,6 +219,17 @@
      on :active). */
   --shadow-card: none;
   --shadow-lift: 0 4px 16px oklch(0.21 0.02 250 / 0.08);
+  /* A shadow that paints nothing but is still a SHADOW, unlike `--shadow-card`.
+     `none` is only valid as the whole `box-shadow` value; inside a comma list it
+     makes the declaration invalid, and the focus rule composes exactly such a
+     list — so «no elevation» needs a value that can sit in one. */
+  --shadow-none: 0 0 #0000;
+  /* Elevation CHANNEL, not an elevation. A component's `:hover`/`:active`
+     publishes the shadow it wants here as well as into `box-shadow`; the global
+     focus rule (base.css) reads the channel and composes ring + elevation, so
+     the two states add up instead of one erasing the other. Nothing declares it
+     at rest — the focus rule supplies `--shadow-none` as the var() fallback,
+     and a state that wants the elevation gone sets it back to `initial`. */
 
   /* --- Layout & focus ------------------------------------------------------ */
   --container: 1200px;
@@ -193,7 +241,12 @@
   --sp-sec: clamp(44px, 4vw + 28px, 72px);
   /* Line measure for running text blocks. */
   --measure: 62ch;
-  --focus-shadow: 0 0 0 3px var(--focus-ring);
+  /* Halo FIRST so it paints on top: the list gives a solid 0–2px halo hugging
+     the element and the ring showing through at 2–4px. Reversing the two would
+     bury the ring under the halo and leave a 4px white glow. */
+  --focus-shadow:
+    0 0 0 2px var(--focus-ring-halo),
+    0 0 0 4px var(--focus-ring);
 
   /* State transition — the only motion in the system (120–160ms ease-out). */
   --t-state: 0.13s ease-out;

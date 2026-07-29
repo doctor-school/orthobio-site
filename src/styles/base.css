@@ -14,8 +14,26 @@
    output). NO webfont CDN anywhere — RF accessibility is a hard constraint
    (AGENTS.md), a fonts.googleapis.com link would break the page for the
    audience this site exists for.
+
+   CASCADE LAYERS. Everything below sits in `@layer base`, and components.css in
+   `@layer components` — `base` first, so the component layer keeps winning ties
+   exactly as it did when the two files were plain source order. What the layers
+   BUY is the block at the bottom of this file: the focus rules are deliberately
+   left OUTSIDE every layer, and unlayered declarations beat layered ones no
+   matter how specific the layered selector is. That is the whole point. Five
+   card components paint a hover shadow (`a.ob-yc:hover` and friends), each of
+   them more specific than `:focus-visible`, and each therefore REPLACED the
+   focus ring outright the moment a focused card was also hovered — measured at
+   the review of PR #44: the ring vanished and only `--shadow-lift` was left.
+   Raising the focus rule's specificity would have fixed those five and lost to
+   the sixth card someone writes next year; a layer cannot be out-specified.
+
+   Only the two files are wrapped, and neither is re-indented: a layer block is
+   otherwise transparent, and indenting 1900 lines of components.css would have
+   buried a two-line change in a whole-file diff.
    ============================================================================ */
 
+@layer base {
 *,
 *::before,
 *::after {
@@ -127,13 +145,6 @@ a.ob-arrow:hover::after {
   translate: 3px 0;
 }
 
-/* Visible focus ring on EVERY interactive element (AGENTS.md hard rule). */
-:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-shadow);
-  border-radius: var(--r-sm);
-}
-
 ::selection {
   background: var(--ob-sky-tint);
 }
@@ -159,5 +170,38 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+  }
+}
+}
+/* ── UNLAYERED, and that is load-bearing ────────────────────────────────────
+   Nothing below this line may be moved into `@layer base` (or any other layer):
+   unlayered is the only position from which the focus indicator outranks a
+   component's `:hover` without competing on specificity. See the file header.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Visible focus ring on EVERY interactive element (AGENTS.md hard rule).
+   Composed of two parts, not one: the ring itself, plus whatever elevation the
+   element's own state published into `--shadow-state`. Winning the cascade
+   would otherwise mean DELETING the hover lift a card is designed to show — the
+   ring must add to the component's state, not replace it. `--shadow-none` is
+   the fallback because a `box-shadow` list cannot contain `none`. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-shadow), var(--shadow-state, var(--shadow-none));
+  border-radius: var(--r-sm);
+}
+
+/* Windows High Contrast (and any other forced-colours mode) throws BOTH halves
+   of the rule above away: the UA forces `box-shadow: none`, so the two-tone ring
+   is gone, and the `outline: none` we wrote to make room for it survives — the
+   indicator disappears entirely and a keyboard user in HCM navigates blind.
+   `Highlight` is the system's own focus colour, which is the only value
+   guaranteed to contrast in a palette the user chose, and the offset keeps the
+   outline off the glyphs the way the box-shadow ring did. Found by the audit of
+   this very change (PR #44). */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 }

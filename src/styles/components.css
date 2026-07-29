@@ -1109,6 +1109,51 @@ a.ob-pt__card:active {
   transition: none;
 }
 
+/* Since Issue #24 a linked card can lead to a PROFILE ON THIS SITE instead of
+   the partner's own website, and the two were pixel-identical — nothing told
+   the reader which one keeps them here. The profile card therefore names its
+   action in words, stacked under the mark.
+
+   The label lives INSIDE the card's own <a>: a «Подробнее» link placed beside a
+   card that is already an anchor would be a nested link — invalid HTML, and
+   unreachable by keyboard. So the card stays exactly one tab stop. */
+.ob-pt__card--profile {
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.ob-pt__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* WCAG 2.2 §2.5.8 floor, same as the other standalone text links — even
+     though the whole card is the target, the row reads as one. */
+  min-height: 24px;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-medium);
+  color: var(--text-link);
+  /* The label is the one part of the card that must never wrap or be broken:
+     it is a fixed two-word action, and `overflow-wrap: anywhere` on the card
+     would happily split it mid-word. */
+  white-space: nowrap;
+}
+
+/* Mirrors `a.ob-arrow`, which cannot be reused here: that rule is scoped to
+   `a` elements and this label is a <span> inside one. */
+.ob-pt__more::after {
+  content: '→';
+  transition: translate var(--t-state);
+}
+
+a.ob-pt__card--profile:hover .ob-pt__more {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+a.ob-pt__card--profile:hover .ob-pt__more::after {
+  translate: 3px 0;
+}
+
 /* Fixed slot: the logo box is reserved before the file loads, so a tier grid
    cannot reflow as logos stream in. The box is 120×72, not the 120×44 that was
    reserved while every partner was `logo: null` (Issue #22): the rescued marks

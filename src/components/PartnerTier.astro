@@ -101,8 +101,13 @@ const newTab = (url: string): Record<string, string> =>
              from inside the profile. `newTab` then correctly resolves an
              internal profile href to «same tab». */
           const href = partnerCardHref(p);
+          const isProfile = p.slug !== null;
           return href ? (
-            <a class="ob-pt__card" href={href} {...newTab(href)}>
+            <a
+              class={`ob-pt__card${isProfile ? ' ob-pt__card--profile' : ''}`}
+              href={href}
+              {...newTab(href)}
+            >
               {
                 p.logo ? (
                   <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
@@ -110,6 +115,13 @@ const newTab = (url: string): Record<string, string> =>
                   p.name
                 )
               }
+              {/* The visible affordance the AC asks for, INSIDE the single <a>:
+                  a profile card and an external-site card were pixel-identical,
+                  so nothing told the reader that one keeps them on this site and
+                  the other leaves it. It also gives the link a fuller accessible
+                  name — «<Название> Подробнее →», since pseudo-element content
+                  counts towards it (AccName §2F, as measured for .ob-arrow). */}
+              {isProfile && <span class="ob-pt__more">Подробнее</span>}
             </a>
           ) : (
             /* A partner with neither a profile nor a `url` is a plain roster

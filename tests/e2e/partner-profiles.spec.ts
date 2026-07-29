@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 import { PROFILE_ROUTES } from './_routes';
-import { expectNoOverflow } from './_overflow';
+import { expectNoOverflow, OVERFLOW_WIDTHS } from './_overflow';
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
 
 /**
@@ -15,11 +15,11 @@ import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
  * that is one long line, a company that published no email. Those only show up
  * on the page that has them.
  *
- * Widths follow the Issue #24 acceptance criteria (360 / 768 / 1280): the
- * narrowest supported phone, the tablet tier where the fact list becomes two
- * columns, and the desktop tier.
+ * Widths are the shared `OVERFLOW_WIDTHS` ladder (360 / 390 / 768 / 1024 /
+ * 1280), not a subset: AGENTS.md mandates the full ladder for every
+ * UI-affecting change, and a local list would silently stop matching it the
+ * next time the ladder moves.
  */
-const WIDTHS = [360, 768, 1280] as const;
 
 test('the archive really does generate profile routes', () => {
   // Guards the derivation itself: if PROFILE_ROUTES ever came back empty, every
@@ -42,7 +42,7 @@ test.describe('partner profiles', () => {
       await expect(page.getByRole('heading', { name: 'О компании' })).toBeVisible();
     });
 
-    for (const width of WIDTHS) {
+    for (const width of OVERFLOW_WIDTHS) {
       test(`${path} at ${width}px: no overflow, headings and columns hold`, async ({ page }) => {
         await expectNoOverflow(page, path, width);
         // Same viewport the overflow guard just used, so the assertions below
@@ -95,6 +95,42 @@ test('every exhibitor card on /partners opens its profile', async ({ page }) => 
   // …and back again, which is the whole job of the breadcrumb.
   await page.getByRole('link', { name: 'К списку компаний' }).click();
   await expect(page.getByRole('heading', { level: 1, name: /партнёр/i })).toBeVisible();
+});
+
+/**
+ * The card has to SAY that it opens a profile.
+ *
+ * Without a visible label a profile card and an external-site card are the same
+ * outlined white rectangle, so nothing distinguishes «this keeps you on the
+ * site» from «this sends you to the vendor» (responsive-a11y audit of PR #40).
+ * The label also has to stay INSIDE the card's single anchor — a second link
+ * beside it would nest anchors — so what is asserted is: visible text, exactly
+ * one tab stop per card, and no label on the cards that leave the site.
+ */
+test('a profile card shows a visible «Подробнее» affordance, external cards do not', async ({
+  page,
+}) => {
+  await page.goto('/partners');
+
+  const profileCards = page.locator('a.ob-pt__card[href^="/partners/"]');
+  await expect(profileCards).toHaveCount(22);
+  await expect(profileCards.locator('.ob-pt__more')).toHaveCount(22);
+  await expect(profileCards.first().locator('.ob-pt__more')).toBeVisible();
+  await expect(profileCards.first().locator('.ob-pt__more')).toHaveText('Подробнее');
+
+  // Still ONE link per card: the label is a <span>, not a nested <a>.
+  expect(await profileCards.first().locator('a').count()).toBe(0);
+
+  // The accessible name carries both the organization and the action.
+  const name = await profileCards.first().evaluate((el) => el.textContent?.trim() ?? '');
+  expect(name).toContain('Подробнее');
+
+  // A card that leaves the site keeps its plain look — the label would be a lie
+  // there, and its new-tab semantics already say «this goes elsewhere».
+  const external = page.locator('a.ob-pt__card:not([href^="/partners/"])');
+  if ((await external.count()) > 0) {
+    await expect(external.locator('.ob-pt__more')).toHaveCount(0);
+  }
 });
 
 /**

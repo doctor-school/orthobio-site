@@ -51,6 +51,7 @@ import { mediaUrl } from '@/config/site';
 import type { CongressEntry, PartnerTier } from '@/content';
 import { MAJOR_TIERS } from '@/lib/congress';
 import { partnerCardHref } from '@/lib/partners';
+import NewTabHint from './NewTabHint.astro';
 
 interface Props {
   tier: PartnerTier;
@@ -99,9 +100,6 @@ const isExternal = (url: string): boolean => {
   }
 };
 
-/** New-tab attributes for a link that leaves the site; nothing for one that stays. */
-const newTab = (url: string): Record<string, string> =>
-  isExternal(url) ? { target: '_blank', rel: 'noopener' } : {};
 ---
 
 {
@@ -118,15 +116,22 @@ const newTab = (url: string): Record<string, string> =>
         {partners.map((p) => {
           /* A profile page wins over the partner's own website (Issue #24):
              the card opens what WE can show, and the external site is offered
-             from inside the profile. `newTab` then correctly resolves an
+             from inside the profile. `isExternal` then correctly resolves an
              internal profile href to «same tab». */
           const href = partnerCardHref(p);
           const isProfile = p.slug !== null;
+          /* ONE call, read by both the attributes and the announcement below:
+             the two are the same claim about the same href, and two calls are
+             two places for a future edit to change only one of them — a card
+             that opens a tab in silence, or one that promises a tab it never
+             opens (Issue #37). */
+          const leavesSite = href !== null && isExternal(href);
           return href ? (
             <a
               class={`ob-pt__card${isProfile ? ' ob-pt__card--profile' : ''}`}
               href={href}
-              {...newTab(href)}
+              target={leavesSite ? '_blank' : undefined}
+              rel={leavesSite ? 'noopener' : undefined}
             >
               {
                 p.logo ? (
@@ -142,6 +147,11 @@ const newTab = (url: string): Record<string, string> =>
                   name — «<Название> Подробнее →», since pseudo-element content
                   counts towards it (AccName §2F, as measured for .ob-arrow). */}
               {isProfile && <span class="ob-pt__more">Подробнее</span>}
+              {/* Never keyed on `isProfile`: the two are not complements. МОО
+                  «ОРТО» has no profile and no `target` either — its `url` is
+                  this very origin — so «not a profile» would announce a tab
+                  that never opens. */}
+              {leavesSite && <NewTabHint />}
             </a>
           ) : (
             /* A partner with neither a profile nor a `url` is a plain roster

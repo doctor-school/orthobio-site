@@ -9,9 +9,9 @@ import {
 
 /**
  * The e2e suite cannot test its own bootstrap: by the time a spec runs, the
- * port has already been chosen and a server is up. So the guarantee that made
- * issue #34 — two worktrees never land on the same preview port, one worktree
- * always lands on the same one — is asserted here.
+ * port has already been chosen and a server is up. Hence the guarantee lives
+ * here — two worktrees never land on the same preview port, one worktree always
+ * lands on the same one (rationale: `tests/e2e/_port.ts`).
  */
 
 const WIN = 'C:\\Users\\dev\\repos\\orthobio-site';
@@ -76,14 +76,18 @@ describe('resolveE2eTarget', () => {
     }
   });
 
-  it('lets PW_BASE_URL win and takes its port', () => {
+  it('lets PW_BASE_URL win and claims no port — the server is not ours to start', () => {
     expect(resolveE2eTarget({ PW_BASE_URL: 'http://127.0.0.1:5000/', PW_PORT: '4331' }, POSIX)).toEqual(
-      { baseURL: 'http://127.0.0.1:5000', port: 5000 },
+      { baseURL: 'http://127.0.0.1:5000' },
     );
+    expect(resolveE2eTarget({ PW_BASE_URL: 'https://orthobio.ru' }, POSIX).port).toBeUndefined();
   });
 
-  it('falls back to the protocol default port for a portless PW_BASE_URL', () => {
-    expect(resolveE2eTarget({ PW_BASE_URL: 'https://orthobio.ru' }, POSIX).port).toBe(443);
-    expect(resolveE2eTarget({ PW_BASE_URL: 'http://orthobio.ru' }, POSIX).port).toBe(80);
+  it('rejects a PW_BASE_URL that is not an http(s) URL', () => {
+    // `localhost:5000` parses as protocol `localhost:` — the classic typo that
+    // used to survive resolution and die as a navigation timeout instead.
+    for (const raw of ['localhost:5000', 'orthobio.ru', 'ftp://orthobio.ru', 'нет']) {
+      expect(() => resolveE2eTarget({ PW_BASE_URL: raw }, POSIX)).toThrow(/PW_BASE_URL/);
+    }
   });
 });

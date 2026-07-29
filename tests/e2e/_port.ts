@@ -15,6 +15,16 @@ import { resolve } from 'node:path';
  * impossible by construction: different checkout → different port → no cross-
  * worktree reuse. `reuseExistingServer` stays on locally, where it is wanted —
  * it now can only ever match a server of the SAME worktree.
+ *
+ * ── Known limitation, accepted ──────────────────────────────────────────────
+ * `reuseExistingServer` calls whatever answers on the port «our server»; it
+ * cannot check WHO answered. Unrelated software squatting a derived port (the
+ * window holds e.g. 11211 memcached, 11434 Ollama, 24678 Vite HMR) would still
+ * be silently reused. Not closed here because every cheap fix is worse than the
+ * ~0.1%-per-worktree risk: probing a marker path makes the suite hang for 180 s
+ * the day that path is renamed, and switching reuse off for derived ports costs
+ * a full rebuild on every local run. A squatted port fails loudly enough in
+ * practice — the specs assert this site's own DOM.
  */
 
 /**
@@ -46,8 +56,12 @@ export function portForWorktree(worktreeDir: string): number {
 export interface E2eTarget {
   /** What the tests navigate to. */
   baseURL: string;
-  /** What `astro preview` is told to listen on. */
-  port: number;
+  /**
+   * What `astro preview` is told to listen on — and, by being absent, the
+   * signal that there is nothing for us to start: with `PW_BASE_URL` the server
+   * belongs to someone else, so the config must declare no `webServer` at all.
+   */
+  port?: number;
 }
 
 function parsePort(raw: string): number {
@@ -59,19 +73,30 @@ function parsePort(raw: string): number {
 }
 
 /**
+ * Rejects what `new URL` happily accepts but Playwright cannot reach: a missing
+ * scheme parses as its own protocol (`localhost:5000` → protocol `localhost:`,
+ * path `5000`) and would otherwise surface much later as a navigation timeout.
+ */
+function parseBaseUrl(raw: string): string {
+  const invalid = new Error(`PW_BASE_URL must be an http(s) URL, got ${JSON.stringify(raw)}`);
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw invalid;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw invalid;
+  return raw.replace(/\/+$/, '');
+}
+
+/**
  * Resolution order: an explicit `PW_BASE_URL` (point the suite at an already
- * running or remote deployment) → an explicit `PW_PORT` (pin the port, keep the
- * local server) → the per-worktree hash.
+ * running or remote deployment — no server of ours) → an explicit `PW_PORT`
+ * (pin the port, keep the local server) → the per-worktree hash.
  */
 export function resolveE2eTarget(env: NodeJS.ProcessEnv, worktreeDir: string): E2eTarget {
   const explicitUrl = env.PW_BASE_URL?.trim();
-  if (explicitUrl) {
-    const url = new URL(explicitUrl);
-    return {
-      baseURL: explicitUrl.replace(/\/+$/, ''),
-      port: Number(url.port || (url.protocol === 'https:' ? 443 : 80)),
-    };
-  }
+  if (explicitUrl) return { baseURL: parseBaseUrl(explicitUrl) };
 
   const pinned = env.PW_PORT?.trim();
   const port = pinned ? parsePort(pinned) : portForWorktree(worktreeDir);

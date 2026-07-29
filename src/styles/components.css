@@ -121,18 +121,14 @@
   background: var(--surface-page);
 }
 
-/* Brand ribbon opening the page (design v2 chrome); the footer closes with the
-   same sequence. Decorative — it carries no information, hence a pseudo. */
+/* Brand ribbon opening the page; the footer closes with the same sequence.
+   Decorative — it carries no information, hence a pseudo. The stop list lives
+   in `--grad-ribbon` so both ends of the page cannot drift apart. */
 .ob-head::before {
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--ob-sky) 0 46%,
-    var(--ob-green) 46% 78%,
-    var(--ob-lime) 78% 100%
-  );
+  background: var(--grad-ribbon);
 }
 
 /* Sticky only where there is vertical room to spare: on a 360px phone a
@@ -245,18 +241,12 @@
   margin-top: var(--sp-sec);
 }
 
-/* Brand ribbon closing the page — the same sky/green/lime sequence the header
-   opens with (design v2 chrome). */
+/* Brand ribbon closing the page — same `--grad-ribbon` the header opens with. */
 .ob-foot::after {
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--ob-sky) 0 46%,
-    var(--ob-green) 46% 78%,
-    var(--ob-lime) 78% 100%
-  );
+  background: var(--grad-ribbon);
 }
 
 .ob-foot__in {

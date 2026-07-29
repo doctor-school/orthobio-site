@@ -1089,10 +1089,10 @@ a.ob-pt__card:active {
   background: var(--surface);
 }
 
-/* The rescued portraits are 16:9 stills, not square headshots: a centred crop
-   cuts the face out. Biasing the crop upward keeps the head in frame for the
-   whole set. Proper square crops belong to the media pipeline (Issue #2), not
-   to CSS — see the TODO in PersonCard.astro. */
+/* The оргкомитет derivatives are square (288×288), so `cover` crops nothing and
+   this bias is inert for them. It stays as the guard for any non-square
+   portrait that reaches the circle later: on a portrait-orientation source a
+   centred crop lands on the chest, an upward bias keeps the head in frame. */
 .ob-pc__photo {
   object-position: 50% 28%;
 }
@@ -1118,8 +1118,14 @@ a.ob-pt__card:active {
   overflow-wrap: anywhere;
 }
 
+/* `--lh-small`, not the inherited `--lh-body`: this line also renders оргкомитет
+   regalia (238 characters, up to a dozen lines in a 340px column) since
+   CommitteeList folded into PersonCard. The deleted `.ob-cl__regalia` was tuned
+   with the tighter leading and the consolidation must not change it silently
+   (PR #28 review). */
 .ob-pc__role {
   font-size: var(--fs-small);
+  line-height: var(--lh-small);
   color: var(--text-muted);
   margin: 0;
   overflow-wrap: anywhere;
@@ -1137,31 +1143,17 @@ a.ob-pt__card:active {
   padding: 0;
   display: grid;
   gap: var(--sp-3);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  /* 340px floor, not 300: the card now leads with a 72px portrait circle, and
+     regalia run to 238 characters — a narrower column turned the text into a
+     ribbon two or three words wide. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
 }
 
+/* The card chrome comes from `.ob-pc` (PersonCard) inside — the list item is
+   only a grid cell. */
 .ob-cl__item {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--r-md);
-  padding: var(--sp-4);
   min-width: 0;
-}
-
-.ob-cl__name {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  margin: 0 0 4px;
-  overflow-wrap: anywhere;
-}
-
-.ob-cl__regalia {
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  color: var(--text-muted);
-  margin: 0;
-  /* Regalia run to 238 characters — wrap anywhere rather than overflow. */
-  overflow-wrap: anywhere;
+  display: grid;
 }
 
 /* ── MediaGrid (disclosure over a card grid, zero client JS) ─────────────── */

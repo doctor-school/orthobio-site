@@ -1,22 +1,28 @@
 ---
 /**
- * PersonCard — президиум / обращения (bundle components/people/PersonCard).
+ * PersonCard — one person as a portrait circle plus name/role. Used by both
+ * президиум/обращения and the оргкомитет list (bundle components/people).
  * No portrait → an initial plate (decorative: the name is right next to it).
  * Greeting texts were never published for any year, so `text` is usually null.
  *
- * The portrait is served through `<Image>`: the rescued files are 1–2MB stills
- * for a 72px circle, so build-time resizing is the difference between a page a
- * phone can open on mobile data and one it cannot. `inferSize` reads the
- * intrinsic size at build — unlike photos/cover, the schema carries no
- * dimensions for greeting portraits.
+ * BOTH circle states are decorative — `alt=""` on the portrait, `aria-hidden`
+ * on the plate. The person's name sits in `.ob-pc__name` immediately after, so
+ * a descriptive alt («Фото: <ФИО>») made a screen reader announce the same name
+ * twice per card — twelve times over on /orgs (a11y audit, PR #28).
  *
- * TODO(#2 media pipeline): NO year ships a portrait today. The rescued files
- * are 16:9 title cards of the greeting videos — half the frame is a branded
- * plate and the person sits in the right third, so a 72px circle showed a green
- * wedge instead of a face (Issue #16). Every `photo` is `null` until square
- * derivatives exist in the bucket; the initial plate below is the design's own
- * state for that (PersonCard.prompt.md), not a fallback. The upward crop bias
- * in CSS (.ob-pc__photo) stays for the day a portrait returns.
+ * The portrait is served through `<Image>`: build-time resizing keeps a page
+ * openable on mobile data. `inferSize` reads the intrinsic size at build —
+ * unlike photos/cover, the schema carries a person's portrait as a plain scalar
+ * URL with no dimensions, and `<Image>` writes the measured width/height onto
+ * the tag, so the circle reserves its box before the file arrives (no CLS).
+ *
+ * State of the portrait set (Issue #23): the оргкомитет ships 11 real square
+ * derivatives (288×288 webp, `2026/people/`). The обращения cards still show
+ * the initial plate for Загородний and Губин — the only files that survive for
+ * them are 16:9 title cards of the greeting videos, where a branded plate fills
+ * half the frame and a 72px circle showed a green wedge instead of a face
+ * (Issue #16). That plate is the design's own state for a person without a
+ * usable photo (PersonCard.prompt.md), not a degraded fallback.
  */
 import { Image } from 'astro:assets';
 
@@ -44,9 +50,9 @@ const { name, role = null, photo = null, text = null, priority = false } = Astro
       <Image
         class="ob-pc__photo"
         src={mediaUrl(photo)}
-        alt={`Фото: ${name}`}
+        alt=""
         inferSize
-        widths={[72, 144]}
+        widths={[72, 144, 216]}
         sizes="72px"
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"

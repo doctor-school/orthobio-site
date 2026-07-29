@@ -32,18 +32,24 @@ const read = (path: string): string =>
 const COMPONENTS_CSS = read('../../src/styles/components.css');
 const TOKENS_CSS = read('../../src/styles/tokens.css');
 
-/** `.ob-pt__dot--<tier> { … background: var(--token) … }`, as authored. */
-const declaredDots = (): Record<string, string> => {
-  const rules = COMPONENTS_CSS.matchAll(
-    /\.ob-pt__dot--([a-z-]+)\s*\{([^}]*)\}/g,
-  );
-  const map: Record<string, string> = {};
-  for (const [, tier, body] of rules) {
+/**
+ * `.ob-pt__dot--<tier> { … background: var(--token) … }`, as authored.
+ *
+ * Anchored to the start of a line, so it reads TOP-LEVEL rules only: a second
+ * `.ob-pt__dot--info` nested in a media query is indented, and would otherwise
+ * overwrite the key silently — the map would agree with an override the site
+ * never intended instead of failing.
+ */
+const dotRules = (pattern: RegExp): [string, string][] =>
+  [...COMPONENTS_CSS.matchAll(pattern)].flatMap(([, tier, body]) => {
     const background = body.match(/background:\s*var\((--[a-z0-9-]+)\)/);
-    if (background) map[tier] = background[1];
-  }
-  return map;
-};
+    return background ? [[tier, background[1]] as [string, string]] : [];
+  });
+
+const TOP_LEVEL = /^\.ob-pt__dot--([a-z-]+)\s*\{([^}]*)\}/gm;
+const ANYWHERE = /\.ob-pt__dot--([a-z-]+)\s*\{([^}]*)\}/g;
+
+const declaredDots = (): Record<string, string> => Object.fromEntries(dotRules(TOP_LEVEL));
 
 describe('PartnerTier tier markers', () => {
   it('paints every tier with the token the design bundle assigns it', () => {
@@ -53,6 +59,15 @@ describe('PartnerTier tier markers', () => {
   it('covers every tier the schema allows', () => {
     const declared = Object.keys(declaredDots()).sort();
     expect(declared).toEqual([...PARTNER_TIERS].sort());
+  });
+
+  // One rule per tier, nowhere else in the sheet: an override — in a media
+  // query, say — is a colour decision, and it belongs in the map above rather
+  // than hidden behind it.
+  it('paints each tier in exactly one place', () => {
+    expect(dotRules(ANYWHERE).map(([tier]) => tier).sort()).toEqual(
+      Object.keys(declaredDots()).sort(),
+    );
   });
 
   it('names only tokens that tokens.css actually defines', () => {
@@ -76,9 +91,15 @@ describe('PartnerTier tier markers', () => {
     expect(body).toMatch(/width:\s*9px/);
     expect(body).toMatch(/height:\s*9px/);
     expect(body).toMatch(/border-radius:\s*var\(--r-pill\)/);
-    // Centred on the FIRST line box of the heading, so a label that wraps keeps
-    // its marker beside the first line instead of halfway down the block.
-    expect(body).toMatch(/top:\s*calc\(\(1em \* var\(--lh-h3\) - 9px\) \/ 2\)/);
+    /* Centred on the FIRST line box of the heading, so a label that wraps keeps
+       its marker beside the first line instead of halfway down the block. What
+       is pinned is that `top` is COMPUTED FROM THE LINE HEIGHT, not the exact
+       spelling of the arithmetic: `calc((var(--fs-h3) * var(--lh-h3) - 9px)/2)`
+       is the same geometry to the pixel, and a test that fails on it is noise to
+       be silenced rather than a gate. The declaration the formula depends on is
+       pinned below, on `.ob-pt__title`. */
+    expect(body).toMatch(/top:\s*calc\(/);
+    expect(body).toContain('--lh-h3');
   });
 
   /**

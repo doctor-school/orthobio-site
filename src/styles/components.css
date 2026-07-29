@@ -122,19 +122,13 @@
 }
 
 /* Brand ribbon opening the page; the footer closes with the same sequence.
-   Decorative — it carries no information, hence a pseudo. Equal thirds with
-   soft midpoints: each colour owns 1/3 once its half of each blend is counted.
-   Diverges from Claude.design v2 chrome (hard 46/78 stops) — see issue #21. */
+   Decorative — it carries no information, hence a pseudo. The stop list lives
+   in `--grad-ribbon` so both ends of the page cannot drift apart. */
 .ob-head::before {
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--ob-sky) 0 25%,
-    var(--ob-green) 42% 58%,
-    var(--ob-lime) 75% 100%
-  );
+  background: var(--grad-ribbon);
 }
 
 /* Sticky only where there is vertical room to spare: on a 360px phone a
@@ -247,17 +241,12 @@
   margin-top: var(--sp-sec);
 }
 
-/* Brand ribbon closing the page — must stay byte-identical to `.ob-head::before`. */
+/* Brand ribbon closing the page — same `--grad-ribbon` the header opens with. */
 .ob-foot::after {
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--ob-sky) 0 25%,
-    var(--ob-green) 42% 58%,
-    var(--ob-lime) 75% 100%
-  );
+  background: var(--grad-ribbon);
 }
 
 .ob-foot__in {

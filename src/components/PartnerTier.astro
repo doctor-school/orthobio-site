@@ -83,12 +83,12 @@ const newTab = (url: string): Record<string, string> =>
             <a class="ob-pt__card" href={p.url} {...newTab(p.url)}>
               {
                 p.logo ? (
-                  /* Fixed 120×44 slot with `object-fit: contain` (see
-                     .ob-pt__card img): the schema carries no logo dimensions,
-                     so reserving the box in CSS is what keeps the tier grid
-                     from reflowing once real logos land in the bucket — every
-                     partner is `logo: null` today, which is why no test would
-                     have caught it (PR #14 review). */
+                  /* The 120×72 slot is fixed in CSS (.ob-pt__card img,
+                     `object-fit: contain`) and repeated here as width/height:
+                     the schema carries no logo dimensions, and the marks are
+                     fetched from S3, so the reserved box is what keeps the tier
+                     grid from reflowing while they lazy-load. Values are pinned
+                     in tests/unit/partner-logos.test.ts. */
                   <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
                 ) : (
                   p.name
@@ -102,12 +102,12 @@ const newTab = (url: string): Record<string, string> =>
             <span class="ob-pt__card ob-pt__card--static">
               {
                 p.logo ? (
-                  /* Fixed 120×44 slot with `object-fit: contain` (see
-                     .ob-pt__card img): the schema carries no logo dimensions,
-                     so reserving the box in CSS is what keeps the tier grid
-                     from reflowing once real logos land in the bucket — every
-                     partner is `logo: null` today, which is why no test would
-                     have caught it (PR #14 review). */
+                  /* The 120×72 slot is fixed in CSS (.ob-pt__card img,
+                     `object-fit: contain`) and repeated here as width/height:
+                     the schema carries no logo dimensions, and the marks are
+                     fetched from S3, so the reserved box is what keeps the tier
+                     grid from reflowing while they lazy-load. Values are pinned
+                     in tests/unit/partner-logos.test.ts. */
                   <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
                 ) : (
                   p.name

@@ -34,8 +34,12 @@ const embedSrc = videoEmbedSrc(url);
 {
   embedSrc ? (
     <div class="ob-vc">
-      {/* The accessible name repeats the visible caption, so «label in name»
-          holds for voice control (WCAG 2.5.3). */}
+      {/* The caption is a SIBLING of the button, not its content, so the only
+          text inside the button is the host badge — «Rutube», three times over
+          on a year page. The accessible name therefore has to carry the title
+          itself; WCAG 2.5.3 does not bind here (there is no visible label on
+          the control to match), it is this aria-label or three identical
+          buttons. */}
       <button
         type="button"
         class="ob-vc__btn"

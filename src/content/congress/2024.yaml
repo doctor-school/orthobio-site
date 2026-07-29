@@ -40,9 +40,14 @@ greetings:
     role: Сопрезидент
     photo: null
     text: null
+  # Квадратный портрет с карточки оргкомитета живого orthobio.ru/orgs
+  # (Issue #23) — см. развёрнутое обоснование в 2022.yaml. Спасённый
+  # 2024/previews/strahov.png — стоп-кадр видео 16:9, не портрет; не используется.
+  # ⚠️ TODO(Антон): переиспользование портрета между годами и согласия на
+  # публикацию фото — маркеры в 2022.yaml (greetings) и 2026.yaml (committee).
   - name: Страхов М.А.
     role: член Оргкомитета
-    photo: null
+    photo: /media/2026/people/strahov-288.webp
     text: null
 
 committee: []

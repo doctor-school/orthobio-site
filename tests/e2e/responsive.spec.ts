@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { ROUTES } from './_routes';
 import { expectNoOverflow, measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
@@ -46,6 +46,134 @@ test.describe('responsive', () => {
         ['critical', 'serious'].includes(v.impact ?? ''),
       );
       expect(blocking, `axe violations on expanded /faq: ${JSON.stringify(blocking)}`).toEqual([]);
+    });
+  }
+
+  /**
+   * The hero brand pattern is decorative and must stay off the hero copy
+   * («не подкладывать под плотный текст»). It regressed the moment the layers
+   * went back to the design's saturation (#18): instance B is rotated 150°, so
+   * it paints ~2.2× its CSS width, and the strip left free beside the text
+   * column is narrower than that from 1024 — where the pattern first appears —
+   * until the bundle's own placement fits again at 1280. The a11y suite cannot
+   * catch this: the copy stayed above 4.5:1 the whole time.
+   *
+   * Two questions, deliberately kept apart:
+   *
+   * - CONTACT — does the artwork actually PAINT under a line of copy? Sampled
+   *   with `isPointInFill` against the path itself, so the rotated bounding box
+   *   (mostly empty corners) cannot raise a false alarm. Asserted at every
+   *   width the pattern exists at, the bundle's 1280+ placements included.
+   * - AIR — does the pattern's box crowd the column even where the painted
+   *   shape misses it? Only asserted from 1024 to 1279, the band whose
+   *   placement is OURS; from 1280 the bundle's geometry overlaps the column by
+   *   a few px of empty corner on purpose, and demanding air there would fail
+   *   artwork that is visually correct.
+   *
+   * Both cover BOTH instances: A runs at full opacity and is the louder one.
+   */
+  const HERO_PATTERNS = ['.ob-hero__pattern--a', '.ob-hero__pattern--b'] as const;
+
+  async function probeHeroPattern(page: Page, width: number) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+
+    return page.evaluate((selectors) => {
+      // EVERY text node of the hero, not a hand-listed set of tags: the `stats`
+      // and `statsNote` slots can render figures as div/span/li, and a selector
+      // list would drop them and quietly start measuring less than it claims.
+      // Line boxes, not element boxes — a 640px block can have every line end
+      // far short of 640px.
+      const lines: DOMRect[] = [];
+      const walker = document.createTreeWalker(
+        document.querySelector('.ob-hero') as Node,
+        NodeFilter.SHOW_TEXT,
+      );
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.nodeValue?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        for (const rect of range.getClientRects()) {
+          if (rect.width > 0 && rect.height > 0) lines.push(rect);
+        }
+      }
+
+      const patterns = selectors.map((selector) => {
+        const el = document.querySelector(selector);
+        if (!el) return { selector, display: 'ABSENT', pathFound: false, left: 0, hits: 0, samples: 0 };
+
+        const display = getComputedStyle(el).display;
+        const box = el.getBoundingClientRect();
+        const path = el.querySelector('path');
+        let hits = 0;
+        let samples = 0;
+
+        // `display:none` yields a null CTM and an all-zero box — hence the
+        // explicit display assertion in the tests rather than a 0px reading
+        // that would fail with a message pointing nowhere.
+        const ctm = display === 'none' || !path ? null : path.getScreenCTM();
+        if (path && ctm) {
+          const toUser = ctm.inverse();
+          const STEP = 4; // px — these shapes are hundreds of px across
+          for (const line of lines) {
+            const disjoint =
+              line.right < box.left ||
+              line.left > box.right ||
+              line.bottom < box.top ||
+              line.top > box.bottom;
+            if (disjoint) continue;
+            for (let y = line.top; y <= line.bottom; y += STEP) {
+              for (let x = line.left; x <= line.right; x += STEP) {
+                samples++;
+                if (path.isPointInFill(new DOMPoint(x, y).matrixTransform(toUser))) hits++;
+              }
+            }
+          }
+        }
+
+        return { selector, display, pathFound: !!path, left: box.left, hits, samples };
+      });
+
+      return { textRight: lines.reduce((max, r) => Math.max(max, r.right), 0), patterns };
+    }, HERO_PATTERNS as unknown as string[]);
+  }
+
+  for (const width of [1024, 1120, 1279, 1280, 1440]) {
+    test(`no hero pattern paints under the hero copy at ${width}px`, async ({ page }) => {
+      const { textRight, patterns } = await probeHeroPattern(page, width);
+      expect(textRight).toBeGreaterThan(0);
+
+      for (const p of patterns) {
+        // Hiding the pattern is what the WRONG fix for #18 looks like, so it
+        // fails here instead of trivially satisfying a clearance check.
+        expect(p.display, `${p.selector} is "${p.display}" at ${width}px, expected block`).toBe(
+          'block',
+        );
+        expect(p.pathFound, `${p.selector} has no <path> — the probe measured nothing`).toBe(true);
+        expect(
+          p.hits,
+          `${p.selector} paints over ${p.hits} of ${p.samples} points sampled inside hero ` +
+            `line boxes at ${width}px — decorative artwork is sitting under the copy`,
+        ).toBe(0);
+      }
+    });
+  }
+
+  for (const width of [1024, 1120, 1279]) {
+    test(`the hero pattern leaves the copy air at ${width}px`, async ({ page }) => {
+      const { textRight, patterns } = await probeHeroPattern(page, width);
+
+      for (const p of patterns) {
+        expect(p.display, `${p.selector} is "${p.display}" at ${width}px, expected block`).toBe(
+          'block',
+        );
+        expect(
+          p.left,
+          `${p.selector} starts at ${Math.round(p.left)}px while the widest line of hero copy ` +
+            `ends at ${Math.round(textRight)}px — the decorative layer is crowding the text ` +
+            `column at ${width}px`,
+        ).toBeGreaterThanOrEqual(textRight);
+      }
     });
   }
 

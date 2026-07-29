@@ -33,6 +33,30 @@
   --ob-lime-tint: #f7fae4;
   --ob-green-tint: #eef8e8;
 
+  /* DELIBERATELY DECLARED WITHOUT A CONSUMER: --ob-green-deep, --ob-lime-tint,
+     --ob-green-tint and --sp-9 further down. They are ramp members of the design
+     bundle's own token files, and this file is their 1:1 port — the green/lime
+     rungs exist so the ramps are symmetrical, not because a component was
+     dropped. Sky is the lead accent (brief §6.1), so green and lime live in the
+     identity layer (brand ribbon, metaball pattern, hero overline) and own no
+     tinted surface yet. Giving them one is a design decision — it is made in
+     Claude.design and ported here, never invented in a CSS edit; deleting them
+     would only make the next port re-add them.
+     TODO(Антон): оставить рампу целиком или вычистить незадействованные рунги —
+     решение владельца; код работает одинаково в обоих случаях. */
+
+  /* Brand chrome ribbon — one token because the header and the footer must
+     paint the SAME sequence; two copies of the stop list would drift the first
+     time one of them is touched. Equal thirds: each colour owns 1/3 once its
+     half of each ~17% blend is counted, and the blends leave no hard edge.
+     Diverges from Claude.design v2 chrome (hard 46/78 stops) — see issue #31. */
+  --grad-ribbon: linear-gradient(
+    90deg,
+    var(--ob-sky) 0 25%,
+    var(--ob-green) 42% 58%,
+    var(--ob-lime) 75% 100%
+  );
+
   /* --- Doctor.School base (parent brand): actions, links, focus ------------ */
   --ds-blue: #2d84f2;
   --ds-blue-dark: #114d9e;
@@ -79,6 +103,12 @@
   /* Play-button scrim on the video facade (over the dark ink plate). */
   --scrim-play: oklch(0.35 0.05 250 / 0.85);
   --on-dark: #ffffff;
+  /* Host badge on the video facade. Was `--on-dark` at `opacity: 0.75`, which
+     is 10px uppercase text whose contrast depends on whatever the plate shows;
+     the design wants it recessed, not translucent, so the recession is baked
+     into a solid value (≈13:1 over `--ink`, and it stays that way if a poster
+     frame ever backs the facade). */
+  --video-host-fg: oklch(0.93 0.006 250);
   /* Photo lightbox: full-screen scrim plus the controls that sit on it. */
   --scrim-lightbox: oklch(0.17 0.02 250 / 0.93);
   --lightbox-caption: oklch(0.87 0.008 250);
@@ -131,11 +161,16 @@
   --sp-6: 32px;
   --sp-7: 48px;
   --sp-8: 64px;
+  /* Top of the 4px ramp; no consumer today — see the note above the tints. */
   --sp-9: 96px;
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 16px;
   --r-pill: 999px;
+  /* The design's answer to «what shadow does a resting card carry»: none. Most
+     cards therefore declare no box-shadow at all and only lift on hover; the
+     token is referenced where a lift has to be undone by name (`.ob-pg__it`
+     on :active). */
   --shadow-card: none;
   --shadow-lift: 0 4px 16px oklch(0.21 0.02 250 / 0.08);
 

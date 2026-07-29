@@ -38,6 +38,32 @@ const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
 // reach anyone navigating by headings, which is exactly the reader the finding
 // is about.
 const heading = year ? `${label} · ${year}` : label;
+
+/**
+ * «External» means ANOTHER ORIGIN, not «starts with http».
+ *
+ * МОО «ОРТО»'s own site IS this domain — `2025.yaml` carries
+ * `url: https://orthobio.ru/`, faithful to the recon — so a blanket `target`
+ * opened a second tab of the page the reader was already standing on. The
+ * comparison runs against `Astro.site` (the canonical origin in
+ * astro.config.mjs) rather than a hardcoded host, so it stays correct when the
+ * partner registry is edited or the apex finally points here.
+ */
+const siteOrigin = Astro.site?.origin;
+const isExternal = (url: string): boolean => {
+  // Without a configured `site` nothing can be proven external; staying in the
+  // current tab is the recoverable failure, a stray tab is not.
+  if (!siteOrigin) return false;
+  try {
+    return new URL(url, siteOrigin).origin !== siteOrigin;
+  } catch {
+    return false;
+  }
+};
+
+/** New-tab attributes for a link that leaves the site; nothing for one that stays. */
+const newTab = (url: string): Record<string, string> =>
+  isExternal(url) ? { target: '_blank', rel: 'noopener' } : {};
 ---
 
 {
@@ -54,7 +80,7 @@ const heading = year ? `${label} · ${year}` : label;
       <div class="ob-pt__grid">
         {partners.map((p) =>
           p.url ? (
-            <a class="ob-pt__card" href={p.url}>
+            <a class="ob-pt__card" href={p.url} {...newTab(p.url)}>
               {
                 p.logo ? (
                   /* Fixed 120×44 slot with `object-fit: contain` (see
@@ -70,7 +96,10 @@ const heading = year ? `${label} · ${year}` : label;
               }
             </a>
           ) : (
-            <span class="ob-pt__card">
+            /* A partner with no `url` is a plain roster entry. It must not LOOK
+               like the linked cards beside it: `--static` drops the card fill and
+               the pointer affordances (see components.css). */
+            <span class="ob-pt__card ob-pt__card--static">
               {
                 p.logo ? (
                   /* Fixed 120×44 slot with `object-fit: contain` (see

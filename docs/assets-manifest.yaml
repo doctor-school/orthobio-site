@@ -34,8 +34,13 @@
 # public URL = <s3_public_base_url><s3_key>.)
 #
 # Integrity: docs/assets-checksums.txt = SHA-256 of every staged file
-# (2222 lines, "hash  <relative path>", sorted). Verify tree or the future
+# (2244 lines, "hash  <relative path>", sorted). Verify tree or the future
 # S3 upload object-by-object against it.
+#
+# 2026-07-29 (Issue #23): +22 objects — the 11 оргкомитет portraits rescued
+# from the LIVE orthobio.ru/orgs (originals + 288×288 square derivatives),
+# see item 2026-committee-portraits. This is the first rescue run after the
+# 2026-07-27 sweep; every other number in this file still describes that sweep.
 #
 # ⚠️ Year attribution: the Google Drive folders «15 апреля»/«16 апреля»
 # (1MaNlskHjkZpxm9XzYkgSky-Jfb2o3xGK / 1fJ5BoMr1Tc2jPPDFpNQ6jDk5eSzmryN1)
@@ -50,11 +55,11 @@ meta:
   s3_endpoint: https://s3.twcstorage.ru
   s3_region: ru-1
   s3_public_base_url: https://s3.twcstorage.ru/orthobio-media/
-  s3_uploaded_at: '2026-07-27'
-  # 2219 objects = 2222 staged files minus the 3 byte-duplicate 2021/previews
+  s3_uploaded_at: '2026-07-29' # 2026-07-27 sweep + the Issue #23 portraits
+  # 2241 objects = 2244 staged files minus the 3 byte-duplicate 2021/previews
   # files (s3_key: null below); verified by post-upload object count + random
   # SHA-256 spot-checks against docs/assets-checksums.txt.
-  s3_objects: 2219
+  s3_objects: 2241
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -62,7 +67,7 @@ meta:
   # Unit: all "mb" values are MiB (1024^2 bytes, PowerShell's 1MB). Per-year
   # values sum to 8910.3 vs total 8910.4 — both are correct roundings of the
   # true total 8910.35, not a discrepancy.
-  total: { files: 2222, mb: 8910.4 }
+  total: { files: 2244, mb: 8910.7 }
   checksums: docs/assets-checksums.txt
   source_pages:
     - https://orthobio2021.creatium.site/archive/2021
@@ -71,6 +76,7 @@ meta:
     - https://orthobio2021.creatium.site/archive/2024
     - https://orthobio2021.creatium.site/archive/2025
     - https://orthobio.ru/
+    - https://orthobio.ru/orgs # оргкомитет portraits (Issue #23)
 
 years:
   2021:
@@ -401,8 +407,65 @@ years:
           - { title: 'Обращение к участникам, карточка 2', title_source: editorial, slot: 'ОБРАЩЕНИЯ К УЧАСТНИКАМ', url: 'https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/' }
 
   2026:
-    counters: { files: 2, mb: 1.6 }
+    counters: { files: 24, mb: 1.9 }
     items:
+      - id: 2026-committee-portraits
+        source: https://orthobio.ru/orgs
+        source_urls:
+          - https://cdn.congress-ph.online/261/orgs_hum/kotenko.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/nazarenko.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/strahov.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/ahpashev.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/deev.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/eremin.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/kovalev.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/lazishvili.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/malanin.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/ochkurenko.jpg
+          - https://cdn.congress-ph.online/261/orgs_hum/torgashin.jpg
+        description: >-
+          11 portraits of the оргкомитет, rescued with Playwright from the LIVE
+          orthobio.ru/orgs (the apex still serves the operator's 2026 site; the
+          files themselves sit on the operator's CDN cdn.congress-ph.online,
+          which is exactly the dependency this rescue removes).
+
+          Originals are 512×512 JPEG, each a circular photo mask of diameter 400
+          painted dead centre on a white canvas. Derivatives are 288×288 webp
+          (q88, 6.8-11.9 KB) for the 72px PersonCard circle: a FIXED 400×400
+          centre crop lifts the inscribed circle out of the white canvas, then a
+          resize to 288 — a deterministic transform for the whole set. Automatic
+          white-border trim was rejected: on the four portraits shot against a
+          near-white background (white coat / bright studio) it ate into the
+          circle and shifted the face off centre.
+
+          NO portrait exists for Загородний Н.В. — he has no card on /orgs. The
+          only person-shaped file left on the old site is the homepage
+          `261/images/human.jpg`, which is the ОРТО wordmark over «2026», not a
+          person; it was downloaded, identified, and discarded (not staged, not
+          uploaded).
+
+          Consumers: 2026.yaml committee[].photo (11 members), the 2025.yaml
+          committee (9 of the same people) and the Страхов М.А. greeting cards
+          in 2022/2023/2024/2025.yaml — a portrait is person identity, not a
+          year-scoped fact.
+
+          ⚠️ PREFIX SEMANTICS: `2026/people/` records WHERE THE RESCUE RAN (the
+          2026 congress site), NOT the year the face belongs to. A person is
+          year-independent and five different years' YAML point at these same
+          objects. Do NOT re-file the same person under 2027 on the next rescue
+          — add missing people here and reuse what already exists. A flat
+          `people/` prefix would say this more directly; it was not adopted
+          because these objects are already served with an immutable
+          year-long Cache-Control, so re-prefixing means re-uploading all 22,
+          rewriting the checksums and touching five content files for zero
+          user-visible gain (PR #28 review).
+        actual_year: 2026
+        type: photos
+        status: downloaded
+        local: '2026/people/' # derivatives; originals under 2026/people/originals/
+        s3_key: '2026/people/'
+        s3_status: uploaded
+        files: 22
       - id: 2026-program-pdf
         source: https://cdn.congress-ph.online/261/prog.pdf
         description: 'Program VII Congress 2026 (47 pages)'

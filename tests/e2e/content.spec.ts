@@ -146,6 +146,84 @@ test('media past the fold is disclosed without JavaScript', async ({ browser }) 
   await context.close();
 });
 
+test('/orgs actually renders the оргкомитет portraits, not the fallback plate', async ({
+  page,
+}) => {
+  // Regression guard for Issue #23. Every other suite stays green if the
+  // portraits vanish: drop a `photo:` key, break `mediaUrl()`, or move the
+  // bucket objects, and PersonCard silently falls back to the initials plate —
+  // valid DOM, valid a11y, zero overflow, zero CLS. The COUNT is the assertion.
+  await page.goto('/orgs');
+  const portraits = page.locator('#orgs26 img.ob-pc__photo');
+  await expect(portraits).toHaveCount(11);
+
+  // Explicit intrinsic dimensions on every tag: the schema carries a portrait
+  // as a bare URL, so the box is reserved only because <Image> measured the
+  // file at build. A missing attribute here IS the CLS regression.
+  const boxes = await portraits.evaluateAll((nodes) =>
+    nodes.map((n) => ({
+      w: n.getAttribute('width'),
+      h: n.getAttribute('height'),
+      alt: n.getAttribute('alt'),
+      src: n.getAttribute('src'),
+    })),
+  );
+  for (const box of boxes) {
+    expect(Number(box.w), `width must be a positive number, got ${box.w}`).toBeGreaterThan(0);
+    expect(Number(box.h), `height must be a positive number, got ${box.h}`).toBeGreaterThan(0);
+    // Decorative: the name is the adjacent .ob-pc__name (see PersonCard.astro).
+    expect(box.alt).toBe('');
+    expect(box.src, 'portraits must be served from our own build output').toMatch(/^\/_astro\//);
+  }
+
+  // The twelfth member, Загородний Н. В., has no portrait anywhere on the old
+  // site — his plate is the honest state and must NOT quietly gain a photo.
+  await expect(page.locator('#orgs26 .ob-pc__initial')).toHaveCount(1);
+});
+
+/**
+ * Portrait census per archive year — the same count guard as /orgs, extended to
+ * the 13 references /orgs does not cover (PR #28 review).
+ *
+ * These are the entries most likely to rot: every one of them points at a
+ * `2026/people/` key from a DIFFERENT year's file, and that cross-year reuse is
+ * the judgment call most likely to be revisited. Null those keys and no other
+ * suite notices — the cards degrade to a valid, accessible initials plate.
+ *
+ * `initials` is asserted alongside `photos` on purpose: it pins the people who
+ * must STAY without a portrait (Загородний, Губин — no usable image exists for
+ * either anywhere on the old site), so the guard fails in both directions.
+ */
+const PORTRAIT_CENSUS = [
+  { year: 2021, photos: 0, initials: 2 }, // Губин + Загородний, no portraits exist
+  { year: 2022, photos: 1, initials: 2 }, // Страхов greeting; Загородний + Губин plates
+  { year: 2023, photos: 1, initials: 2 },
+  { year: 2024, photos: 1, initials: 2 },
+  { year: 2025, photos: 10, initials: 1 }, // 9 committee + Страхов greeting; Загородний plate
+  { year: 2026, photos: 11, initials: 1 }, // committee; Загородний has no /orgs card
+] as const;
+
+for (const { year, photos, initials } of PORTRAIT_CENSUS) {
+  test(`/archive/${year} renders ${photos} portrait(s) and ${initials} initials plate(s)`, async ({
+    page,
+  }) => {
+    await page.goto(`/archive/${year}`);
+    await expect(page.locator('img.ob-pc__photo')).toHaveCount(photos);
+    await expect(page.locator('.ob-pc__initial')).toHaveCount(initials);
+    // Same no-CLS contract as /orgs: the schema carries a bare URL, so the box
+    // is reserved only because <Image> measured the file at build.
+    const boxes = await page
+      .locator('img.ob-pc__photo')
+      .evaluateAll((nodes) =>
+        nodes.map((n) => ({ w: n.getAttribute('width'), h: n.getAttribute('height') })),
+      );
+    for (const box of boxes) {
+      expect(Number(box.w)).toBeGreaterThan(0);
+      expect(Number(box.h)).toBeGreaterThan(0);
+    }
+  });
+}
+
 test('FAQ answers open without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();

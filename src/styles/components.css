@@ -121,18 +121,14 @@
   background: var(--surface-page);
 }
 
-/* Brand ribbon opening the page (design v2 chrome); the footer closes with the
-   same sequence. Decorative — it carries no information, hence a pseudo. */
+/* Brand ribbon opening the page; the footer closes with the same sequence.
+   Decorative — it carries no information, hence a pseudo. The stop list lives
+   in `--grad-ribbon` so both ends of the page cannot drift apart. */
 .ob-head::before {
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--ob-sky) 0 46%,
-    var(--ob-green) 46% 78%,
-    var(--ob-lime) 78% 100%
-  );
+  background: var(--grad-ribbon);
 }
 
 /* Sticky only where there is vertical room to spare: on a 360px phone a
@@ -245,18 +241,12 @@
   margin-top: var(--sp-sec);
 }
 
-/* Brand ribbon closing the page — the same sky/green/lime sequence the header
-   opens with (design v2 chrome). */
+/* Brand ribbon closing the page — same `--grad-ribbon` the header opens with. */
 .ob-foot::after {
   content: '';
   display: block;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--ob-sky) 0 46%,
-    var(--ob-green) 46% 78%,
-    var(--ob-lime) 78% 100%
-  );
+  background: var(--grad-ribbon);
 }
 
 .ob-foot__in {
@@ -441,6 +431,12 @@
 
 .ob-btn--ghost:hover {
   color: var(--text-link-hover);
+}
+
+/* Ghost has no fill to darken, so the pressed state borrows the text-link
+   family's accent (see the .ob-sh__link:active group below). */
+.ob-btn--ghost:active {
+  color: var(--ob-sky-text);
 }
 
 /* NB: the bundle's standalone Tag component is not ported — nothing on the
@@ -665,12 +661,17 @@
 }
 
 /* Brand pattern — decorative only; hidden on phones where there is no white
-   air to place it in (design: «не подкладывать под плотный текст»). */
+   air to place it in (design: «не подкладывать под плотный текст»).
+   The element ships with `fill="currentColor"`, so the pattern is tinted by a
+   token instead of the mark's own #7cba48: it is the graphic language, not the
+   «ОРТО» mark, and the brief's rule «знак не перекрашивать» does not cover it
+   (the design's own brand-pattern guideline recolours it over dark fields). */
 .ob-hero__pattern {
   display: none;
   position: absolute;
   pointer-events: none;
   user-select: none;
+  color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the
      CSS width or the artwork letterboxes inside its own box. */
   height: auto;
@@ -681,23 +682,44 @@
     display: block;
   }
 
-  /* The bundle places the artwork at full saturation. At hero scale on a white
-     page that reads as a graphic block rather than the design's «тональные
-     слои», so both instances render as tonal layers — same placement, same
-     shapes, lower presence. */
+  /* Saturation is the design's: on a white field the pattern runs at full
+     strength along the edge («на белом — по краям, много воздуха»), and only
+     the second, inward instance recedes to a tonal layer — bundle
+     `components/hero/Hero` places instance A with no opacity and instance B at
+     0.5. The former 0.22/0.12 override greyed the identity out of the page. */
   .ob-hero__pattern--a {
     width: 320px;
     top: -90px;
     right: -70px;
-    opacity: 0.22;
   }
 
+  /* Instance B is rotated, so it paints a box 2.2× its CSS width — the bundle's
+     240px becomes 527px on screen. That geometry assumes the wide window it was
+     drawn at, and narrower ones fail it in two degrees (sampled against the path
+     itself with `isPointInFill` over every hero line box): up to ~1200 the
+     PAINTED shape crosses the lead copy, heavily at 1024 and thinning out as the
+     window widens, and from there to 1280 only the rotated BOUNDING BOX still
+     crowds the text column, its corners empty. The first breaks the design's
+     «не подкладывать под плотный текст» outright, the second is the same air
+     rule one degree milder; contrast passed throughout, so neither was ever an
+     a11y defect. The layer is therefore scaled to the free strip across the
+     whole band and returns to the bundle's own geometry at 1280 below, where
+     the window can hold it. */
+  .ob-hero__pattern--b {
+    width: 140px;
+    bottom: -120px;
+    right: 110px;
+    transform: rotate(150deg);
+    opacity: 0.5;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* The bundle's placement for instance B, restored as soon as the viewport has
+     room for it beside the text column (see the note above). */
   .ob-hero__pattern--b {
     width: 240px;
-    bottom: -120px;
     right: 220px;
-    transform: rotate(150deg);
-    opacity: 0.12;
   }
 }
 
@@ -1067,6 +1089,26 @@ a.ob-pt__card:active {
   border-color: var(--ob-sky);
 }
 
+/* Interactive honesty: a partner without a site renders as a <span> that used to
+   be pixel-identical to the linked card, so the whole tier read as clickable and
+   a third of it did nothing. The static entry is a FILLED, borderless plate —
+   the outlined white card now means «this one opens».
+
+   CONSTRAINT, because the signal is «filled against the page» and therefore
+   depends on what the tier sits on: `--surface-section` is also `.ob-band`'s
+   background (see .ob-band above), so a tier placed inside a band would dissolve
+   into it. No tier does today — bands live only on the home page, tiers on plain
+   `.ob-section`. `interaction.spec.ts` asserts the plate differs from its own
+   painted ancestor so this cannot rot silently; if a tier ever does belong in a
+   band, that test fails first and the fill moves, rather than the distinction
+   quietly disappearing. */
+.ob-pt__card--static {
+  background: var(--surface-section);
+  border-color: transparent;
+  cursor: default;
+  transition: none;
+}
+
 /* Fixed slot: the logo box is reserved before the file loads, so a tier grid
    cannot reflow as logos stream in. The box is 120×72, not the 120×44 that was
    reserved while every partner was `logo: null` (Issue #22): the rescued marks
@@ -1104,10 +1146,10 @@ a.ob-pt__card:active {
   background: var(--surface);
 }
 
-/* The rescued portraits are 16:9 stills, not square headshots: a centred crop
-   cuts the face out. Biasing the crop upward keeps the head in frame for the
-   whole set. Proper square crops belong to the media pipeline (Issue #2), not
-   to CSS — see the TODO in PersonCard.astro. */
+/* The оргкомитет derivatives are square (288×288), so `cover` crops nothing and
+   this bias is inert for them. It stays as the guard for any non-square
+   portrait that reaches the circle later: on a portrait-orientation source a
+   centred crop lands on the chest, an upward bias keeps the head in frame. */
 .ob-pc__photo {
   object-position: 50% 28%;
 }
@@ -1133,8 +1175,14 @@ a.ob-pt__card:active {
   overflow-wrap: anywhere;
 }
 
+/* `--lh-small`, not the inherited `--lh-body`: this line also renders оргкомитет
+   regalia (238 characters, up to a dozen lines in a 340px column) since
+   CommitteeList folded into PersonCard. The deleted `.ob-cl__regalia` was tuned
+   with the tighter leading and the consolidation must not change it silently
+   (PR #28 review). */
 .ob-pc__role {
   font-size: var(--fs-small);
+  line-height: var(--lh-small);
   color: var(--text-muted);
   margin: 0;
   overflow-wrap: anywhere;
@@ -1152,31 +1200,17 @@ a.ob-pt__card:active {
   padding: 0;
   display: grid;
   gap: var(--sp-3);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  /* 340px floor, not 300: the card now leads with a 72px portrait circle, and
+     regalia run to 238 characters — a narrower column turned the text into a
+     ribbon two or three words wide. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
 }
 
+/* The card chrome comes from `.ob-pc` (PersonCard) inside — the list item is
+   only a grid cell. */
 .ob-cl__item {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--r-md);
-  padding: var(--sp-4);
   min-width: 0;
-}
-
-.ob-cl__name {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-semibold);
-  margin: 0 0 4px;
-  overflow-wrap: anywhere;
-}
-
-.ob-cl__regalia {
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  color: var(--text-muted);
-  margin: 0;
-  /* Regalia run to 238 characters — wrap anywhere rather than overflow. */
-  overflow-wrap: anywhere;
+  display: grid;
 }
 
 /* ── MediaGrid (disclosure over a card grid, zero client JS) ─────────────── */
@@ -1313,13 +1347,39 @@ a.ob-pt__card:active {
   transition: box-shadow var(--t-state);
 }
 
+/* The tile's only hover used to be `--shadow-lift`, and the photo covers the
+   whole tile at the same radius — the shadow fell entirely BEHIND the image and
+   nothing moved on hover (owner's report, Issue #20). Feedback now happens on
+   the pixels the pointer is actually over: the photo pushes past its frame,
+   which `overflow: hidden` above crops back to the tile. `zoom-in` names what
+   the click does — these tiles open the lightbox, they do not navigate. */
+a.ob-pg__it {
+  cursor: zoom-in;
+}
+
+.ob-pg__it img {
+  transition:
+    scale var(--t-state),
+    opacity var(--t-state);
+}
+
 a.ob-pg__it:hover {
   box-shadow: var(--shadow-lift);
 }
 
+a.ob-pg__it:hover img {
+  scale: 1.05;
+}
+
 a.ob-pg__it:active {
-  box-shadow: none;
+  /* Drops the hover lift back to the design's resting card elevation, which is
+     exactly the value `--shadow-card` names. */
+  box-shadow: var(--shadow-card);
   opacity: 0.9;
+}
+
+a.ob-pg__it:active img {
+  scale: 1.01;
 }
 
 /* ── PhotoGrid lightbox (:target, no client JS) ──────────────────────────── */
@@ -1439,14 +1499,22 @@ html:has(.ob-pg__lb:target) {
     border-color var(--t-state);
 }
 
-a.ob-vc:hover {
+/* Not qualified with `a`: once the player loads, the card is a <div>. */
+.ob-vc:hover {
   box-shadow: var(--shadow-lift);
   border-color: var(--hairline-strong);
   color: var(--text-body);
 }
 
-a.ob-vc:active {
+.ob-vc:active {
   border-color: var(--ob-sky);
+}
+
+.ob-vc__frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
 }
 
 .ob-vc__facade {
@@ -1490,17 +1558,39 @@ a.ob-vc:active {
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
   letter-spacing: 0.04em;
-  color: var(--on-dark);
-  opacity: 0.75;
+  color: var(--video-host-fg);
   text-transform: uppercase;
 }
 
+/* `display: block` is load-bearing: the caption is a <span>, and on an inline
+   box the vertical padding paints outside the line box without moving anything
+   — the text sat flush against the plate while the padding hung over it. */
 .ob-vc__title {
+  display: block;
   padding: 10px 14px;
   font-size: var(--fs-small);
   color: var(--text-body);
   margin: 0;
-  overflow-wrap: anywhere;
+  /* `anywhere` (was here) breaks Russian mid-word — «ортобиоло/гия» — because
+     these captions have no unbreakable tokens to justify it. */
+  overflow-wrap: break-word;
+}
+
+/* Outbound marker: only YouTube cards carry it, and only they leave the site. */
+.ob-vc__ext {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 14px 10px;
+  font-size: var(--fs-caption);
+  color: var(--text-muted);
+}
+
+.ob-vc__ext svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
 }
 
 /* ── DocCard ─────────────────────────────────────────────────────────────── */
@@ -1630,11 +1720,17 @@ details[open] > .ob-faq__q::after {
   background: var(--ob-sky-tint);
 }
 
+/* Same token tint as the home hero. The 0.45 here is the design's value for
+   this band (bundle `ui_kits/orthobio-site/Year`) and stays a tonal layer for
+   the same reason the home hero's second instance does: this pattern sits on
+   the sky-tinted plate, not on white, where the design calls for «тональные
+   слои» rather than full-strength artwork. */
 .ob-yh__pattern {
   position: absolute;
   right: -80px;
   top: -90px;
   width: 280px;
+  color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the CSS
      width or the artwork letterboxes inside its own box. */
   height: auto;

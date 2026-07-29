@@ -17,8 +17,22 @@ import { ROUTES } from './_routes';
  * hover that works.
  */
 
-/** Absolute http(s) links to some other host — the ones that need a new tab. */
-const EXTERNAL_LINKS = `a[href^="http"]:not([href*="localhost"])`;
+/**
+ * The canonical origin — `site` in astro.config.mjs. Mirrors the comparison
+ * `PartnerTier` makes against `Astro.site`.
+ */
+const SITE_ORIGIN = 'https://orthobio.ru';
+
+/**
+ * External means ANOTHER ORIGIN, not «absolute». Two exclusions, for two
+ * different reasons: `localhost` is the preview server this suite runs against
+ * (absolute self-links the build emits as canonical/og URLs point at
+ * SITE_ORIGIN, but anything the page builds at runtime would point at the
+ * preview host), and SITE_ORIGIN is us — МОО «ОРТО»'s partner card links to
+ * `https://orthobio.ru/`, which is this very site.
+ */
+const EXTERNAL_LINKS =
+  `a[href^="http"]:not([href*="localhost"]):not([href^="${SITE_ORIGIN}"])`;
 
 test('every external link opens in a new tab, safely', async ({ page }) => {
   let checked = 0;
@@ -61,6 +75,23 @@ test('links that stay on the site — and mailto — keep the current tab', asyn
   }
 });
 
+test('an absolute link back to our own origin is not treated as external', async ({ page }) => {
+  // МОО «ОРТО»'s site IS this domain (2025.yaml), so its partner card is an
+  // absolute URL that must NOT open a second tab of the page we are already on.
+  // The guard is the whole reason `PartnerTier` compares origins instead of
+  // testing for an `http` prefix.
+  await page.goto('/archive/2025');
+  const selfLinks = page.locator(`a[href^="${SITE_ORIGIN}"]`);
+  const count = await selfLinks.count();
+  expect(count, 'the 2025 roster must still carry the ОРТО self-link').toBeGreaterThan(0);
+
+  for (const link of await selfLinks.all()) {
+    const href = await link.getAttribute('href');
+    expect(await link.getAttribute('target'), `${href} is our own origin`).toBeNull();
+    expect(await link.getAttribute('rel'), `${href} needs no rel without a target`).toBeNull();
+  }
+});
+
 test('a photo tile answers the pointer (owner report: it did not)', async ({ page }) => {
   await page.goto('/archive/2025');
   const tile = page.locator('a.ob-pg__it').first();
@@ -95,6 +126,21 @@ test('a partner without a site does not pretend to be clickable', async ({ page 
   ]);
   expect(staticBg, 'the static entry must not share the card fill').not.toBe(linkedBg);
 
+  // The plate's signal is «filled against the page», so it also has to differ
+  // from whatever surface it sits on — `--surface-section` is `.ob-band`'s
+  // background too, and a tier dropped into a band would dissolve into it. This
+  // is the guard that makes that a failing test instead of a silent regression.
+  const ancestorBg = await static_.evaluate((el) => {
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      const bg = getComputedStyle(node).backgroundColor;
+      // Skip the transparent wrappers; the first painted ancestor is the
+      // surface the plate is actually read against.
+      if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return bg;
+    }
+    return getComputedStyle(document.body).backgroundColor;
+  });
+  expect(staticBg, 'the plate must not dissolve into the surface behind it').not.toBe(ancestorBg);
+
   // …and the hover lift belongs to the link alone.
   const staticShadowAtRest = await static_.evaluate((el) => getComputedStyle(el).boxShadow);
   await linked.hover();
@@ -104,7 +150,12 @@ test('a partner without a site does not pretend to be clickable', async ({ page 
 });
 
 test('the anchor offset exists only where the header is sticky', async ({ page }) => {
-  const target = page.locator('[id]').first();
+  // A real navigation target, not `[id]` first-in-document — that resolves to
+  // the layout's <main id="main"> skip-link anchor, which nobody scrolls to and
+  // which would pass the assertion without ever exercising the elements whose
+  // landing position was actually wrong. `#pg2025` is the gallery anchor the
+  // lightbox's ✕ returns to.
+  const target = page.locator('#pg2025');
 
   // Below lg the header scrolls away with the page, so an 88px offset would
   // park every anchor that far past its own heading.

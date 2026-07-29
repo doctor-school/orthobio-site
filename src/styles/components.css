@@ -1076,7 +1076,16 @@ a.ob-pt__card:active {
 /* Interactive honesty: a partner without a site renders as a <span> that used to
    be pixel-identical to the linked card, so the whole tier read as clickable and
    a third of it did nothing. The static entry is a FILLED, borderless plate —
-   the outlined white card now means «this one opens». */
+   the outlined white card now means «this one opens».
+
+   CONSTRAINT, because the signal is «filled against the page» and therefore
+   depends on what the tier sits on: `--surface-section` is also `.ob-band`'s
+   background (see .ob-band above), so a tier placed inside a band would dissolve
+   into it. No tier does today — bands live only on the home page, tiers on plain
+   `.ob-section`. `interaction.spec.ts` asserts the plate differs from its own
+   painted ancestor so this cannot rot silently; if a tier ever does belong in a
+   band, that test fails first and the fill moves, rather than the distinction
+   quietly disappearing. */
 .ob-pt__card--static {
   background: var(--surface-section);
   border-color: transparent;

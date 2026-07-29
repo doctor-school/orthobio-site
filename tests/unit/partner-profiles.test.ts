@@ -3,7 +3,15 @@ import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 
 import { congressSchema, congressSchemaChecked } from '@/content/schemas';
-import { partnerCardHref, partnerProfiles, profileHref } from '@/lib/partners';
+import {
+  descriptionBlocks,
+  metaDescription,
+  META_DESCRIPTION_MAX,
+  partnerCardHref,
+  partnerProfiles,
+  profileHref,
+  telHref,
+} from '@/lib/partners';
 
 /**
  * Partner profile pages (Issue #24) — the values the other gates cannot see.
@@ -226,5 +234,183 @@ describe('rescued profile content, per year', () => {
       .map((p) => p.slug)
       .filter((s): s is string => s !== null);
     expect(new Set(slugs).size).toBe(slugs.length);
+  });
+});
+
+
+/**
+ * `tel:` targets (PR #40 review, IMPORTANT).
+ *
+ * The template used to build the href with `phone.replace(/[^+\d]/g, '')`,
+ * which turned «КардиоМед»'s «+7 495 955 52 57 / 58 / 40» — one switchboard
+ * with three extensions — into `tel:+749595552575840`, a 16-digit number that
+ * does not exist. The visible text stayed correct, so only someone who TAPPED
+ * it would ever find out: precisely the class of wrong VALUE the e2e suite
+ * cannot see, which is why the logic moved here.
+ */
+describe('telHref', () => {
+  it('refuses to guess when the string holds several numbers', () => {
+    // The real regression. One unlinked phone is honest; one wrong tel: is not,
+    // and reconstructing «/ 58 / 40» would invent digits nobody published.
+    expect(telHref('+7 495 955 52 57 / 58 / 40')).toBeNull();
+  });
+
+  it.each([
+    ['+7 495 111 64 95, +7 499 252 36 09'],
+    ['+7 495 111 64 95; +7 499 252 36 09'],
+    ['+7 495 111 64 95 доб. 12'],
+  ])('refuses %s', (phone) => {
+    expect(telHref(phone)).toBeNull();
+  });
+
+  it('builds a dialable target for a plain single number', () => {
+    expect(telHref('+7 495 785 01 00')).toBe('+74957850100');
+    // The space after «+» is how one partner published it.
+    expect(telHref('+ 7495 795 39 39')).toBe('+74957953939');
+    // Already compact.
+    expect(telHref('+74957786210')).toBe('+74957786210');
+  });
+
+  it('keeps a domestic number without inventing a country code', () => {
+    // «8 800 …» must NOT gain a «+»: that would assert an international form
+    // the source never published.
+    expect(telHref('8 800 550 67 57')).toBe('88005506757');
+  });
+
+  it('returns null for a string with too few digits to dial', () => {
+    expect(telHref('')).toBeNull();
+    expect(telHref('нет данных')).toBeNull();
+    expect(telHref('12345')).toBeNull();
+  });
+
+  it('produces a target of digits and at most a leading + — nothing else', () => {
+    // Whatever comes back is pasted straight into href="tel:…".
+    for (const phone of ['+7 (495) 785-01-00', '8 800 550 67 57']) {
+      expect(telHref(phone)).toMatch(/^\+?\d+$/);
+    }
+  });
+});
+
+/**
+ * Every phone actually published in the content must resolve to one of the two
+ * intended states — a clean dialable target, or a deliberate null. This is the
+ * assertion that would have caught the КардиоМед defect on real data.
+ */
+describe('telHref over the live 2026 roster', () => {
+  const partners = congressSchema.parse(
+    parse(readFileSync('src/content/congress/2026.yaml', 'utf8')),
+  ).partners;
+
+  it('never emits a malformed target for any published phone', () => {
+    const phones = partners
+      .map((p) => p.contacts?.phone)
+      .filter((v): v is string => typeof v === 'string');
+    expect(phones.length).toBeGreaterThan(0);
+    for (const phone of phones) {
+      const href = telHref(phone);
+      if (href === null) continue;
+      expect(href, phone).toMatch(/^\+?\d{10,15}$/);
+    }
+  });
+
+  it('leaves exactly the multi-extension entry unlinked', () => {
+    const unlinked = partners
+      .filter((p) => p.contacts?.phone && telHref(p.contacts.phone) === null)
+      .map((p) => p.name);
+    expect(unlinked).toEqual(['КардиоМед']);
+  });
+});
+
+/**
+ * Meta descriptions (PR #40 review, MINOR). Several partners open with a
+ * 450-character paragraph; a search engine cuts that at ~160 mid-word.
+ */
+describe('metaDescription', () => {
+  it('returns short text untouched', () => {
+    expect(metaDescription('Короткое описание компании.')).toBe('Короткое описание компании.');
+  });
+
+  it('cuts at a sentence boundary when one fits', () => {
+    // The capital after the full stop is part of the signal — it is what tells
+    // a sentence end from «в г. Хайдерабад» (next case).
+    const text = `${'а'.repeat(80)} конец. ${'Б'.repeat(200)}`;
+    const out = metaDescription(text);
+    expect(out.endsWith('конец.')).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(META_DESCRIPTION_MAX);
+  });
+
+  it('does not mistake a Russian abbreviation for the end of a sentence', () => {
+    // «в г. Хайдерабад» — a naive «. » search would end the snippet on «г.».
+    const text = `Компания с головным офисом в г. Хайдерабад, Индия, ${'и работает долго '.repeat(20)}`;
+    const out = metaDescription(text);
+    expect(out).not.toMatch(/в г\.$/);
+    expect(out.length).toBeLessThanOrEqual(META_DESCRIPTION_MAX + 1);
+  });
+
+  it('falls back to a word boundary with an ellipsis', () => {
+    const out = metaDescription(`${'слово '.repeat(60)}`);
+    expect(out.endsWith('…')).toBe(true);
+    expect(out).not.toMatch(/\s…$/);
+    expect(out.length).toBeLessThanOrEqual(META_DESCRIPTION_MAX + 1);
+  });
+
+  it('keeps every real profile description within budget', () => {
+    const partners = congressSchema.parse(
+      parse(readFileSync('src/content/congress/2026.yaml', 'utf8')),
+    ).partners;
+    const described = partners.filter((p) => p.slug !== null && p.description.length > 0);
+    expect(described.length).toBe(22);
+    for (const p of described) {
+      const meta = metaDescription(p.description[0]);
+      expect(meta.length, `${p.name}: ${meta.length} chars`).toBeLessThanOrEqual(
+        META_DESCRIPTION_MAX + 1,
+      );
+      expect(meta.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * List structure (PR #40 review, MINOR). ПанБио Фарм's seven «· ревматология,»
+ * entries were rendering as seven paragraphs each opening with a literal «·»:
+ * no list for a screen reader to announce, and a typographic glyph doing
+ * markup's job. The marker stays in the YAML — it is the only signal that
+ * survives the CMS loader swap — and is translated to a real <ul> here.
+ */
+describe('descriptionBlocks', () => {
+  it('leaves ordinary paragraphs alone', () => {
+    expect(descriptionBlocks(['Первый.', 'Второй.'])).toEqual([
+      { kind: 'text', text: 'Первый.' },
+      { kind: 'text', text: 'Второй.' },
+    ]);
+  });
+
+  it('groups a run of bullet entries into one list and strips the marker', () => {
+    expect(
+      descriptionBlocks(['Направления:', '· ревматология,', '· травматология,', 'И далее.']),
+    ).toEqual([
+      { kind: 'text', text: 'Направления:' },
+      { kind: 'list', items: ['ревматология,', 'травматология,'] },
+      { kind: 'text', text: 'И далее.' },
+    ]);
+  });
+
+  it('starts a new list when a paragraph interrupts the run', () => {
+    const blocks = descriptionBlocks(['· а', 'проза', '· б']);
+    expect(blocks.map((b) => b.kind)).toEqual(['list', 'text', 'list']);
+  });
+
+  it('turns the real ПанБио Фарм entry into a single seven-item list', () => {
+    const panbio = congressSchema
+      .parse(parse(readFileSync('src/content/congress/2026.yaml', 'utf8')))
+      .partners.find((p) => p.slug === 'panbio-pharm');
+    const blocks = descriptionBlocks(panbio!.description);
+    const lists = blocks.filter((b) => b.kind === 'list');
+    expect(lists).toHaveLength(1);
+    expect(lists[0].kind === 'list' && lists[0].items).toHaveLength(7);
+    // No marker survives into the rendered item.
+    for (const item of lists[0].kind === 'list' ? lists[0].items : []) {
+      expect(item.startsWith('·')).toBe(false);
+    }
   });
 });

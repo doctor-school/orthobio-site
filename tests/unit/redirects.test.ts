@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { parseRedirects, renderNginxRedirects, assertRenderable } from '../../scripts/redirects.mjs';
 import { parse } from 'yaml';
 
+import { profileHref } from '@/lib/partners';
+
 import { ROUTES } from '../e2e/_routes';
 
 /**
@@ -396,7 +398,11 @@ describe('infra/redirects.yaml — the live company map', () => {
   });
 
   it('sends every old id to a profile route the content declares', () => {
-    const routes = new Set(profileSlugs.map((s) => `/partners/${s}/`));
+    // Built through `profileHref`, not by string-concatenating the path here:
+    // that function is what the partner cards link with, so this is the
+    // assertion that keeps the redirect map, the card links and the built route
+    // agreeing — trailing slash included (PR #40 review).
+    const routes = new Set(profileSlugs.map((s) => profileHref(s)));
     for (const entry of company) {
       expect(routes, `${entry.query?.value} -> ${entry.to}`).toContain(entry.to);
     }
@@ -405,9 +411,7 @@ describe('infra/redirects.yaml — the live company map', () => {
   it('covers every declared profile — no page is left without its old URL', () => {
     const targets = new Set(company.map((e) => e.to));
     for (const slug of profileSlugs) {
-      expect(targets, `/partners/${slug}/ has no /company?i= entry`).toContain(
-        `/partners/${slug}/`,
-      );
+      expect(targets, `${profileHref(slug)} has no /company?i= entry`).toContain(profileHref(slug));
     }
   });
 

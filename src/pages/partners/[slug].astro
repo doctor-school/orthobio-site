@@ -19,7 +19,13 @@ import { getCongressYears } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { PARTNER_TIER_LABELS } from '@/content/schemas';
 import { plural } from '@/lib/congress';
-import { partnerProfiles, type PartnerProfile } from '@/lib/partners';
+import {
+  descriptionBlocks,
+  metaDescription,
+  partnerProfiles,
+  telHref,
+  type PartnerProfile,
+} from '@/lib/partners';
 
 export async function getStaticPaths() {
   // Drafts are filtered inside getCongressYears() — a fixture must never get a
@@ -46,9 +52,17 @@ const yearsLabel = `Участник ${plural(profile.years.length, [
 
 // The <meta description> is the organization's own opening line when it wrote
 // one; otherwise a factual sentence built from the roster — never a boast we
-// invented on its behalf.
-const description =
-  p.description[0] ?? `${p.name} — партнёр конгресса ОРТОБИОЛОГИЯ ${profile.years[0]}.`;
+// invented on its behalf. Trimmed to a sentence: several partners open with a
+// 450-character paragraph, which a search engine would cut mid-word.
+const description = p.description[0]
+  ? metaDescription(p.description[0])
+  : `${p.name} — партнёр конгресса ОРТОБИОЛОГИЯ ${profile.years[0]}.`;
+
+/** Prose entries, with runs of plain-text «·» items regrouped into real lists. */
+const blocks = descriptionBlocks(p.description);
+
+/** `null` when the published string holds several numbers — then it stays text. */
+const phoneHref = p.contacts?.phone ? telHref(p.contacts.phone) : null;
 ---
 
 <BaseLayout title={`${p.name} — партнёр конгресса`} description={description}>
@@ -86,8 +100,16 @@ const description =
         p.contacts?.phone && (
           <div class="ob-cp__fact">
             <dt>Телефон</dt>
+            {/* Linked only when the string denotes ONE number. «КардиоМед»
+                publishes «+7 495 955 52 57 / 58 / 40» — three extensions on one
+                switchboard — and any single tel: built from that would dial a
+                number that does not exist (see telHref). */}
             <dd>
-              <a href={`tel:${p.contacts.phone.replace(/[^+\d]/g, '')}`}>{p.contacts.phone}</a>
+              {phoneHref ? (
+                <a href={`tel:${phoneHref}`}>{p.contacts.phone}</a>
+              ) : (
+                p.contacts.phone
+              )}
             </dd>
           </div>
         )
@@ -119,9 +141,20 @@ const description =
       <div class="ob-container ob-section">
         <SectionHeading title="О компании" />
         <div class="ob-prose">
-          {p.description.map((paragraph) => (
-            <p>{paragraph}</p>
-          ))}
+          {blocks.map((block) =>
+            block.kind === 'list' ? (
+              /* The source wrote these as «· ревматология,» lines; rendering
+                 them as paragraphs would leave a screen reader with no list to
+                 announce and a typographic glyph doing markup's job. */
+              <ul class="ob-list">
+                {block.items.map((item) => (
+                  <li>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>{block.text}</p>
+            ),
+          )}
         </div>
       </div>
     )

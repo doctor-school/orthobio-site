@@ -39,26 +39,43 @@ cat "$SRC" > "$STAGED"
 # Since Issue #24 the generator also emits MULTI-LINE blocks, for the
 # query-conditional redirects that carry `/company?i=<id>` to the partner
 # profiles: an opening `location = /x {`, one indented `if ($arg_… = "…")` per
-# condition, an optional indented fallthrough `return`, and a closing `}`. A
-# bare `}` therefore had to become an allowed line, which on its own would let a
-# crafted snippet close the vhost's `server {}` early — so brace balance is now
-# asserted separately, below. (Even without that check the blast radius was a
-# rejected config rather than a served one: every line after such a `}` would
-# still have to match this allowlist, and `location` at http level fails
-# `nginx -t`. The balance check makes it a refusal here instead, which is where
-# the error belongs.)
+# condition, an optional indented fallthrough `return`, and a closing `}`.
+#
+# A line allowlist ALONE cannot police that shape, because two of its lines are
+# only safe INSIDE a block (PR #40 review). A file consisting of the single line
+# `    return 301 https://elsewhere/;` matches, is `include`d directly into
+# `server {}`, is valid nginx — and 301s the entire site. `nginx -t` passes, so
+# the rollback below never fires and the snippet stays installed. That is the
+# one shape whose blast radius is a SERVED config rather than a rejected one.
+# Structure is therefore checked separately, by depth, in the awk pass below.
+#
 # Each alternative is SINGLE-quoted so the bytes here are the bytes grep sees.
 # Double quotes would be a trap: sh expands `\$` to `$` inside them, silently
 # turning the literal `$` of a rewrite pattern into an end-of-line anchor.
+
+# Redirect target: a root-relative path, or an https URL on a host we control.
+#
+# Both halves are load-bearing. The path arm must reject `//host/path`, which a
+# browser resolves as an EXTERNAL url — hence the first character after the
+# leading `/` is drawn from a class WITHOUT `/`. The absolute arm names its
+# hosts instead of accepting any `https://…`: `doctor.school` is where the
+# November platform migration points (see infra/redirects.yaml), `orthobio.ru`
+# is us. Anything else — including a bare `evil.example` with no scheme at all —
+# is not a destination this site redirects to. Adding a host at migration time
+# is a one-line edit here.
+TC='[A-Za-z0-9._~/%!&()*+,=:@?-]'
+TC1='[A-Za-z0-9._~%!&()*+,=:@?-]'
+TGT="(/($TC1$TC*)?|https://(doctor\.school|orthobio\.ru)(/$TC*)?)"
+
 A_BLANK='^[[:space:]]*(#.*)?$'
-A_EXACT='^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$'
-A_PREFIX='^location \^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \{ rewrite \^[A-Za-z0-9._~/%!&()*+,=:@\\-]+\(\.\*\)\$ [A-Za-z0-9._~/%!&()*+,=:@?-]+\$1 (permanent|redirect); \}$'
-A_ROOT='^location ~ \^/\(\?!\\\.\)\(\.\*\)\$ \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+\$1; \}$'
+A_EXACT="^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \\{ return 30[1278] $TGT; \\}\$"
+A_PREFIX="^location \\^~ /[A-Za-z0-9._~/%!&()*+,=:@-]* \\{ rewrite \\^[A-Za-z0-9._~/%!&()*+,=:@\\\\-]+\\(\\.\\*\\)\\\$ $TGT\\\$1 (permanent|redirect); \\}\$"
+A_ROOT="^location ~ \\^/\\(\\?!\\\\.\\)\\(\\.\\*\\)\\\$ \\{ return 30[1278] $TGT\\\$1; \\}\$"
 # Multi-line query-conditional block (Issue #24): open, conditions, optional
 # fallthrough, close.
 A_OPEN='^location = /[A-Za-z0-9._~/%!&()*+,=:@-]* \{$'
-A_IF='^    if \(\$arg_[A-Za-z0-9_]+ = "[A-Za-z0-9._~/%!&()*+,=:@-]+"\) \{ return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+; \}$'
-A_RETURN='^    return 30[1278] (https://)?[A-Za-z0-9._~/%!&()*+,=:@?-]+;$'
+A_IF="^    if \\(\\\$arg_[A-Za-z0-9_]+ = \"[A-Za-z0-9._~/%!&()*+,=:@-]+\"\\) \\{ return 30[1278] $TGT; \\}\$"
+A_RETURN="^    return 30[1278] $TGT;\$"
 A_CLOSE='^\}$'
 
 if grep -nvE "$A_BLANK|$A_EXACT|$A_PREFIX|$A_ROOT|$A_OPEN|$A_IF|$A_RETURN|$A_CLOSE" "$STAGED"; then
@@ -66,13 +83,42 @@ if grep -nvE "$A_BLANK|$A_EXACT|$A_PREFIX|$A_ROOT|$A_OPEN|$A_IF|$A_RETURN|$A_CLO
     exit 1
 fi
 
-# Brace balance: the snippet is `include`d INSIDE `server {}`, so it must open
-# and close exactly as many blocks as it declares. An unbalanced file would
-# either close the vhost's own block or leave it open.
-OPEN=$(tr -cd '{' < "$STAGED" | wc -c)
-CLOSE=$(tr -cd '}' < "$STAGED" | wc -c)
-if [ "$OPEN" -ne "$CLOSE" ]; then
-    echo "orthobio-apply-redirects: refused — $OPEN '{' vs $CLOSE '}'; the snippet must not open or close a block it does not own" >&2
+# Block structure, by DEPTH — not by counting braces.
+#
+# The snippet is `include`d INSIDE `server {}`, so it must open and close
+# exactly the blocks it declares, and it must never contain a directive at the
+# top level. A counter cannot express either: `location = /a {` / `}` / `}` /
+# `location = /b {` balances 2:2 while closing the vhost's own block, and a `{`
+# inside an nginx COMMENT balances the books without nginx ever seeing it.
+#
+# Comments are stripped first for that reason. `if`/`return` at depth 0 is the
+# hijack described above; a negative depth is a `}` closing someone else's
+# block; a non-zero depth at EOF leaves the vhost hanging open.
+if ! awk '
+    { line = $0; sub(/#.*/, "", line) }
+    line ~ /^[[:space:]]*(if|return)/ && depth == 0 {
+        printf "line %d: `%s` is a directive at the top level of the snippet\n", NR, $0 > "/dev/stderr"
+        bad = 1
+    }
+    {
+        opens = gsub(/\{/, "{", line)
+        closes = gsub(/\}/, "}", line)
+        depth += opens - closes
+    }
+    depth < 0 {
+        printf "line %d: closes a block the snippet did not open\n", NR > "/dev/stderr"
+        bad = 1
+        exit
+    }
+    END {
+        if (bad) exit 1
+        if (depth != 0) {
+            printf "%d block(s) left open at end of file\n", depth > "/dev/stderr"
+            exit 1
+        }
+    }
+' "$STAGED"; then
+    echo "orthobio-apply-redirects: refused — block structure is not generator output" >&2
     exit 1
 fi
 

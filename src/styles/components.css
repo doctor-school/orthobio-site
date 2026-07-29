@@ -64,6 +64,17 @@
   margin-bottom: 0;
 }
 
+/* A list inside running prose (partner profiles render «· …» source lines as a
+   real <ul>) needs the same rhythm as the paragraphs around it — `.ob-list`
+   itself carries `margin: 0` because its other callers sit alone in a section. */
+.ob-prose .ob-list {
+  margin: 0 0 var(--sp-4);
+}
+
+.ob-prose .ob-list:last-child {
+  margin-bottom: 0;
+}
+
 .ob-note {
   font-size: var(--fs-small);
   color: var(--text-muted);

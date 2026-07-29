@@ -38,7 +38,7 @@ const validator = (() => {
     const end = src.indexOf('\nfi\n', start);
     return src.slice(start, end + 4);
   };
-  return `set -eu\n${section('# Allowlist:')}\n${section('# Brace balance:')}\n`;
+  return `set -eu\n${section('# Allowlist:')}\n${section('# Block structure, by DEPTH')}\n`;
 })();
 
 /** Run the real allowlist over a candidate snippet. */
@@ -113,5 +113,43 @@ describe('orthobio-apply-redirects allowlist', () => {
     ],
   ])('refuses %s', (_label, snippet) => {
     expect(accepts(snippet)).toBe(false);
+  });
+
+  /**
+   * The six snippets the PR #40 reviewer got past the previous gate, by running
+   * the very same extracted sections through `sh`. Each is pinned here so the
+   * fix is demonstrated rather than asserted.
+   *
+   * The first is the one that mattered: a single top-level `return` is valid
+   * nginx inside the vhost's `server {}`, so it 301s the WHOLE SITE, passes
+   * `nginx -t`, and therefore never triggers the rollback — the only bypass
+   * whose blast radius was a served config rather than a rejected one.
+   */
+  it.each([
+    ['a top-level return that would 301 the whole vhost', '    return 301 https://evil.example/;\n'],
+    ['a top-level if, outside any block', '    if ($arg_i = "a") { return 301 /x/; }\n'],
+    [
+      'a balanced pair that still closes the vhost block',
+      'location = /a {\n}\n}\nlocation = /b {\n',
+    ],
+    [
+      'a brace hidden in a comment, balancing the books nginx never reads',
+      'location = /a {\n    return 301 /b;\n}\n# {\n}\n',
+    ],
+    ['a protocol-relative target the browser resolves as external', 'location = /x { return 301 //evil.example/; }\n'],
+    ['a schemeless host as the target', 'location = /x { return 301 evil.example; }\n'],
+  ])('refuses the reviewer bypass: %s', (_label, snippet) => {
+    expect(accepts(snippet)).toBe(false);
+  });
+
+  it('still accepts the November migration target, which is a foreign host by design', () => {
+    // The absolute arm is a HOST ALLOWLIST, not a blanket ban: the platform
+    // migration redirects to doctor.school, and that must keep working.
+    expect(accepts('location = /program { return 301 https://doctor.school/orthobio-2027/program; }\n')).toBe(
+      true,
+    );
+    expect(accepts('location = /program { return 301 https://evil.example/orthobio-2027/program; }\n')).toBe(
+      false,
+    );
   });
 });

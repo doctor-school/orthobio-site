@@ -612,9 +612,15 @@ logos:
   # The encoder that produced the `object.sha256` pins below. Those pins are
   # exact bytes, and exact bytes are only reproducible on the same codec build:
   # a later libvips re-encodes the same pixels differently and every pin will
-  # look violated when nothing is wrong. Both the #22 rescue and the #39 re-trim
-  # ran on this build; `scripts/retrim-partner-logos.mjs` prints it and writes
-  # it to its index.json, so this line is copied, not typed from memory.
+  # look violated when nothing is wrong. `scripts/retrim-partner-logos.mjs`
+  # prints it and writes it to its index.json, so this line is copied, not
+  # typed from memory.
+  #
+  # Both rescues ran on this build, and that is checkable rather than asserted:
+  # vmeda.jpg and rnch-petrovskogo.jpg still carry their #22 bytes (this pass
+  # left them alone), and re-encoding their sources here with the #22 recipe —
+  # resize 240 inside + jpeg quality 88 mozjpeg — reproduces both objects
+  # exactly.
   tool: 'sharp 0.35.3 / libvips 8.18.3 (mozjpeg 0826579, libpng 1.6.58)'
   counters:
     objects: 49

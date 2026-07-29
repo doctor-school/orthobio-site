@@ -5,6 +5,10 @@
  * The metaball element is the brand's background motif: inline SVG (no CDN),
  * decorative, and rendered from lg upwards only — on a phone there is no white
  * air to place it in, and the design forbids laying it under dense text.
+ * It MUST stay inlined through this import. The asset ships `fill="currentColor"`
+ * so its colour is a token (`.ob-hero__pattern`), and the design bundle renders
+ * it as `<img src=…>` — porting that verbatim would paint a silent BLACK
+ * metaball, because `currentColor` in a referenced SVG never sees this page.
  * Slots: default = lead paragraphs, `cta`, `stats`, `statsNote` (the caption
  * that keeps the figures readable as PAST results, not 2027 promises).
  */

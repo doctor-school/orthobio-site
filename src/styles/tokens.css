@@ -34,14 +34,16 @@
   --ob-green-tint: #eef8e8;
 
   /* DELIBERATELY DECLARED WITHOUT A CONSUMER: --ob-green-deep, --ob-lime-tint,
-     --ob-green-tint (and --sp-9 / --shadow-card further down). They are ramp
-     members of the design bundle's own token files, and this file is their 1:1
-     port — the green/lime rungs exist so the ramps are symmetrical, not because
-     a component was dropped. Sky is the lead accent (brief §6.1), so green and
-     lime live in the identity layer (brand ribbon, metaball pattern, hero
-     overline) and own no tinted surface yet. Giving them one is a design
-     decision — it is made in Claude.design and ported here, never invented in a
-     CSS edit; deleting them would only make the next port re-add them. */
+     --ob-green-tint and --sp-9 further down. They are ramp members of the design
+     bundle's own token files, and this file is their 1:1 port — the green/lime
+     rungs exist so the ramps are symmetrical, not because a component was
+     dropped. Sky is the lead accent (brief §6.1), so green and lime live in the
+     identity layer (brand ribbon, metaball pattern, hero overline) and own no
+     tinted surface yet. Giving them one is a design decision — it is made in
+     Claude.design and ported here, never invented in a CSS edit; deleting them
+     would only make the next port re-add them.
+     TODO(Антон): оставить рампу целиком или вычистить незадействованные рунги —
+     решение владельца; код работает одинаково в обоих случаях. */
 
   /* Brand chrome ribbon — one token because the header and the footer must
      paint the SAME sequence; two copies of the stop list would drift the first
@@ -159,9 +161,10 @@
   --r-md: 10px;
   --r-lg: 16px;
   --r-pill: 999px;
-  /* The design's answer to «what shadow does a resting card carry»: none. Cards
-     therefore declare no box-shadow at all and only lift on hover, which is why
-     the token has no reference — see the note above the tints. */
+  /* The design's answer to «what shadow does a resting card carry»: none. Most
+     cards therefore declare no box-shadow at all and only lift on hover; the
+     token is referenced where a lift has to be undone by name (`.ob-pg__it`
+     on :active). */
   --shadow-card: none;
   --shadow-lift: 0 4px 16px oklch(0.21 0.02 250 / 0.08);
 

@@ -2,8 +2,11 @@
 /**
  * PhotoGrid — фотоотчёт года (bundle components/archive/PhotoGrid v2).
  *
- * Three things beyond a plain grid, all of them pure CSS/HTML (the site ships
- * zero client JS — AGENTS.md):
+ * Three things beyond a plain grid. All three are CSS/HTML and all three keep
+ * working with the module at the bottom of this file switched off — the one
+ * island this component ships is an upgrade, never a dependency, which is how
+ * it clears «no client-side JS by default» (AGENTS.md). What it adds and why
+ * only JS can add it: «`:target` alone is only half a modal», below.
  * • reportage grid: the first photo occupies a 2×2 cell from 640px up;
  * • everything past `visible` hides inside a native <details>, so a year with
  *   80 photos does not bury the sections under it;
@@ -18,18 +21,24 @@
  * requires width/height), which is what reserves layout space and keeps CLS at
  * zero; `displaySize()` caps the largest variant we ask sharp to produce.
  *
- * Known cost of `:target`, so the next reader does not file it as a defect —
- * none of the three is fixable without the client JS the brief forbids (§5):
- * • Escape does not close the lightbox, and neither does the Android Back
- *   gesture in the sense a modal implies — Back walks the fragment history
- *   backwards one photo at a time (open + n arrows = n+2 entries);
- * • focus is not trapped: Tab past the ✕/←/→ leaves the overlay and lands on
- *   page controls hidden behind the 93%-opaque scrim (WCAG 2.2 §2.4.11). The
- *   frames are the LAST children of `.ob-pg`, so the escape happens as late in
- *   the document order as the markup can push it, and the very first Tab after
- *   opening still lands on «Закрыть»;
- * • focus is not restored to the tile that opened the frame — closing returns
- *   to the gallery anchor, so the next Tab restarts at the first tile.
+ * `:target` alone is only half a modal — it paints one, but Escape did nothing,
+ * Tab walked straight off the ✕/←/→ onto page controls hidden behind the
+ * 93%-opaque scrim, and closing dropped focus at the gallery anchor instead of
+ * the tile the reader came from. The island at the bottom of this file closes
+ * that gap (Issue #32) and nothing else: it UPGRADES the CSS lightbox the way
+ * VideoCard's island upgrades its anchor. With no JS at all the fragment
+ * lightbox still opens and closes exactly as it always did.
+ *
+ * `aria-modal` is therefore written by the script and never by this template:
+ * the attribute promises that everything behind the scrim is unreachable, and
+ * nothing but a running focus trap makes that promise true.
+ *
+ * What navigating by fragment still costs, so the next reader does not file it
+ * as a defect: the Android Back gesture walks the history backwards one photo
+ * at a time (open + n arrows = n+2 entries) rather than dismissing the overlay,
+ * and closing returns the page to the gallery anchor rather than to the scroll
+ * position the frame was opened from. Escape reuses the ✕'s own navigation on
+ * purpose, so keyboard and pointer leave identical history and land identically.
  */
 import { Image } from 'astro:assets';
 
@@ -203,3 +212,156 @@ const altOf = (
     </div>
   )
 }
+
+<script>
+  /**
+   * The keyboard half of the `:target` lightbox (Issue #32).
+   *
+   * State lives in three facts the CSS cannot hold: which frame is open
+   * (`:target`), which tile opened it, and which control the reader should land
+   * on in the frame being navigated to. Everything else — showing, hiding,
+   * closing, the scroll lock — stays in `components.css`, so a failure to run
+   * this module costs the modality and nothing more.
+   *
+   * Delegated once per page like the VideoCard island: a year page renders one
+   * frame per photo, up to 80 of them by the design's own demo. Astro 6 inlines
+   * this import-less script into every page that uses the component, which is
+   * both why pages without a gallery ship zero JS and why a future
+   * `script-src 'self'` on `infra/nginx/new.orthobio.ru.conf` would need a hash
+   * or a real file here — the e2e suite runs against `astro preview` with no
+   * such headers and would stay green while this died in production.
+   */
+  const CLOSE = '.ob-pg__close';
+
+  /**
+   * The frame's tab stops, in document order — today ✕, ←, → and nothing else.
+   *
+   * Derived from what the BROWSER considers focusable rather than from a list
+   * of the elements that happen to be in there now, because the edges of this
+   * list are the edges of the trap: a `<button>` added to a frame tomorrow (a
+   * zoom, a download) would fall outside a hand-written `a[href]` selector, and
+   * the wrap would then fire one stop early and let Tab out onto the page
+   * behind the scrim — silently, with no markup obviously at fault.
+   *
+   * `tabIndex >= 0` is that browser answer in one property: it is 0 for an
+   * anchor with an href and for a button, −1 for the `<figure>`/`<img>` around
+   * them, and −1 for the backdrop, which carries an explicit `tabindex="-1"`
+   * because it is the ✕'s action without the ✕'s label.
+   */
+  const tabStops = (frame: HTMLElement) =>
+    [...frame.querySelectorAll<HTMLElement>('*')].filter(
+      (el) => el.tabIndex >= 0 && !el.hasAttribute('disabled'),
+    );
+
+  /** The tile that opened the overlay — kept across ←/→, because the reader
+   *  came from that photo and not from the one they walked to. */
+  let trigger: HTMLElement | null = null;
+  /** Which control to land on in the frame we are heading for. Landing on → again
+   *  after → is what makes «next, next, next» work at all. */
+  let landing = CLOSE;
+
+  const openFrame = () => document.querySelector<HTMLElement>('.ob-pg__lb:target');
+
+  document.addEventListener('click', (event) => {
+    // A modified or middle click opens the photo in another tab and leaves THIS
+    // one where it is — no navigation, no `hashchange`. Recording a trigger for
+    // it would leave a stale tile behind that `trigger ??=` then prefers over
+    // the real one, and the next Escape would hand focus to a photo the reader
+    // never opened. Same guard, same reason as the VideoCard island.
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    // Runs for keyboard activation too: Enter on an anchor dispatches a click.
+    const link = target.closest<HTMLAnchorElement>('a.ob-pg__it[href^="#"], a.ob-pg__nav');
+    if (!link) return;
+    if (link.classList.contains('ob-pg__nav')) {
+      landing = link.classList.contains('ob-pg__nav--next')
+        ? '.ob-pg__nav--next'
+        : '.ob-pg__nav--prev';
+    } else {
+      trigger = link;
+      landing = CLOSE;
+    }
+  });
+
+  /**
+   * Reconcile with the fragment. Called on every hash change and once at load,
+   * so a deep link straight into a frame is as operable as a click on a tile.
+   */
+  const sync = () => {
+    const frame = openFrame();
+    for (const stale of document.querySelectorAll('.ob-pg__lb[aria-modal]')) {
+      if (stale !== frame) stale.removeAttribute('aria-modal');
+    }
+
+    if (!frame) {
+      const back = trigger;
+      trigger = null;
+      landing = CLOSE;
+      if (!back) return;
+      // A DERIVED trigger can sit in the collapsed <details> that holds the
+      // tail of the gallery — deep-link to a photo past `visible`, press Esc,
+      // and `focus()` on a `display: none` tile does nothing at all, dropping
+      // the reader at the top of the document. Unreachable with today's content
+      // (12 photos against a floor of 11 + 3 keeps the disclosure unrendered)
+      // and one YAML edit away from being reachable, so the disclosure is
+      // opened rather than left to be rediscovered as a bug.
+      const disclosure = back.closest('details');
+      if (disclosure && !disclosure.open) disclosure.open = true;
+      // `preventScroll`: the navigation that closed the frame has already put
+      // the gallery anchor where the ✕ has always put it, and pulling the page
+      // to the tile instead would change what the pointer path does.
+      back.focus({ preventScroll: true });
+      return;
+    }
+
+    frame.setAttribute('aria-modal', 'true');
+    // A deep link has no trigger to remember, so derive one: exactly one tile
+    // points at any given frame.
+    trigger ??= document.querySelector<HTMLElement>(
+      `a.ob-pg__it[href="#${CSS.escape(frame.id)}"]`,
+    );
+    (frame.querySelector<HTMLElement>(landing) ?? tabStops(frame)[0])?.focus();
+  };
+
+  window.addEventListener('hashchange', sync);
+  /**
+   * The one-shot reconcile for a deep link cannot run at module time: Chrome
+   * resolves the document's target element as part of the post-load scroll to
+   * the fragment, so at `readyState: interactive` — when this deferred module
+   * runs — `:target` matches nothing and the frame is still `display: none`,
+   * which silently makes the `focus()` below a no-op. `load` is the first
+   * moment the CSS lightbox is actually open. Every later transition arrives
+   * through `hashchange`, which fires after the fragment is applied.
+   */
+  if (document.readyState === 'complete') sync();
+  else window.addEventListener('load', sync, { once: true });
+
+  document.addEventListener('keydown', (event) => {
+    const frame = openFrame();
+    if (!frame) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      // Escape IS the ✕ — the same navigation, so both produce one history
+      // entry and the same landing anchor.
+      frame.querySelector<HTMLAnchorElement>(CLOSE)?.click();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const stops = tabStops(frame);
+    if (stops.length === 0) return;
+    const first = stops[0];
+    const last = stops[stops.length - 1];
+    const active = document.activeElement;
+    // Off the trailing edge, or adrift outside the overlay entirely (the frame
+    // that had focus is `display: none` the moment the fragment moves on).
+    if (!frame.contains(active) || active === (event.shiftKey ? first : last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
+  });
+</script>

@@ -1811,6 +1811,24 @@ details[open] > .ob-faq__q::after {
   .ob-yh__pattern {
     display: block;
   }
+
+  /* …and where it IS shown, the copy keeps out of its strip. Hiding the layer
+     on phones alone left the same defect on a wide window with a long line:
+     2026's venue line («…отель „Холидей Инн Москва Сокольники“ (Русаковская
+     ул., 24…») ran to 912px at 1024 while the layer starts at 824 — 10 sampled
+     points inside that line box landed on the painted shape, and no amount of
+     staring at 2025 would have shown it.
+
+     A reserve, not a nudge to the layer's own coordinates, because the header
+     is one template over per-year content: the next year's venue can be longer
+     again, and only a copy that CANNOT reach the strip is safe for text nobody
+     has written yet. 180px is the worst case with 4px to spare — the layer sits
+     at «viewport − 200px» while the container's content edge is at «viewport −
+     24px» up to 1248px wide (a 176px bite), and above that the capped 1200px
+     container pulls away from the layer faster than the layer moves right. */
+  .ob-yh__in > * {
+    max-width: calc(100% - 180px);
+  }
 }
 
 .ob-yh__in {

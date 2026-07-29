@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { ROUTES } from './_routes';
+import { ROUTES, YEAR_ROUTES } from './_routes';
 import { expectNoOverflow, measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
 
@@ -197,8 +197,14 @@ test.describe('responsive', () => {
    * placement), so the strip it occupies is «viewport − 200px» and eats into
    * the text column as soon as the window is narrow: at 360px it started at
    * 160px while the copy ran to 328px — 168px of the year number, the H1 and
-   * the dates painted over. The band's own copy sets the bar, one probe run per
-   * width across the full canonical ladder.
+   * the dates painted over.
+   *
+   * EVERY year route, not the one page a screenshot was taken of: the header is
+   * one template over per-year content, and the length of its copy is the whole
+   * question. 2026 proved it — its venue line («…отель „Холидей Инн Москва
+   * Сокольники“ (Русаковская ул., 24…») runs 300px longer than 2025's date line
+   * and walked straight into the layer at 1024 while 2025 was clean. A guard
+   * pinned to one year would have kept passing.
    *
    * Below 1024 the assertion is «hidden OR clear», not «hidden»: the guard
    * exists to protect the copy, and a future placement that keeps the motif on
@@ -206,40 +212,47 @@ test.describe('responsive', () => {
    * layer must be THERE and clear — otherwise deleting the decoration outright
    * would pass this suite.
    */
-  for (const width of OVERFLOW_WIDTHS) {
-    test(`the year header pattern stays off the header copy at ${width}px`, async ({ page }) => {
-      const { textRight, patterns } = await probePattern(page, {
-        path: '/archive/2025',
-        band: '.ob-yh',
-        selectors: ['.ob-yh__pattern'],
-        width,
-      });
-      expect(textRight).toBeGreaterThan(0);
-      const [p] = patterns;
+  for (const path of YEAR_ROUTES) {
+    for (const width of OVERFLOW_WIDTHS) {
+      test(`the year header pattern stays off the copy of ${path} at ${width}px`, async ({
+        page,
+      }) => {
+        const { textRight, patterns } = await probePattern(page, {
+          path,
+          band: '.ob-yh',
+          selectors: ['.ob-yh__pattern'],
+          width,
+        });
+        expect(textRight).toBeGreaterThan(0);
+        const [p] = patterns;
 
-      if (width >= 1024) {
+        if (width >= 1024) {
+          expect(
+            p.display,
+            `${p.selector} is "${p.display}" at ${width}px — the year header must keep the brand ` +
+              `motif at the widths that have room for it`,
+          ).toBe('block');
+          expect(p.pathFound, `${p.selector} has no <path> — the probe measured nothing`).toBe(
+            true,
+          );
+        }
+
+        if (p.display === 'none') return;
+
         expect(
-          p.display,
-          `${p.selector} is "${p.display}" at ${width}px — the year header must keep the brand ` +
-            `motif at the widths that have room for it`,
-        ).toBe('block');
-        expect(p.pathFound, `${p.selector} has no <path> — the probe measured nothing`).toBe(true);
-      }
-
-      if (p.display === 'none') return;
-
-      expect(
-        p.hits,
-        `${p.selector} paints over ${p.hits} of ${p.samples} points sampled inside year-header ` +
-          `line boxes at ${width}px — decorative artwork is sitting under the copy`,
-      ).toBe(0);
-      expect(
-        p.left,
-        `${p.selector} starts at ${Math.round(p.left)}px while the widest line of the year ` +
-          `header ends at ${Math.round(textRight)}px — the decorative layer is crowding the ` +
-          `text column at ${width}px`,
-      ).toBeGreaterThanOrEqual(textRight);
-    });
+          p.hits,
+          `${p.selector} paints over ${p.hits} of ${p.samples} points sampled inside the ` +
+            `${path} header's line boxes at ${width}px — decorative artwork is sitting under ` +
+            `the copy`,
+        ).toBe(0);
+        expect(
+          p.left,
+          `${p.selector} starts at ${Math.round(p.left)}px while the widest line of the ${path} ` +
+            `header ends at ${Math.round(textRight)}px — the decorative layer is crowding the ` +
+            `text column at ${width}px`,
+        ).toBeGreaterThanOrEqual(textRight);
+      });
+    }
   }
 
   // Same blind spot on the year page: every guard above measures the gallery

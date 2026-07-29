@@ -1434,7 +1434,7 @@ html:has(.ob-pg__lb:target) {
     border-color var(--t-state);
 }
 
-/* Not qualified with `a`: the embeddable card is a <div> holding a <button>. */
+/* Not qualified with `a`: once the player loads, the card is a <div>. */
 .ob-vc:hover {
   box-shadow: var(--shadow-lift);
   border-color: var(--hairline-strong);
@@ -1443,27 +1443,6 @@ html:has(.ob-pg__lb:target) {
 
 .ob-vc:active {
   border-color: var(--ob-sky);
-}
-
-/* Facade trigger of the click-to-load player: a button that must look like the
-   plate it replaces, so every UA button default is stripped. */
-.ob-vc__btn {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-/* The card clips its corners (`overflow: hidden`), which would eat the global
-   outer focus ring — so this one is drawn inside the button. */
-.ob-vc__btn:focus-visible {
-  box-shadow: none;
-  outline: 3px solid var(--focus-ring);
-  outline-offset: -3px;
 }
 
 .ob-vc__frame {
@@ -1485,8 +1464,7 @@ html:has(.ob-pg__lb:target) {
 }
 
 .ob-vc:hover .ob-vc__play,
-.ob-vc:focus-visible .ob-vc__play,
-.ob-vc__btn:focus-visible .ob-vc__play {
+.ob-vc:focus-visible .ob-vc__play {
   background: var(--ds-blue-dark);
 }
 

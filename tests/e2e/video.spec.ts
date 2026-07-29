@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
 import { expectNoColumnOverlap } from './_layout';
 
@@ -8,20 +8,26 @@ import { expectNoColumnOverlap } from './_layout';
  * The provider is stubbed: what is under test is our swap — that the click
  * yields an in-page frame pointed at the right video and never a navigation —
  * and a suite that depends on Rutube being reachable would fail for reasons
- * that have nothing to do with this repo.
+ * that have nothing to do with this repo. The stub is installed on the CONTEXT,
+ * not the page, so a modified click that opens a second tab is covered too.
  */
-const stubProvider = async (page: import('@playwright/test').Page) => {
-  await page.route('https://rutube.ru/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub' }),
-  );
-};
+const WATCH_URL = 'https://rutube.ru/video/15094348253029651341d677331f4515/';
+const EMBED_URL = 'https://rutube.ru/play/embed/15094348253029651341d677331f4515/?autoplay=true';
+
+const stubProvider = (page: Page) =>
+  page
+    .context()
+    .route('https://rutube.ru/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>stub' }),
+    );
 
 test('a Rutube card loads the player in place, without leaving the page', async ({ page }) => {
   await stubProvider(page);
   await page.goto('/archive/2025');
 
-  const facade = page.locator('button[data-ob-video]').first();
-  await expect(facade).toHaveAccessibleName(/Смотреть на странице/);
+  const facade = page.locator('a[data-ob-video]').first();
+  // The name is the card's own text; nothing about it is authored.
+  await expect(facade).toHaveAccessibleName(/Отчетный ролик конгресса 2025/);
   // Nothing embedded before the click: eight frames on a year page is the cost
   // the facade exists to avoid.
   await expect(page.locator('iframe')).toHaveCount(0);
@@ -29,22 +35,23 @@ test('a Rutube card loads the player in place, without leaving the page', async 
   await facade.click();
 
   const frame = page.locator('iframe.ob-vc__frame');
-  await expect(frame).toHaveAttribute(
-    'src',
-    'https://rutube.ru/play/embed/15094348253029651341d677331f4515/?autoplay=true',
-  );
+  await expect(frame).toHaveAttribute('src', EMBED_URL);
   // A frame without a name is an unlabelled region for a screen reader.
   await expect(frame).toHaveAttribute('title', /\S/);
   expect(page.url()).toContain('/archive/2025');
   // The sibling cards are untouched: one click loads one player.
-  await expect(page.locator('button[data-ob-video]')).toHaveCount(2);
+  await expect(page.locator('a[data-ob-video]')).toHaveCount(2);
+  // The caption survives the swap — it is moved, not re-rendered.
+  await expect(page.locator('.ob-vc__frame + .ob-vc__title')).toHaveText(
+    /Отчетный ролик конгресса 2025/,
+  );
 });
 
 test('the facade is keyboard-operable and keeps focus in the player', async ({ page }) => {
   await stubProvider(page);
   await page.goto('/archive/2025');
 
-  const facade = page.locator('button[data-ob-video]').first();
+  const facade = page.locator('a[data-ob-video]').first();
   await facade.focus();
   await expect(facade).toBeFocused();
   await page.keyboard.press('Enter');
@@ -54,6 +61,47 @@ test('the facade is keyboard-operable and keeps focus in the player', async ({ p
   // The activated element is gone; without an explicit move, focus falls back
   // to <body> and a keyboard user restarts at the top of the document.
   await expect(frame).toBeFocused();
+});
+
+/**
+ * Progressive enhancement is the whole point of the anchor: the island may not
+ * run (a proxy that strips `type="module"`, an extension, a future
+ * `script-src 'self'` CSP), and the video must still be reachable when it does
+ * not. This is the regression for the review finding on PR #30.
+ */
+test.describe('without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('the card is still a working link to the video', async ({ page }) => {
+    await stubProvider(page);
+    await page.goto('/archive/2025');
+
+    const card = page.locator('a[data-ob-video]').first();
+    await expect(card).toHaveAttribute('href', WATCH_URL);
+    await expect(card).toBeVisible();
+    // Nothing was swapped in, and nothing pretends it was.
+    await expect(page.locator('iframe')).toHaveCount(0);
+    // Every video on the page is reachable, not just the first.
+    await expect(page.locator('a.ob-vc[href^="https://rutube.ru/video/"]')).toHaveCount(3);
+
+    // «Has an href» is not the claim; «the visitor gets to the video» is.
+    await card.click();
+    await page.waitForURL(WATCH_URL);
+    expect(page.url()).toBe(WATCH_URL);
+  });
+});
+
+test('a modified click is left to the browser, not swallowed by the island', async ({ page }) => {
+  // Ctrl-click, ⌘-click and middle-click are how a physician opens the video in
+  // a background tab; an unguarded preventDefault() kills all three silently.
+  await stubProvider(page);
+  await page.goto('/archive/2025');
+
+  const card = page.locator('a[data-ob-video]').first();
+  await card.click({ modifiers: ['ControlOrMeta'] });
+
+  await expect(page.locator('iframe.ob-vc__frame')).toHaveCount(0);
+  await expect(page.locator('a[data-ob-video]')).toHaveCount(3);
 });
 
 /**
@@ -72,7 +120,7 @@ test.describe('the loaded player holds the layout', () => {
       const before = await measureOverflow(page);
       expect(before, `/archive/2025 already overflows at ${width}px`).toBeLessThanOrEqual(0);
 
-      await page.locator('button[data-ob-video]').first().click();
+      await page.locator('a[data-ob-video]').first().click();
       const frame = page.locator('iframe.ob-vc__frame');
       await expect(frame).toBeVisible();
 
@@ -96,7 +144,7 @@ test('a YouTube card stays an outbound link and says so', async ({ page }) => {
   // 20 of 23 archive videos are YouTube-hosted, which the RF cannot rely on —
   // those cards must not pretend to embed.
   await page.goto('/archive/2021');
-  await expect(page.locator('button[data-ob-video]')).toHaveCount(0);
+  await expect(page.locator('a[data-ob-video]')).toHaveCount(0);
 
   const card = page.locator('a.ob-vc').first();
   await expect(card).toHaveAttribute('href', /youtube\.com|youtu\.be/);

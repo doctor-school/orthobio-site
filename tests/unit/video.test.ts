@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { videoEmbedSrc } from '@/lib/video';
+import { ALLOWED_VIDEO_HOSTS } from '@/content/schemas';
 
 /**
  * The click-to-load facade lives or dies by this derivation: a wrong embed URL
@@ -47,6 +48,25 @@ describe('videoEmbedSrc', () => {
     'https://youtu.be/c-RvCZ2GPKM',
   ])('refuses to embed YouTube (%s)', (url) => {
     expect(videoEmbedSrc(url)).toBeNull();
+  });
+
+  /**
+   * The hostname check here and `ALLOWED_VIDEO_HOSTS` in the content schema are
+   * two lists that must agree, with nothing connecting them. Widen the schema
+   * to a mirror or `www.rutube.ru` and the YAML validates, the build succeeds,
+   * the badge still reads «Rutube» — and the card silently downgrades to an
+   * outbound link that nobody is looking at. This is the alarm for that.
+   */
+  it('embeds every Rutube host the content schema admits', () => {
+    const rutubeHosts = ALLOWED_VIDEO_HOSTS.filter((h) => h.includes('rutube'));
+    expect(rutubeHosts.length).toBeGreaterThan(0);
+    for (const host of rutubeHosts) {
+      expect(
+        videoEmbedSrc(`https://${host}/video/938e909c140c9d918077ebcfa366e3d5/`),
+        `${host} is an allowed video host but yields no embed — the card would ` +
+          `render as an outbound link with no error anywhere`,
+      ).not.toBeNull();
+    }
   });
 
   it.each([

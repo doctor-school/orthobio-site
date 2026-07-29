@@ -110,60 +110,94 @@ test('every partner tier opens with its marker, in the design’s colour', async
   expect(accents.size, 'sky / green / lime must stay three different colours').toBe(3);
 });
 
-test('the marker stays on the first line of its heading at 360px', async ({ page }) => {
-  /**
-   * The narrow-viewport regression this component actually had. /partners
-   * appends the year to every tier label, so it carries the longest headings on
-   * the site («Информационные партнёры · 2026»); at 360px that heading is 315px
-   * wide against 328px of content box. While the marker was a flex ITEM of
-   * `.ob-pt__h` — the shape the design bundle draws — the heading no longer fit
-   * beside it, `flex-wrap` moved the heading to the next flex line, and the dot
-   * was left stranded on a line of its own, 28px above the words it marks.
-   * Inline inside the heading it cannot be separated from the text at any
-   * width, and this is what proves it.
-   */
-  await page.setViewportSize({ width: 360, height: 900 });
-  await page.goto('/partners');
+/**
+ * Phone geometry of the marker, on the page that carries the site's longest tier
+ * headings: /partners appends the year to every label («Информационные партнёры
+ * · 2026» — 336.5px of text).
+ *
+ * Three things go wrong on a 328px row if the marker is built naively, and all
+ * three were seen while building it:
+ *
+ * • as a flex ITEM of `.ob-pt__h` — the shape the bundle draws — the heading no
+ *   longer fits beside it, the row wraps, and the dot is stranded on a line of
+ *   its own 28px above the words it marks;
+ * • as an IN-FLOW marker inside the heading it eats 19px of the text's own
+ *   width, which is more slack than these labels have;
+ * • hung too far into the page gutter (16px on a phone) it is clipped by the
+ *   screen edge.
+ *
+ * So: on the first line, inside the viewport, with the count still beside the
+ * heading rather than stranded below it. 390 is here as well as 360 because the
+ * cliff it guards is 1.5px wide at 390 and does not exist at 360.
+ */
+for (const width of [360, 390]) {
+  test(`the marker holds the heading row at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/partners');
+    // Every number below is a text measurement, and Inter is self-hosted and
+    // wider than the fallback: measured before the font swaps, «Стратегические
+    // партнёры · 2026» reads 295.8px instead of 316.6px — enough to fit a row
+    // that does not fit in the shipped page.
+    await page.evaluate(() => document.fonts.ready);
 
-  const rows = await page.evaluate(() =>
-    [...document.querySelectorAll('.ob-pt__title')].map((title) => {
-      const dot = title.querySelector('.ob-pt__dot');
-      const dotBox = dot?.getBoundingClientRect();
-      /**
-       * The FIRST LINE BOX of the heading text — not the heading's own box.
-       * `getClientRects()` on the <h3> is a single border-box rect (it is a
-       * block), which a stranded marker would still fall inside; a Range over
-       * the text node returns one rect PER LINE, which is the geometry the
-       * assertion is actually about.
-       */
-      const text = [...title.childNodes].find(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
-      );
-      const range = document.createRange();
-      if (text) range.selectNodeContents(text);
-      const lines = text ? [...range.getClientRects()] : [];
-      return {
-        text: title.textContent?.trim() ?? '',
-        dot: dotBox ? { width: dotBox.width, height: dotBox.height } : null,
-        dotCentre: dotBox ? dotBox.top + dotBox.height / 2 : null,
-        lineCount: lines.length,
-        line: lines[0] ? { top: lines[0].top, bottom: lines[0].bottom } : null,
-      };
-    }),
-  );
-
-  expect(rows.length, '/partners must render its 2026 tiers').toBeGreaterThan(3);
-  for (const row of rows) {
-    expect(row.dot, `«${row.text}» must carry a marker`).not.toBeNull();
-    expect(row.line, `«${row.text}» must have a measurable first line`).not.toBeNull();
-    expect(row.dot?.width, `«${row.text}» marker width at 360px`).toBeCloseTo(9, 0);
-    expect(row.dot?.height, `«${row.text}» marker height at 360px`).toBeCloseTo(9, 0);
-    expect(
-      row.dotCentre,
-      `«${row.text}»: the marker must sit on the first line of the heading`,
-    ).toBeGreaterThan(row.line?.top ?? 0);
-    expect(row.dotCentre, `«${row.text}»: the marker must not float below`).toBeLessThan(
-      row.line?.bottom ?? 0,
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('.ob-pt__h')].map((header) => {
+        const title = header.querySelector('.ob-pt__title');
+        const dot = title?.querySelector('.ob-pt__dot');
+        const count = header.querySelector('.ob-pt__count');
+        const dotBox = dot?.getBoundingClientRect();
+        /**
+         * The FIRST LINE BOX of the heading text — not the heading's own box.
+         * `getClientRects()` on the <h3> is a single border-box rect (it is a
+         * block), which a stranded marker would still fall inside; a Range over
+         * the text node returns one rect PER LINE, which is the geometry these
+         * assertions are actually about.
+         */
+        const text = [...(title?.childNodes ?? [])].find(
+          (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim(),
+        );
+        const range = document.createRange();
+        if (text) range.selectNodeContents(text);
+        const lines = text ? [...range.getClientRects()] : [];
+        const countBox = count?.getBoundingClientRect();
+        return {
+          text: text?.textContent?.trim() ?? '',
+          dot: dotBox ? { width: dotBox.width, height: dotBox.height, x: dotBox.x } : null,
+          dotCentre: dotBox ? dotBox.top + dotBox.height / 2 : null,
+          line: lines[0] ? { top: lines[0].top, bottom: lines[0].bottom } : null,
+          count: countBox ? { top: countBox.top, bottom: countBox.bottom } : null,
+        };
+      }),
     );
-  }
-});
+
+    expect(rows.length, '/partners must render its 2026 tiers').toBeGreaterThan(3);
+    for (const row of rows) {
+      const where = `«${row.text}» @${width}`;
+      expect(row.dot, `${where}: must carry a marker`).not.toBeNull();
+      expect(row.line, `${where}: must have a measurable first line`).not.toBeNull();
+      expect(row.dot?.width, `${where}: marker width`).toBeCloseTo(9, 0);
+      expect(row.dot?.height, `${where}: marker height`).toBeCloseTo(9, 0);
+
+      // On the first line of the heading — never stranded above it, never
+      // drifting to the middle of a label that wrapped.
+      expect(row.dotCentre, `${where}: the marker must sit on the first line`).toBeGreaterThan(
+        row.line?.top ?? 0,
+      );
+      expect(row.dotCentre, `${where}: the marker must not float below`).toBeLessThan(
+        row.line?.bottom ?? 0,
+      );
+
+      // Whole marker inside the viewport: it hangs into the page gutter, and
+      // that gutter is only 16px on a phone.
+      expect(row.dot?.x, `${where}: the marker must not be clipped by the edge`).toBeGreaterThan(0);
+
+      // The count belongs to the heading, not to a line of its own underneath.
+      expect(row.count?.top, `${where}: the count must stay beside the heading`).toBeLessThan(
+        row.line?.bottom ?? 0,
+      );
+      expect(row.count?.bottom, `${where}: the count must stay beside the heading`).toBeGreaterThan(
+        row.line?.top ?? 0,
+      );
+    }
+  });
+}

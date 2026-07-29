@@ -1020,12 +1020,23 @@ a.ob-yc:active {
   margin-bottom: var(--sp-6);
 }
 
+/* `nowrap` — which is also what the bundle declares (it sets no `flex-wrap` at
+   all); the `wrap` this rule used to carry was added by the port.
+
+   Wrapping here is a cliff, not a safety net. The heading is ONE flex item, so
+   the row can only ever break between the heading and its count, and the count
+   then lands alone on a line of its own — which is what `main` already does at
+   360px to «Стратегические партнёры · 2026» (316.6px of heading against 328px
+   of row), before Issue #27 put anything else in the row. Under `nowrap` the
+   heading shrinks and its own TEXT wraps instead: the count keeps its place
+   beside the first line, and the row degrades a word at a time instead of
+   jumping at one width. */
 .ob-pt__h {
   display: flex;
   align-items: baseline;
   gap: 10px;
   margin: 0 0 var(--sp-3);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* Tier marker — bundle `components/partners/PartnerTier` (Issue #27).
@@ -1041,21 +1052,32 @@ a.ob-yc:active {
    is the whole point; the pairs are pinned in
    tests/unit/partner-tier-markers.test.ts and painted in tests/e2e/identity.spec.ts.
 
-   Inline rather than a flex item (see PartnerTier.astro for why): it therefore
-   aligns like a glyph. `vertical-align: middle` puts its centre half an
-   x-height above the baseline — where the optical centre of the heading's
-   capitals is — instead of on the baseline, where an empty inline box would
-   otherwise sit.
+   A HANGING marker, taken out of flow: the bundle spends 19px of the heading
+   row on it (a 9px flex item plus the row's 10px gap), and this site's longest
+   tier headings do not have 19px to spare — /partners appends the year to every
+   label, and at 360px «Стратегические партнёры · 2026» measures 316.6px inside
+   a 328px container. An in-flow marker spent that slack and pushed headings
+   onto a second line. Out of flow it costs the text 9px instead of 19: the
+   heading reserves the full 19px as padding and gives 10px of it straight back
+   with a negative margin, so the marker overhangs the column into the page
+   gutter (`--container-pad` is 16px at its narrowest, so the dot always lands
+   inside the viewport) and only the 9px it truly occupies is taken from the
+   words.
+
+   `top` puts it on the FIRST line of the heading, not the middle of the box:
+   `1em` here is `--fs-h3` (`.ob-pt__title` sets it for both the h2 and the h3
+   spelling), so the expression is the first line box minus the dot, halved —
+   the marker stays beside the first line when a long label wraps to two.
 
    9px and 10px are literals, not tokens: this is a decorative diameter and the
    space that follows it, not a step of the 4px spacing ramp (`--sp-2` is 8px
    and would round the marker down). Same values as the bundle. */
 .ob-pt__dot {
-  display: inline-block;
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc((1em * var(--lh-h3) - 9px) / 2);
   width: 9px;
   height: 9px;
-  margin-inline-end: 10px;
-  vertical-align: middle;
   border-radius: var(--r-pill);
   /* Fallback for a tier added to the schema before its rung is designed: a
      neutral marker rather than an invisible 9px hole. */
@@ -1090,14 +1112,26 @@ a.ob-yc:active {
   background: var(--hairline);
 }
 
+/* Positioning context and the marker's hanging slot: 19px reserved, 10px of it
+   handed back to the row so the dot overhangs the column instead of pushing the
+   text (see .ob-pt__dot). `min-width: 0` is what lets the heading SHRINK now
+   that the row no longer wraps — without it a flex item refuses to go below its
+   min-content width and the count would be pushed out of the container. */
 .ob-pt__title {
+  position: relative;
+  padding-inline-start: 19px;
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
   font-weight: var(--fw-semibold);
   margin: 0;
+  margin-inline-start: -10px;
+  min-width: 0;
 }
 
+/* Never the item that gives way: it is two glyphs, and shrinking it would break
+   «16» across two lines while the heading beside it still had room. */
 .ob-pt__count {
+  flex: none;
   font-size: var(--fs-small);
   color: var(--text-muted);
 }

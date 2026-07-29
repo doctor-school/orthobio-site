@@ -19,11 +19,13 @@
  *   tier→token map belongs in components.css (AGENTS.md → Code style forbids
  *   inline `style=`) and is pinned in tests/unit/partner-tier-markers.test.ts;
  * • the dot lives INSIDE the heading, where the bundle makes it a flex sibling
- *   of it. As a sibling it is a flex item of `.ob-pt__h`, and that row wraps
- *   (long labels): measured at 360px on /partners, «Информационные партнёры ·
- *   2026» pushed the heading to the next flex line and left the marker
- *   stranded on a line of its own. Inline in the heading it rides the first
- *   line of the text and cannot be separated from it at any width.
+ *   of it, and hangs out of the text flow (see `.ob-pt__dot` in
+ *   components.css). As a flex sibling it is an item of `.ob-pt__h`, and on a
+ *   phone that row has no room for it: measured at 360px on /partners,
+ *   «Информационные партнёры · 2026» pushed the heading onto the next flex
+ *   line and left the marker stranded there alone. Owned by the heading and
+ *   hung in the gutter, it rides the first line of the text at every width and
+ *   costs those words 9px instead of the bundle's 19.
  *
  * The dot is decoration — the tier is spelled out in the heading it sits in —
  * so it is `aria-hidden`, which also keeps it out of the heading's accessible

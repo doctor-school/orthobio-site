@@ -28,8 +28,12 @@ pnpm typecheck      # astro check + tsc --noEmit (строгий TS)
 pnpm test:e2e       # Playwright: overflow-лестница + axe на каждый маршрут
 ```
 
-`pnpm test:e2e` сам собирает проект и поднимает `astro preview` на порту 4331
-(первый запуск: `pnpm exec playwright install chromium`).
+`pnpm test:e2e` сам собирает проект и поднимает `astro preview`
+(первый запуск: `pnpm exec playwright install chromium`). Порт вычисляется из
+абсолютного пути checkout'а (hash → 10240–32767), поэтому параллельные прогоны
+в разных git worktree не переиспользуют чужой сервер с чужой сборкой. Явно
+задать: `PW_PORT=4331` (свой сервер на фиксированном порту) или
+`PW_BASE_URL=http://localhost:4331` (тесты против уже запущенного сервера).
 
 Контент годов конгресса — YAML-файлы `src/content/congress/<year>.yaml`;
 схема и правила заполнения: `src/content/schemas.ts` + документированный

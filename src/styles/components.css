@@ -1634,10 +1634,13 @@ html:has(.ob-pg__lb:target) {
   text-transform: uppercase;
 }
 
-/* Sibling selector, so the pill appears only on the cards that actually have a
-   poster behind the badge — over the bare ink plate the recessed grey is the
-   design's own value and needs no plate of its own (--scrim-video-badge). */
-.ob-vc__poster ~ .ob-vc__host {
+/* Only the cards that actually have a poster behind the badge get the pill —
+   over the bare ink plate the recessed grey is the design's own value and needs
+   no plate of its own (--scrim-video-badge). `:has()` and not `.ob-vc__poster ~
+   .ob-vc__host`: the condition is «this facade has a poster», not «the badge
+   comes after the img», and the sibling form would silently drop the pill the
+   day someone reorders the facade. */
+.ob-vc__facade:has(.ob-vc__poster) .ob-vc__host {
   top: 8px;
   left: 8px;
   padding: 2px 8px;

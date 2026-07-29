@@ -64,14 +64,16 @@ const withPoster = videos.filter((v) => v.poster).map((v) => ({ ...v, poster: v.
 
 const manifest = parse(readFileSync(MANIFEST, 'utf8')) as {
   video_posters: {
-    counters: { videos: number; objects: number };
+    counters: { videos: number; objects: number; original_bytes: number; object_bytes: number };
     items: {
       id: string;
+      year: number;
       video: string;
       source: string;
       s3_key: string;
       s3_status: string;
-      object: { w: number; h: number };
+      original: { bytes: number };
+      object: { w: number; h: number; bytes: number };
     }[];
   };
 };
@@ -205,6 +207,27 @@ describe('manifest and content agree on what was uploaded', () => {
   it('has no uploaded object nobody references — that frame would be invisible', () => {
     const referenced = new Set(withPoster.map((v) => v.poster.url));
     expect(manifestPaths.filter((k) => !referenced.has(k))).toEqual([]);
+  });
+
+  it('files each poster under the year whose page actually shows it', () => {
+    /**
+     * `year` is provenance, and provenance is the one field nothing else
+     * constrains: an item could say 2023 about a 2022 poster and every other
+     * assertion would still pass. This is the «15/16 апреля» trap of ТЗ §3 in
+     * its poster form — the manifest's whole job is to be the record that
+     * outlives i.ytimg.com, so a wrong year in it is a wrong answer forever.
+     */
+    const yearOf = new Map(videos.map((v) => [v.url, v.year]));
+    for (const item of manifest.video_posters.items) {
+      expect(item.year, `${item.id} (${item.video})`).toBe(yearOf.get(item.video));
+    }
+  });
+
+  it('adds its counters up — they are a summary, not a second opinion', () => {
+    const sum = (pick: (i: (typeof manifest.video_posters.items)[number]) => number) =>
+      manifest.video_posters.items.reduce((total, i) => total + pick(i), 0);
+    expect(manifest.video_posters.counters.object_bytes).toBe(sum((i) => i.object.bytes));
+    expect(manifest.video_posters.counters.original_bytes).toBe(sum((i) => i.original.bytes));
   });
 
   it('records where each frame came from, so the rescue stays auditable', () => {

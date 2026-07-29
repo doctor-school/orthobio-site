@@ -152,12 +152,30 @@ test.describe('the loaded player holds the layout', () => {
 test.describe('poster frames', () => {
   const BUCKET_POSTERS = 'https://s3.twcstorage.ru/orthobio-media/posters/';
 
+  /**
+   * A 16×9 WebP, 48 bytes, standing in for the bucket. The suite's claim is
+   * about OUR markup — right host, reserved box, no foreign request — and none
+   * of that is evidence about Timeweb's uptime. Served locally so the run
+   * cannot go red because a bucket in another country hiccuped, or because the
+   * runner has no egress to an RU host; the one test that does need the live
+   * object says so in its name and skips when the host is unreachable.
+   */
+  const STUB_WEBP = Buffer.from(
+    'UklGRigAAABXRUJQVlA4IBwAAABwAQCdASoQAAkABUB8JZQCdAFAAAD+73QKv0gA',
+    'base64',
+  );
+  const stubBucket = (page: Page) =>
+    page.route(`${BUCKET_POSTERS}*`, (route) =>
+      route.fulfill({ status: 200, contentType: 'image/webp', body: STUB_WEBP }),
+    );
+
   test('every card paints a poster served from our own bucket', async ({ page }) => {
     const foreign: string[] = [];
     page.on('request', (r) => {
       const { hostname } = new URL(r.url());
       if (/ytimg|rtbcdn|youtube|rutube/.test(hostname)) foreign.push(r.url());
     });
+    await stubBucket(page);
 
     // 2022 is the densest year: 8 videos, 5 of them behind the disclosure.
     await page.goto('/archive/2022');
@@ -176,20 +194,58 @@ test.describe('poster frames', () => {
     await expect(first).toHaveAttribute('width', /^\d+$/);
     await expect(first).toHaveAttribute('height', /^\d+$/);
 
+    // Decodes into a real image — the `src` is wired to an <img> the browser
+    // accepts, not merely to a string in the DOM.
     await first.scrollIntoViewIfNeeded();
     await expect
       .poll(() => first.evaluate((img: HTMLImageElement) => img.naturalWidth))
       .toBeGreaterThan(0);
 
+    // Over a frame the host badge gets its scrim pill, so its contrast stops
+    // depending on whatever the photograph shows. The rule is keyed on
+    // `:has(.ob-vc__poster)` — a card without a poster must NOT get the pill,
+    // and there is no CSS test but this one.
+    const badgeBg = await page
+      .locator('.ob-vc__host')
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(badgeBg).not.toBe('rgba(0, 0, 0, 0)');
+
     // The whole point of the rescue: not one request leaves for a provider.
     expect(foreign).toEqual([]);
   });
 
+  /**
+   * The one assertion that genuinely needs the live bucket, kept separate so a
+   * red run names its own cause. A 404 or a truncated object FAILS — that is a
+   * broken card. An unreachable host SKIPS: the media host being down (or
+   * firewalled off from the runner) is not a defect in the diff under test.
+   */
+  test('@network the bucket really serves the frame the card points at', async ({
+    page,
+    request,
+  }) => {
+    const url = `${BUCKET_POSTERS}rt-15094348253029651341d677331f4515.webp`;
+    const probe = await request.get(url, { timeout: 10_000 }).catch(() => null);
+    test.skip(probe === null, 'no egress to s3.twcstorage.ru — media uptime is not this suite’s claim');
+    expect(probe!.status(), `${url} must be a live public object`).toBe(200);
+    expect(probe!.headers()['content-type']).toBe('image/webp');
+
+    await page.goto('/archive/2025');
+    const first = page.locator('a.ob-vc img.ob-vc__poster').first();
+    await first.scrollIntoViewIfNeeded();
+    await expect
+      .poll(() => first.evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBeGreaterThan(0);
+  });
+
   test('the dark plate survives underneath as the poster-less fallback', async ({ page }) => {
-    // No published year has a poster-less video, so the fallback cannot be
-    // observed directly. What CAN be observed is that the poster covers the
-    // plate rather than replacing it — the plate is still painted, and a card
-    // that loses its <img> lands back on it.
+    // No published year has a poster-less video, so this route cannot show the
+    // fallback itself — `poster: null` is rendered and asserted in
+    // tests/unit/video-card.test.ts. What THIS proves is the other half: the
+    // poster covers the plate rather than replacing it, so a card that has no
+    // <img> lands on a plate that is still painted.
+    await stubBucket(page);
     await page.goto('/archive/2025');
     const facade = page.locator('.ob-vc__facade').first();
     const bg = await facade.evaluate((el) => getComputedStyle(el).backgroundColor);

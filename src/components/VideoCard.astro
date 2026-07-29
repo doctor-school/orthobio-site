@@ -22,8 +22,8 @@ const host = videoHost(url);
 const label = title ?? `Видео конгресса ${year}`;
 ---
 
-{/* Same-tab navigation: `rel="noopener"` would be inert without a target. */}
-<a class="ob-vc" href={url}>
+{/* The video host is a third party — open it beside the site, never in place. */}
+<a class="ob-vc" href={url} target="_blank" rel="noopener">
   <span class="ob-vc__facade">
     <span class="ob-vc__host">{host}</span>
     <span class="ob-vc__play">

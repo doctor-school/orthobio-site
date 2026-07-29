@@ -69,9 +69,13 @@ p {
 }
 
 /* Anchor targets (the year sections, the photo lightbox) must not land under
-   the sticky header. */
-[id] {
-  scroll-margin-top: 88px;
+   the sticky header — which exists only from lg (see .ob-head). Below that the
+   header scrolls away with the page, so the offset would just push every anchor
+   88px past its own heading. */
+@media (min-width: 1024px) {
+  [id] {
+    scroll-margin-top: 88px;
+  }
 }
 
 a {

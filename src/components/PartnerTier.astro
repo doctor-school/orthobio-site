@@ -49,7 +49,7 @@ const heading = year ? `${label} · ${year}` : label;
       <div class="ob-pt__grid">
         {partners.map((p) =>
           p.url ? (
-            <a class="ob-pt__card" href={p.url}>
+            <a class="ob-pt__card" href={p.url} target="_blank" rel="noopener">
               {
                 p.logo ? (
                   /* Fixed 120×44 slot with `object-fit: contain` (see
@@ -65,7 +65,10 @@ const heading = year ? `${label} · ${year}` : label;
               }
             </a>
           ) : (
-            <span class="ob-pt__card">
+            /* A partner with no `url` is a plain roster entry. It must not LOOK
+               like the linked cards beside it: `--static` drops the card fill and
+               the pointer affordances (see components.css). */
+            <span class="ob-pt__card ob-pt__card--static">
               {
                 p.logo ? (
                   /* Fixed 120×44 slot with `object-fit: contain` (see

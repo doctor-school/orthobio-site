@@ -11,6 +11,26 @@
  *
  * Major tiers (organizers / strategic / general) get the larger card grid.
  *
+ * Every tier opens with a COLOURED DOT (`.ob-pt__dot`), the bundle's own
+ * hierarchy marker — restored in Issue #27 after the design port dropped it.
+ * Two deliberate departures from how the bundle's JSX writes it:
+ *
+ * • the colour comes from a per-tier CLASS, not an inline `style` — the
+ *   tier→token map belongs in components.css (AGENTS.md → Code style forbids
+ *   inline `style=`) and is pinned in tests/unit/partner-tier-markers.test.ts;
+ * • the dot lives INSIDE the heading, where the bundle makes it a flex sibling
+ *   of it, and hangs out of the text flow (see `.ob-pt__dot` in
+ *   components.css). As a flex sibling it is an item of `.ob-pt__h`, and on a
+ *   phone that row has no room for it: measured at 360px on /partners,
+ *   «Информационные партнёры · 2026» pushed the heading onto the next flex
+ *   line and left the marker stranded there alone. Owned by the heading and
+ *   hung in the gutter, it rides the first line of the text at every width and
+ *   costs those words 9px instead of the bundle's 19.
+ *
+ * The dot is decoration — the tier is spelled out in the heading it sits in —
+ * so it is `aria-hidden`, which also keeps it out of the heading's accessible
+ * name (AccName §4.1 excludes hidden nodes).
+ *
  * Since Issue #24 a card is also the way INTO a partner's profile page: where
  * the roster entry carries a `slug`, the card links to `/partners/<slug>/`
  * rather than to the company's own website (`partnerCardHref`). That keeps the
@@ -36,8 +56,6 @@ interface Props {
   tier: PartnerTier;
   label: string;
   partners: CongressEntry['data']['partners'];
-  /** Heading level — h3 inside a section, h2 when the tier IS the section. */
-  level?: 'h2' | 'h3';
   /**
    * Year appended to the tier heading. Needed where the page is ABOUT another
    * year than the roster: on /partners the same five level names are offered as
@@ -49,7 +67,10 @@ interface Props {
   year?: number | null;
 }
 
-const { tier, label, partners, level = 'h3', year = null } = Astro.props;
+// Always an h3: every page that renders a tier puts it under a section h2
+// (`SectionHeading`), and axe's `heading-order` is asserted per route. A `level`
+// prop existed for «the tier IS the section», which no page ever did.
+const { tier, label, partners, year = null } = Astro.props;
 const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
 // Part of the heading TEXT, not a decoration beside it: the qualifier has to
 // reach anyone navigating by headings, which is exactly the reader the finding
@@ -87,11 +108,10 @@ const newTab = (url: string): Record<string, string> =>
   partners.length > 0 && (
     <div class={cls}>
       <div class="ob-pt__h">
-        {level === 'h2' ? (
-          <h2 class="ob-pt__title">{heading}</h2>
-        ) : (
-          <h3 class="ob-pt__title">{heading}</h3>
-        )}
+        <h3 class="ob-pt__title">
+          <span class={`ob-pt__dot ob-pt__dot--${tier}`} aria-hidden="true" />
+          {heading}
+        </h3>
         <span class="ob-pt__count">{partners.length}</span>
       </div>
       <div class="ob-pt__grid">

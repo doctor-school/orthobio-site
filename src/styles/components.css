@@ -1020,22 +1020,125 @@ a.ob-yc:active {
   margin-bottom: var(--sp-6);
 }
 
+/* `nowrap` — which is also what the bundle declares (it sets no `flex-wrap` at
+   all); the `wrap` this rule used to carry was added by the port.
+
+   Wrapping here is a cliff, not a safety net. The heading is ONE flex item, so
+   the row can only ever break between the heading and its count, and the count
+   then lands alone on a line of its own — which is what `main` already does at
+   360px to «Стратегические партнёры · 2026» (316.6px of heading against 328px
+   of row), before Issue #27 put anything else in the row. Under `nowrap` the
+   heading shrinks and its own TEXT wraps instead: the count keeps its place
+   beside the first line, and the row degrades a word at a time instead of
+   jumping at one width. */
 .ob-pt__h {
   display: flex;
   align-items: baseline;
   gap: 10px;
   margin: 0 0 var(--sp-3);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
+/* Tier marker — bundle `components/partners/PartnerTier` (Issue #27).
+   Restores the hierarchy signal the design port dropped: it is the ONE place
+   the congress palette reaches the partner rosters, and without it the seven
+   tiers were seven identical grey headings.
+
+   Ramp, from the bundle's own `TIER_DOT` map: the people who RUN the congress
+   carry the parent brand's blues (`--ds-blue-dark` → `--ds-blue`), the paid
+   tiers descend the congress accents sky → green → lime, and the two tiers
+   below them (exhibition, info) take the neutral `--hairline` — the marker
+   still opens the row, but carries no identity colour. That the ramp DESCENDS
+   is the whole point; the pairs are pinned in
+   tests/unit/partner-tier-markers.test.ts and painted in tests/e2e/identity.spec.ts.
+
+   Out of flow, in the slot the heading reserves for it (see .ob-pt__title): the
+   bundle makes it a 9px flex item followed by the row's 10px gap, which is the
+   same 19px — but as a flex ITEM it belonged to `.ob-pt__h`, and that row could
+   push the heading to the next flex line and strand the marker there alone.
+   Absolutely positioned inside the heading it is the heading's own, at any
+   width, and it sits exactly where the bundle draws it: on the column edge, in
+   line with the h1 above and the card grid below.
+
+   `top` puts it on the FIRST line of the heading, not the middle of the box:
+   `1em` here is `--fs-h3` and `--lh-h3` the line height that `.ob-pt__title`
+   sets, so the expression is the first line box minus the dot, halved — the
+   marker stays beside the first line when a long label wraps to two.
+
+   9px and 10px are literals, not tokens: this is a decorative diameter and the
+   space that follows it, not a step of the 4px spacing ramp (`--sp-2` is 8px
+   and would round the marker down). Same values as the bundle. */
+.ob-pt__dot {
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc((1em * var(--lh-h3) - 9px) / 2);
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  /* Fallback for a tier added to the schema before its rung is designed: a
+     neutral marker rather than an invisible 9px hole. */
+  background: var(--hairline);
+}
+
+.ob-pt__dot--organizer {
+  background: var(--ds-blue-dark);
+}
+
+.ob-pt__dot--co-organizer {
+  background: var(--ds-blue);
+}
+
+.ob-pt__dot--strategic {
+  background: var(--ob-sky);
+}
+
+.ob-pt__dot--general {
+  background: var(--ob-green);
+}
+
+.ob-pt__dot--partner {
+  background: var(--ob-lime);
+}
+
+.ob-pt__dot--exhibition {
+  background: var(--hairline);
+}
+
+.ob-pt__dot--info {
+  background: var(--hairline);
+}
+
+/* Positioning context and the marker's slot: 19px reserved INSIDE the column,
+   which is the bundle's own geometry — there the dot is a flex item at the head
+   of the row and the heading text starts 19px in. So the thing that lines up
+   with the h1 and the card grid is the MARKER, and the tier titles read as a
+   rail of coloured dots down the column edge.
+
+   The slot is not hung out into the page gutter (an earlier attempt gave 10px
+   of it back with a negative margin). Two reasons it came back inside: the
+   gutter is `--container-pad`, i.e. 16px on a phone, so a 19px overhang puts a
+   9px dot 3px off-screen and anything narrower than that crowds it against the
+   viewport edge; and a partial overhang aligned NOTHING — neither the dot nor
+   the text sat on the column, and a 360→640 sweep showed it saved a wrapped
+   line at four widths out of 57.
+
+   `min-width: 0` is what lets the heading SHRINK now that the row no longer
+   wraps — without it a flex item refuses to go below its min-content width and
+   the count would be pushed out of the container. */
 .ob-pt__title {
+  position: relative;
+  padding-inline-start: 19px;
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
   font-weight: var(--fw-semibold);
   margin: 0;
+  min-width: 0;
 }
 
+/* Never the item that gives way: it is two glyphs, and shrinking it would break
+   «16» across two lines while the heading beside it still had room. */
 .ob-pt__count {
+  flex: none;
   font-size: var(--fs-small);
   color: var(--text-muted);
 }

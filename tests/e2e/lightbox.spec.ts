@@ -18,11 +18,22 @@ import AxeBuilder from '@axe-core/playwright';
 const GALLERY = '#pg2025';
 const FIRST_FRAME = '#pg2025-1';
 
-/** The controls inside a frame, in document order: ✕, ←, →. The backdrop is
- *  `tabindex="-1"` and must never appear among them. */
-const CONTROLS = '.ob-pg__close, .ob-pg__nav--prev, .ob-pg__nav--next';
+type Page = import('@playwright/test').Page;
 
-const openFirst = async (page: import('@playwright/test').Page) => {
+/**
+ * How many tab stops a frame holds, asked of the BROWSER rather than spelled
+ * out as `.ob-pg__close, .ob-pg__nav--prev, .ob-pg__nav--next`. A hand-written
+ * list would keep passing after a `<button>` is added to the frame and the trap
+ * stops covering it — which is the exact regression the island's own selector
+ * was hardened against. `tabIndex >= 0` is 0 for an anchor with an href and for
+ * a button, −1 for the wrappers and −1 for the `tabindex="-1"` backdrop.
+ */
+const countStops = (page: Page, frame: string) =>
+  page
+    .locator(frame)
+    .evaluate((el) => [...el.querySelectorAll<HTMLElement>('*')].filter((n) => n.tabIndex >= 0).length);
+
+const openFirst = async (page: Page) => {
   const tile = page.locator('a.ob-pg__it').first();
   await tile.focus();
   await page.keyboard.press('Enter');
@@ -69,11 +80,14 @@ test('Tab cycles inside the frame and never lands on the page behind the scrim',
   await page.goto('/archive/2025');
   await openFirst(page);
 
-  const inFrame = page.locator(FIRST_FRAME).locator(CONTROLS);
-  const stops = await inFrame.count();
-  expect(stops, 'the frame must offer ✕, ← and →').toBe(3);
+  const stops = await countStops(page, FIRST_FRAME);
+  expect(stops, 'the frame must offer tab stops to cycle between').toBeGreaterThan(1);
 
-  // Two full laps forward: a trap that only holds for one wrap is not a trap.
+  // Mark where the lap starts, so «came back round» is an identity check and
+  // not a guess from a class name.
+  await page.evaluate(() => document.activeElement?.setAttribute('data-lap-start', ''));
+
+  // Two full laps: a trap that only holds for one wrap is not a trap.
   for (let i = 0; i < stops * 2; i += 1) {
     await page.keyboard.press('Tab');
     await expect(
@@ -81,6 +95,11 @@ test('Tab cycles inside the frame and never lands on the page behind the scrim',
       `Tab #${i + 1} escaped the dialog`,
     ).toHaveCount(1);
   }
+  await expect(
+    page.locator(`${FIRST_FRAME} [data-lap-start]:focus`),
+    'two laps forward must land back on the control the lap started from',
+  ).toHaveCount(1);
+
   // …and back out the other way, past the first control.
   for (let i = 0; i < stops + 1; i += 1) {
     await page.keyboard.press('Shift+Tab');
@@ -89,6 +108,25 @@ test('Tab cycles inside the frame and never lands on the page behind the scrim',
       `Shift+Tab #${i + 1} escaped the dialog`,
     ).toHaveCount(1);
   }
+});
+
+test('the trap catches focus that is already adrift outside the frame', async ({ page }) => {
+  // The island's «not contained» branch: the overlay is open but nothing in it
+  // holds focus. It is the state every frame passes through on ←/→ — the old
+  // frame goes `display: none` and takes focus with it — and it is reachable on
+  // its own whenever the browser resets focus to <body>.
+  await page.goto('/archive/2025');
+  await openFirst(page);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await expect(page.locator(`${FIRST_FRAME} :focus`)).toHaveCount(0);
+
+  await page.keyboard.press('Tab');
+  await expect(page.locator(`${FIRST_FRAME} :focus`)).toHaveCount(1);
+
+  // …and from adrift, Shift+Tab pulls in at the other end rather than out.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.locator(`${FIRST_FRAME} :focus`)).toHaveCount(1);
 });
 
 test('the ←/→ arrows keep focus in the new frame, and Escape still returns to the first tile', async ({
@@ -105,9 +143,53 @@ test('the ←/→ arrows keep focus in the new frame, and Escape still returns t
   // Landing on → again is what makes «next, next, next» work at all.
   await expect(second.locator('.ob-pg__nav--next')).toBeFocused();
 
+  // The trap has to hold in a frame reached by ←/→ too, not only in the one
+  // that was opened by a click: here it is enforcing edges on a frame the
+  // focused control was born in one navigation ago.
+  const stops = await countStops(page, '#pg2025-2');
+  for (let i = 0; i < stops + 1; i += 1) {
+    await page.keyboard.press('Tab');
+    await expect(
+      page.locator('#pg2025-2 :focus'),
+      `Tab #${i + 1} escaped the frame reached by →`,
+    ).toHaveCount(1);
+  }
+
   await page.keyboard.press('Escape');
   // The trigger is where the reader came FROM, not the photo they walked to.
   await expect(tile).toBeFocused();
+});
+
+test('a trigger inside a collapsed <details> is revealed before focus goes back to it', async ({
+  page,
+}) => {
+  await page.goto('/archive/2025');
+
+  // The condition is BUILT, not waited for: no year currently renders the
+  // «Показать все фото» disclosure (12 photos against a floor of `visible` 11 +
+  // `MIN_HIDDEN` 3), and one YAML edit brings it back. A tile hidden inside a
+  // closed <details> is `display: none`, and `focus()` on it does nothing at
+  // all — the reader would land at the top of the document instead.
+  await page.evaluate(() => {
+    const tile = document.querySelector('a.ob-pg__it');
+    if (!tile) throw new Error('no tile to hide');
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Показать все фото';
+    tile.replaceWith(details);
+    details.append(summary, tile);
+  });
+
+  // No click, so the island has to DERIVE the trigger — the only path on which
+  // a hidden tile can be chosen at all.
+  await page.evaluate((hash) => {
+    window.location.hash = hash;
+  }, FIRST_FRAME);
+  await expect(page.locator(FIRST_FRAME)).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('details:has(a.ob-pg__it)')).toHaveAttribute('open', '');
+  await expect(page.locator('a.ob-pg__it').first()).toBeFocused();
 });
 
 test('a deep link into a frame is operable without a trigger to return to', async ({ page }) => {

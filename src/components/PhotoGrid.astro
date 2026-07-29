@@ -2,8 +2,11 @@
 /**
  * PhotoGrid — фотоотчёт года (bundle components/archive/PhotoGrid v2).
  *
- * Three things beyond a plain grid, all of them pure CSS/HTML (the site ships
- * zero client JS — AGENTS.md):
+ * Three things beyond a plain grid. All three are CSS/HTML and all three keep
+ * working with the module at the bottom of this file switched off — the one
+ * island this component ships is an upgrade, never a dependency, which is how
+ * it clears «no client-side JS by default» (AGENTS.md). What it adds and why
+ * only JS can add it: «`:target` alone is only half a modal», below.
  * • reportage grid: the first photo occupies a 2×2 cell from 640px up;
  * • everything past `visible` hides inside a native <details>, so a year with
  *   80 photos does not bury the sections under it;
@@ -229,9 +232,26 @@ const altOf = (
    * such headers and would stay green while this died in production.
    */
   const CLOSE = '.ob-pg__close';
-  /** ✕, ←, → in document order. The backdrop is `tabindex="-1"`: it is the same
-   *  action as the ✕ standing right next to it, without the label. */
-  const CONTROLS = 'a[href]:not([tabindex="-1"])';
+
+  /**
+   * The frame's tab stops, in document order — today ✕, ←, → and nothing else.
+   *
+   * Derived from what the BROWSER considers focusable rather than from a list
+   * of the elements that happen to be in there now, because the edges of this
+   * list are the edges of the trap: a `<button>` added to a frame tomorrow (a
+   * zoom, a download) would fall outside a hand-written `a[href]` selector, and
+   * the wrap would then fire one stop early and let Tab out onto the page
+   * behind the scrim — silently, with no markup obviously at fault.
+   *
+   * `tabIndex >= 0` is that browser answer in one property: it is 0 for an
+   * anchor with an href and for a button, −1 for the `<figure>`/`<img>` around
+   * them, and −1 for the backdrop, which carries an explicit `tabindex="-1"`
+   * because it is the ✕'s action without the ✕'s label.
+   */
+  const tabStops = (frame: HTMLElement) =>
+    [...frame.querySelectorAll<HTMLElement>('*')].filter(
+      (el) => el.tabIndex >= 0 && !el.hasAttribute('disabled'),
+    );
 
   /** The tile that opened the overlay — kept across ←/→, because the reader
    *  came from that photo and not from the one they walked to. */
@@ -280,10 +300,20 @@ const altOf = (
       const back = trigger;
       trigger = null;
       landing = CLOSE;
+      if (!back) return;
+      // A DERIVED trigger can sit in the collapsed <details> that holds the
+      // tail of the gallery — deep-link to a photo past `visible`, press Esc,
+      // and `focus()` on a `display: none` tile does nothing at all, dropping
+      // the reader at the top of the document. Unreachable with today's content
+      // (12 photos against a floor of 11 + 3 keeps the disclosure unrendered)
+      // and one YAML edit away from being reachable, so the disclosure is
+      // opened rather than left to be rediscovered as a bug.
+      const disclosure = back.closest('details');
+      if (disclosure && !disclosure.open) disclosure.open = true;
       // `preventScroll`: the navigation that closed the frame has already put
       // the gallery anchor where the ✕ has always put it, and pulling the page
       // to the tile instead would change what the pointer path does.
-      back?.focus({ preventScroll: true });
+      back.focus({ preventScroll: true });
       return;
     }
 
@@ -293,9 +323,7 @@ const altOf = (
     trigger ??= document.querySelector<HTMLElement>(
       `a.ob-pg__it[href="#${CSS.escape(frame.id)}"]`,
     );
-    const stop =
-      frame.querySelector<HTMLElement>(landing) ?? frame.querySelector<HTMLElement>(CONTROLS);
-    stop?.focus();
+    (frame.querySelector<HTMLElement>(landing) ?? tabStops(frame)[0])?.focus();
   };
 
   window.addEventListener('hashchange', sync);
@@ -324,7 +352,7 @@ const altOf = (
     }
     if (event.key !== 'Tab') return;
 
-    const stops = [...frame.querySelectorAll<HTMLElement>(CONTROLS)];
+    const stops = tabStops(frame);
     if (stops.length === 0) return;
     const first = stops[0];
     const last = stops[stops.length - 1];

@@ -138,16 +138,36 @@ const embedSrc = videoEmbedSrc(url);
    */
 
   /**
+   * THE predicate: the player URL this island will swap in for a card, or
+   * `null` when it will leave the card alone.
+   *
+   * One function because two callers must never disagree. The click handler
+   * intercepts on the value's SHAPE — the listener is document-level and an
+   * iframe `src` is one of the few sinks where a `javascript:` URL would run in
+   * our own origin, so it trusts what it can verify rather than the fact that
+   * this file wrote the attribute. The announcement retracted below has to be
+   * retracted under exactly that condition and no other. Asking `a[data-ob-video]`
+   * there instead would be the same answer only for as long as Rutube is the
+   * only embeddable host: add a second one to `videoEmbedSrc` and every card of
+   * it would go silent about a tab this handler still lets the browser open —
+   * a gap the e2e sweep cannot see, because the sweep runs with JS off.
+   */
+  const playerSrc = (link: HTMLAnchorElement): string | null => {
+    const src = link.dataset.obVideo;
+    return src?.startsWith('https://rutube.ru/play/embed/') ? src : null;
+  };
+
+  /**
    * Retract the new-tab announcement the markup ships (Issue #37): from the
-   * moment this file runs, a plain click on an embeddable card loads the player
+   * moment this file runs, a plain click on an upgraded card loads the player
    * in place and opens nothing. Done here rather than by omitting the hint at
    * build time, because THIS is the event that makes it false — if the module
    * never executes, the card really does open a tab and the reader is still
    * told. The `target` attribute stays: it is what a modified or middle click
    * still uses, and those are announced by the browser's own affordances.
    */
-  for (const hint of document.querySelectorAll('a[data-ob-video] .ob-sr-only')) {
-    hint.remove();
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('a[data-ob-video]')) {
+    if (playerSrc(link)) link.querySelector('.ob-sr-only')?.remove();
   }
 
   document.addEventListener('click', (event) => {
@@ -158,11 +178,8 @@ const embedSrc = videoEmbedSrc(url);
     const target = event.target;
     if (!(target instanceof Element)) return;
     const link = target.closest<HTMLAnchorElement>('a[data-ob-video]');
-    const src = link?.dataset.obVideo;
-    // The listener is document-level and an iframe `src` is one of the few
-    // sinks where a `javascript:` URL would run in our own origin, so it trusts
-    // the shape of the value rather than the fact that this file wrote it.
-    if (!link || !src?.startsWith('https://rutube.ru/play/embed/')) return;
+    const src = link && playerSrc(link);
+    if (!src) return;
     event.preventDefault();
 
     const frame = document.createElement('iframe');

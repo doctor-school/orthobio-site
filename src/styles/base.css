@@ -18,9 +18,12 @@
    CASCADE LAYERS. Everything below sits in `@layer base`, and components.css in
    `@layer components` — `base` first, so the component layer keeps winning ties
    exactly as it did when the two files were plain source order. What the layers
-   BUY is the block at the bottom of this file: the focus rules are deliberately
-   left OUTSIDE every layer, and unlayered declarations beat layered ones no
-   matter how specific the layered selector is. That is the whole point. Five
+   BUY is the block at the bottom of this file: TWO rule sets — the focus
+   indicator and `.ob-sr-only` — are deliberately left OUTSIDE every layer, and
+   unlayered declarations beat layered ones no matter how specific the layered
+   selector is. That is the whole point, and it is the same point twice: both
+   rules state something no component may be allowed to contradict, and neither
+   could win that argument on specificity. Five
    card components paint a hover shadow (`a.ob-yc:hover` and friends), each of
    them more specific than `:focus-visible`, and each therefore REPLACED the
    focus ring outright the moment a focused card was also hovered — measured at
@@ -174,9 +177,17 @@ button {
 }
 }
 /* ── UNLAYERED, and that is load-bearing ────────────────────────────────────
-   Nothing below this line may be moved into `@layer base` (or any other layer):
-   unlayered is the only position from which the focus indicator outranks a
-   component's `:hover` without competing on specificity. See the file header.
+   NOTHING below this line may be moved into `@layer base` (or any other layer),
+   and that applies to BOTH rule sets here, not only the first one — a tidy-up
+   that layers `.ob-sr-only` «for consistency» reintroduces the bug it was
+   placed here to prevent.
+
+   • `:focus-visible` — unlayered is the only position from which the focus
+     indicator outranks a component's `:hover` without competing on specificity.
+   • `.ob-sr-only` — unlayered is the only position from which «this never
+     becomes visible» cannot be contradicted by a component selector.
+
+   Each rule carries its own argument below; see also the file header.
    ────────────────────────────────────────────────────────────────────────── */
 
 /* Visually hidden, still announced — the ONE utility class on this site

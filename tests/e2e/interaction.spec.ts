@@ -148,7 +148,17 @@ test.describe('without JavaScript', () => {
       }
     }
 
-    expect(checked, 'the sweep must find external links to check').toBeGreaterThan(10);
+    // PINNED, not a floor. `toBeGreaterThan(10)` would have stayed green with
+    // 42 of the 53 links silently dropped from the sweep — and «dropped from
+    // the sweep» is exactly how this guard dies, since a link only enters it by
+    // being both rendered and reachable (the disclosures above are the proof
+    // that it is easy to lose a dozen at once).
+    //
+    // TO UPDATE: the number is content, not behaviour — adding a partner with a
+    // `url`, a video or a PDF legitimately moves it. Run the suite, take the
+    // number from the failure message, and check it moved by exactly as many
+    // links as the content edit added.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(53);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

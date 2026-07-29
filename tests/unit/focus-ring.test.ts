@@ -27,6 +27,11 @@ const tokensCss = readFileSync(
   'utf8',
 );
 
+const baseCss = readFileSync(
+  fileURLToPath(new URL('../../src/styles/base.css', import.meta.url)),
+  'utf8',
+);
+
 /** Resolves `--name`, following one level of `var(--other)` indirection. */
 function token(name: string): string {
   const seen = new Set<string>();
@@ -160,5 +165,33 @@ describe('focus indicator contrast (WCAG 2.2 SC 1.4.11)', () => {
     expect(token('--focus-shadow').replace(/\s+/g, ' ')).toBe(
       '0 0 0 2px var(--focus-ring-halo), 0 0 0 4px var(--focus-ring)',
     );
+  });
+});
+
+/**
+ * Forced colours (Windows High Contrast), found by the audit of PR #44.
+ *
+ * The whole design above is a `box-shadow`, and forced-colours mode discards
+ * box-shadows outright — while the `outline: none` that was written to make room
+ * for the ring SURVIVES. The two together leave a keyboard user in HCM with no
+ * focus indicator at all, which is the one audience this mode exists for. The
+ * mode cannot be exercised by the maths above (the colours are the user's, not
+ * ours) and axe cannot see it either, so what is asserted is that the escape
+ * hatch is present and restores a real outline.
+ */
+describe('focus indicator under forced colours', () => {
+  const block =
+    /@media\s*\(forced-colors:\s*active\)\s*\{\s*:focus-visible\s*\{([^}]*)\}/.exec(baseCss);
+
+  it('re-declares :focus-visible inside a forced-colors block', () => {
+    expect(block, 'base.css has no @media (forced-colors: active) focus rule').not.toBeNull();
+  });
+
+  it('restores an outline in a system colour, not one of ours', () => {
+    const body = block![1];
+    // `Highlight` is the palette the USER chose; any token of ours would either
+    // be substituted away by the UA or fail against a palette we cannot see.
+    expect(body).toMatch(/outline:\s*\d+px\s+solid\s+Highlight/);
+    expect(body).toMatch(/outline-offset:\s*\d+px/);
   });
 });

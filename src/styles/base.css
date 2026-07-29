@@ -134,6 +134,21 @@ a.ob-arrow:hover::after {
   border-radius: var(--r-sm);
 }
 
+/* Windows High Contrast (and any other forced-colours mode) throws BOTH halves
+   of the rule above away: the UA forces `box-shadow: none`, so the two-tone ring
+   is gone, and the `outline: none` we wrote to make room for it survives — the
+   indicator disappears entirely and a keyboard user in HCM navigates blind.
+   `Highlight` is the system's own focus colour, which is the only value
+   guaranteed to contrast in a palette the user chose, and the offset keeps the
+   outline off the glyphs the way the box-shadow ring did. Found by the audit of
+   this very change (PR #44). */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
 ::selection {
   background: var(--ob-sky-tint);
 }

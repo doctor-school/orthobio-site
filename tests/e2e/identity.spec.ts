@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { TIER_DOT } from '../tier-dot';
 
 /**
  * Brand-identity guards: elements whose ONLY job is to carry the congress
@@ -20,22 +21,16 @@ import { test, expect } from '@playwright/test';
  * paste the new value in without noticing it was a design change.
  */
 
-/** tier → token, the Claude.design bundle's `TIER_DOT` map (see the unit test). */
-const TIER_DOT: Record<string, string> = {
-  organizer: '--ds-blue-dark',
-  'co-organizer': '--ds-blue',
-  strategic: '--ob-sky',
-  general: '--ob-green',
-  partner: '--ob-lime',
-  exhibition: '--hairline',
-  info: '--hairline',
-};
+/** The tokens the ramp is built from, deduplicated — resolved in the page. */
+const RAMP_TOKENS = [...new Set(Object.values(TIER_DOT))];
+/** Same map, keyed by whatever modifier class the DOM turns out to carry. */
+const TOKEN_OF: Record<string, string | undefined> = TIER_DOT;
 
 test('every partner tier opens with its marker, in the design’s colour', async ({ page }) => {
   // 2026 is the only roster that carries all seven tiers.
   await page.goto('/archive/2026');
 
-  const painted = await page.evaluate(() => {
+  const painted = await page.evaluate((rampTokens) => {
     /**
      * Resolve `var(--token)` the way the page itself would: a probe element
      * inside the document, so the value goes through the same cascade and comes
@@ -66,14 +61,10 @@ test('every partner tier opens with its marker, in the design’s colour', async
       };
     });
 
-    const resolved = Object.fromEntries(
-      ['--ds-blue-dark', '--ds-blue', '--ob-sky', '--ob-green', '--ob-lime', '--hairline'].map(
-        (token) => [token, resolve(token)],
-      ),
-    );
+    const resolved = Object.fromEntries(rampTokens.map((token) => [token, resolve(token)]));
     probe.remove();
     return { tiers, resolved };
-  });
+  }, RAMP_TOKENS);
 
   // The sweep is worthless if the page stopped rendering tiers.
   expect(painted.tiers.length, '2026 must render all seven tiers').toBe(7);
@@ -82,10 +73,10 @@ test('every partner tier opens with its marker, in the design’s colour', async
   );
 
   for (const tier of painted.tiers) {
-    const token = TIER_DOT[tier.tier ?? ''];
+    const token = TOKEN_OF[tier.tier ?? ''];
     expect(token, `«${tier.heading}» must carry a known tier marker`).toBeTruthy();
     expect(tier.background, `«${tier.heading}» marker must paint ${token}`).toBe(
-      painted.resolved[token],
+      painted.resolved[token ?? ''],
     );
     // A marker that resolved to nothing would still satisfy a class assertion.
     expect(tier.background, `«${tier.heading}» marker must not be transparent`).not.toBe(
@@ -111,26 +102,28 @@ test('every partner tier opens with its marker, in the design’s colour', async
 });
 
 /**
- * Phone geometry of the marker, on the page that carries the site's longest tier
+ * Geometry of the marker on the page that carries the site's longest tier
  * headings: /partners appends the year to every label («Информационные партнёры
- * · 2026» — 336.5px of text).
+ * · 2026» — 336.5px of text in a 328px row at 360px).
  *
- * Three things go wrong on a 328px row if the marker is built naively, and all
- * three were seen while building it:
+ * Three things went wrong here while this was being built, hence three
+ * assertions:
  *
  * • as a flex ITEM of `.ob-pt__h` — the shape the bundle draws — the heading no
  *   longer fits beside it, the row wraps, and the dot is stranded on a line of
  *   its own 28px above the words it marks;
- * • as an IN-FLOW marker inside the heading it eats 19px of the text's own
- *   width, which is more slack than these labels have;
- * • hung too far into the page gutter (16px on a phone) it is clipped by the
- *   screen edge.
+ * • hung out into the page gutter to spare the text those 19px, it is clipped
+ *   by the screen edge (the gutter is 16px on a phone) and, half-hung, it lines
+ *   up with nothing;
+ * • with the row still wrapping, the COUNT is what gets stranded instead.
  *
- * So: on the first line, inside the viewport, with the count still beside the
- * heading rather than stranded below it. 390 is here as well as 360 because the
- * cliff it guards is 1.5px wide at 390 and does not exist at 360.
+ * So: on the first line of its heading, on the column edge (in line with the h1
+ * above it — that alignment is the marker's job now that it, not the text, sits
+ * at the head of the row), and with the count still beside the heading. 390 is
+ * here as well as 360 because the wrap cliff is 1.5px wide at 390 and simply
+ * does not exist at 360.
  */
-for (const width of [360, 390]) {
+for (const width of [360, 390, 1280]) {
   test(`the marker holds the heading row at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/partners');
@@ -138,7 +131,12 @@ for (const width of [360, 390]) {
     // wider than the fallback: measured before the font swaps, «Стратегические
     // партнёры · 2026» reads 295.8px instead of 316.6px — enough to fit a row
     // that does not fit in the shipped page.
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => document.fonts.ready.then(() => {}));
+
+    const columnX = await page
+      .locator('h1')
+      .first()
+      .evaluate((h1) => h1.getBoundingClientRect().x);
 
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll('.ob-pt__h')].map((header) => {
@@ -187,9 +185,13 @@ for (const width of [360, 390]) {
         row.line?.bottom ?? 0,
       );
 
-      // Whole marker inside the viewport: it hangs into the page gutter, and
-      // that gutter is only 16px on a phone.
-      expect(row.dot?.x, `${where}: the marker must not be clipped by the edge`).toBeGreaterThan(0);
+      // On the column, exactly where the h1 and the card grid start: the marker
+      // is what carries the alignment, and hanging it out into the gutter to buy
+      // the text a few px would both break that and clip it at 360.
+      expect(row.dot?.x, `${where}: the marker must sit on the column edge`).toBeCloseTo(
+        columnX,
+        0,
+      );
 
       // The count belongs to the heading, not to a line of its own underneath.
       expect(row.count?.top, `${where}: the count must stay beside the heading`).toBeLessThan(

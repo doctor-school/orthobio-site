@@ -1052,22 +1052,18 @@ a.ob-yc:active {
    is the whole point; the pairs are pinned in
    tests/unit/partner-tier-markers.test.ts and painted in tests/e2e/identity.spec.ts.
 
-   A HANGING marker, taken out of flow: the bundle spends 19px of the heading
-   row on it (a 9px flex item plus the row's 10px gap), and this site's longest
-   tier headings do not have 19px to spare — /partners appends the year to every
-   label, and at 360px «Стратегические партнёры · 2026» measures 316.6px inside
-   a 328px container. An in-flow marker spent that slack and pushed headings
-   onto a second line. Out of flow it costs the text 9px instead of 19: the
-   heading reserves the full 19px as padding and gives 10px of it straight back
-   with a negative margin, so the marker overhangs the column into the page
-   gutter (`--container-pad` is 16px at its narrowest, so the dot always lands
-   inside the viewport) and only the 9px it truly occupies is taken from the
-   words.
+   Out of flow, in the slot the heading reserves for it (see .ob-pt__title): the
+   bundle makes it a 9px flex item followed by the row's 10px gap, which is the
+   same 19px — but as a flex ITEM it belonged to `.ob-pt__h`, and that row could
+   push the heading to the next flex line and strand the marker there alone.
+   Absolutely positioned inside the heading it is the heading's own, at any
+   width, and it sits exactly where the bundle draws it: on the column edge, in
+   line with the h1 above and the card grid below.
 
    `top` puts it on the FIRST line of the heading, not the middle of the box:
-   `1em` here is `--fs-h3` (`.ob-pt__title` sets it for both the h2 and the h3
-   spelling), so the expression is the first line box minus the dot, halved —
-   the marker stays beside the first line when a long label wraps to two.
+   `1em` here is `--fs-h3` and `--lh-h3` the line height that `.ob-pt__title`
+   sets, so the expression is the first line box minus the dot, halved — the
+   marker stays beside the first line when a long label wraps to two.
 
    9px and 10px are literals, not tokens: this is a decorative diameter and the
    space that follows it, not a step of the 4px spacing ramp (`--sp-2` is 8px
@@ -1112,11 +1108,23 @@ a.ob-yc:active {
   background: var(--hairline);
 }
 
-/* Positioning context and the marker's hanging slot: 19px reserved, 10px of it
-   handed back to the row so the dot overhangs the column instead of pushing the
-   text (see .ob-pt__dot). `min-width: 0` is what lets the heading SHRINK now
-   that the row no longer wraps — without it a flex item refuses to go below its
-   min-content width and the count would be pushed out of the container. */
+/* Positioning context and the marker's slot: 19px reserved INSIDE the column,
+   which is the bundle's own geometry — there the dot is a flex item at the head
+   of the row and the heading text starts 19px in. So the thing that lines up
+   with the h1 and the card grid is the MARKER, and the tier titles read as a
+   rail of coloured dots down the column edge.
+
+   The slot is not hung out into the page gutter (an earlier attempt gave 10px
+   of it back with a negative margin). Two reasons it came back inside: the
+   gutter is `--container-pad`, i.e. 16px on a phone, so a 19px overhang puts a
+   9px dot 3px off-screen and anything narrower than that crowds it against the
+   viewport edge; and a partial overhang aligned NOTHING — neither the dot nor
+   the text sat on the column, and a 360→640 sweep showed it saved a wrapped
+   line at four widths out of 57.
+
+   `min-width: 0` is what lets the heading SHRINK now that the row no longer
+   wraps — without it a flex item refuses to go below its min-content width and
+   the count would be pushed out of the container. */
 .ob-pt__title {
   position: relative;
   padding-inline-start: 19px;
@@ -1124,7 +1132,6 @@ a.ob-yc:active {
   line-height: var(--lh-h3);
   font-weight: var(--fw-semibold);
   margin: 0;
-  margin-inline-start: -10px;
   min-width: 0;
 }
 

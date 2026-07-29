@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { PARTNER_TIERS, type PartnerTier } from '@/content/schemas';
+import { PARTNER_TIERS } from '@/content/schemas';
+import { TIER_DOT } from '../tier-dot';
 
 /**
  * The tier marker of `PartnerTier` (Issue #27) — a 9px dot whose COLOUR is the
@@ -31,25 +32,6 @@ const read = (path: string): string =>
 const COMPONENTS_CSS = read('../../src/styles/components.css');
 const TOKENS_CSS = read('../../src/styles/tokens.css');
 
-/**
- * Verbatim from `components/partners/PartnerTier.jsx` of the Claude.design
- * bundle (v2), where it is applied as an inline style; this repo forbids inline
- * `style=` and carries the map as per-tier classes instead.
- *
- * The ramp DESCENDS: the parent brand's blues for the people who run the
- * congress, the congress accents for the paying tiers (sky → green → lime),
- * neutral for the two tiers below them.
- */
-const TIER_DOT: Record<PartnerTier, string> = {
-  organizer: '--ds-blue-dark',
-  'co-organizer': '--ds-blue',
-  strategic: '--ob-sky',
-  general: '--ob-green',
-  partner: '--ob-lime',
-  exhibition: '--hairline',
-  info: '--hairline',
-};
-
 /** `.ob-pt__dot--<tier> { … background: var(--token) … }`, as authored. */
 const declaredDots = (): Record<string, string> => {
   const rules = COMPONENTS_CSS.matchAll(
@@ -65,7 +47,7 @@ const declaredDots = (): Record<string, string> => {
 
 describe('PartnerTier tier markers', () => {
   it('paints every tier with the token the design bundle assigns it', () => {
-    expect(declaredDots()).toEqual(TIER_DOT);
+    expect(declaredDots()).toEqual({ ...TIER_DOT });
   });
 
   it('covers every tier the schema allows', () => {
@@ -81,9 +63,9 @@ describe('PartnerTier tier markers', () => {
 
   /**
    * The dot is the only geometry the rule owns: a lost `border-radius` turns
-   * the marker into a square, which reads as a broken glyph rather than as the
-   * design's bullet, and a marker back IN the text flow costs the heading the
-   * full 19px again (see the hanging arithmetic below).
+   * the marker into a square, which reads as a broken glyph rather than the
+   * design's bullet, and a marker back in the text flow no longer sits at a
+   * predictable place at all.
    */
   it('keeps the bundle geometry: a 9px pill, out of the text flow', () => {
     const base = COMPONENTS_CSS.match(/\.ob-pt__dot\s*\{([^}]*)\}/);
@@ -100,22 +82,29 @@ describe('PartnerTier tier markers', () => {
   });
 
   /**
-   * The hanging arithmetic, pinned because it is the whole reason the marker
-   * does not cost what the bundle's in-flow version costs.
+   * The slot the marker is positioned in, and the two properties that keep the
+   * row it lives in honest.
    *
-   * The heading reserves 19px (9px dot + the bundle's 10px gap) and hands 10px
-   * of it back to the row, so the marker overhangs into the page gutter and
-   * only 9px comes out of the words. `--container-pad` is 16px at its narrowest
-   * (a phone), which is what keeps a 10px overhang inside the viewport — make
-   * the overhang bigger than that and the dot is clipped by the screen edge.
+   * 19px inside the column is the bundle's own arithmetic (a 9px flex item plus
+   * the row's 10px gap), so the DOT lands on the column edge — in line with the
+   * h1 and the card grid — and the heading text starts after it. A negative
+   * `margin-inline-start` would hang the slot out into the page gutter instead:
+   * that gutter is `--container-pad`, 16px on a phone, so a full 19px overhang
+   * clips the dot against the screen edge and a partial one aligns nothing.
    */
-  it('hangs the marker in the gutter instead of spending the heading’s width', () => {
+  it('reserves the marker slot inside the column, never out in the gutter', () => {
     const title = COMPONENTS_CSS.match(/\.ob-pt__title\s*\{([^}]*)\}/)?.[1] ?? '';
-    const overhang = title.match(/margin-inline-start:\s*-(\d+)px/);
-    const reserved = title.match(/padding-inline-start:\s*(\d+)px/);
-    expect(reserved?.[1], 'the heading must reserve the marker slot').toBe('19');
-    expect(overhang?.[1], 'and hand part of it back to the row').toBe('10');
-    expect(Number(overhang?.[1]), 'the overhang must fit the narrowest gutter').toBeLessThan(16);
+    expect(
+      title.match(/padding-inline-start:\s*(\d+)px/)?.[1],
+      'the heading must reserve the marker slot',
+    ).toBe('19');
+    expect(title, 'the slot must not hang into the page gutter').not.toMatch(
+      /margin-inline-start:\s*-/,
+    );
+    // The marker's `top` is expressed in the heading's own line box, so the
+    // line height it is derived from has to stay declared here.
+    expect(title).toMatch(/line-height:\s*var\(--lh-h3\)/);
+    expect(title).toMatch(/font-size:\s*var\(--fs-h3\)/);
     // Without it the heading cannot shrink, and the count is pushed out of the
     // container instead of the text wrapping.
     expect(title).toMatch(/min-width:\s*0/);

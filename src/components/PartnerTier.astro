@@ -56,8 +56,6 @@ interface Props {
   tier: PartnerTier;
   label: string;
   partners: CongressEntry['data']['partners'];
-  /** Heading level — h3 inside a section, h2 when the tier IS the section. */
-  level?: 'h2' | 'h3';
   /**
    * Year appended to the tier heading. Needed where the page is ABOUT another
    * year than the roster: on /partners the same five level names are offered as
@@ -69,7 +67,10 @@ interface Props {
   year?: number | null;
 }
 
-const { tier, label, partners, level = 'h3', year = null } = Astro.props;
+// Always an h3: every page that renders a tier puts it under a section h2
+// (`SectionHeading`), and axe's `heading-order` is asserted per route. A `level`
+// prop existed for «the tier IS the section», which no page ever did.
+const { tier, label, partners, year = null } = Astro.props;
 const cls = `ob-pt ob-pt--${MAJOR_TIERS.includes(tier) ? 'major' : 'minor'}`;
 // Part of the heading TEXT, not a decoration beside it: the qualifier has to
 // reach anyone navigating by headings, which is exactly the reader the finding
@@ -107,17 +108,10 @@ const newTab = (url: string): Record<string, string> =>
   partners.length > 0 && (
     <div class={cls}>
       <div class="ob-pt__h">
-        {level === 'h2' ? (
-          <h2 class="ob-pt__title">
-            <span class={`ob-pt__dot ob-pt__dot--${tier}`} aria-hidden="true" />
-            {heading}
-          </h2>
-        ) : (
-          <h3 class="ob-pt__title">
-            <span class={`ob-pt__dot ob-pt__dot--${tier}`} aria-hidden="true" />
-            {heading}
-          </h3>
-        )}
+        <h3 class="ob-pt__title">
+          <span class={`ob-pt__dot ob-pt__dot--${tier}`} aria-hidden="true" />
+          {heading}
+        </h3>
         <span class="ob-pt__count">{partners.length}</span>
       </div>
       <div class="ob-pt__grid">

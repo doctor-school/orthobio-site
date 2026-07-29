@@ -181,6 +181,49 @@ test('/orgs actually renders the оргкомитет portraits, not the fallbac
   await expect(page.locator('#orgs26 .ob-pc__initial')).toHaveCount(1);
 });
 
+/**
+ * Portrait census per archive year — the same count guard as /orgs, extended to
+ * the 13 references /orgs does not cover (PR #28 review).
+ *
+ * These are the entries most likely to rot: every one of them points at a
+ * `2026/people/` key from a DIFFERENT year's file, and that cross-year reuse is
+ * the judgment call most likely to be revisited. Null those keys and no other
+ * suite notices — the cards degrade to a valid, accessible initials plate.
+ *
+ * `initials` is asserted alongside `photos` on purpose: it pins the people who
+ * must STAY without a portrait (Загородний, Губин — no usable image exists for
+ * either anywhere on the old site), so the guard fails in both directions.
+ */
+const PORTRAIT_CENSUS = [
+  { year: 2021, photos: 0, initials: 2 }, // Губин + Загородний, no portraits exist
+  { year: 2022, photos: 1, initials: 2 }, // Страхов greeting; Загородний + Губин plates
+  { year: 2023, photos: 1, initials: 2 },
+  { year: 2024, photos: 1, initials: 2 },
+  { year: 2025, photos: 10, initials: 1 }, // 9 committee + Страхов greeting; Загородний plate
+  { year: 2026, photos: 11, initials: 1 }, // committee; Загородний has no /orgs card
+] as const;
+
+for (const { year, photos, initials } of PORTRAIT_CENSUS) {
+  test(`/archive/${year} renders ${photos} portrait(s) and ${initials} initials plate(s)`, async ({
+    page,
+  }) => {
+    await page.goto(`/archive/${year}`);
+    await expect(page.locator('img.ob-pc__photo')).toHaveCount(photos);
+    await expect(page.locator('.ob-pc__initial')).toHaveCount(initials);
+    // Same no-CLS contract as /orgs: the schema carries a bare URL, so the box
+    // is reserved only because <Image> measured the file at build.
+    const boxes = await page
+      .locator('img.ob-pc__photo')
+      .evaluateAll((nodes) =>
+        nodes.map((n) => ({ w: n.getAttribute('width'), h: n.getAttribute('height') })),
+      );
+    for (const box of boxes) {
+      expect(Number(box.w)).toBeGreaterThan(0);
+      expect(Number(box.h)).toBeGreaterThan(0);
+    }
+  });
+}
+
 test('FAQ answers open without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();

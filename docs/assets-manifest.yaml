@@ -440,9 +440,21 @@ years:
           person; it was downloaded, identified, and discarded (not staged, not
           uploaded).
 
-          Consumers: 2026.yaml committee[].photo (11 members) and the Страхов
-          М.А. greeting cards in 2022/2023/2024/2025.yaml — a portrait is
-          person identity, not a year-scoped fact.
+          Consumers: 2026.yaml committee[].photo (11 members), the 2025.yaml
+          committee (9 of the same people) and the Страхов М.А. greeting cards
+          in 2022/2023/2024/2025.yaml — a portrait is person identity, not a
+          year-scoped fact.
+
+          ⚠️ PREFIX SEMANTICS: `2026/people/` records WHERE THE RESCUE RAN (the
+          2026 congress site), NOT the year the face belongs to. A person is
+          year-independent and five different years' YAML point at these same
+          objects. Do NOT re-file the same person under 2027 on the next rescue
+          — add missing people here and reuse what already exists. A flat
+          `people/` prefix would say this more directly; it was not adopted
+          because these objects are already served with an immutable
+          year-long Cache-Control, so re-prefixing means re-uploading all 22,
+          rewriting the checksums and touching five content files for zero
+          user-visible gain (PR #28 review).
         actual_year: 2026
         type: photos
         status: downloaded

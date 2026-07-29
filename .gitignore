@@ -26,3 +26,6 @@ playwright-report/
 # Asset-rescue staging (scripts/rescue-partner-logos.mjs) — rescued binaries
 # live in the S3 bucket, never in git; regenerate the tree from the script.
 .rescue/
+# Ad-hoc screenshot runs (review/audit scripts default here) — evidence, not
+# source; keep them in a scratchpad, never in the repo.
+shots/

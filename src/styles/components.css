@@ -1807,6 +1807,11 @@ details[open] > .ob-faq__q::after {
   user-select: none;
 }
 
+.ob-yh__in {
+  position: relative;
+  padding-block: var(--sp-6) var(--sp-7);
+}
+
 @media (min-width: 1024px) {
   .ob-yh__pattern {
     display: block;
@@ -1822,18 +1827,20 @@ details[open] > .ob-faq__q::after {
      A reserve, not a nudge to the layer's own coordinates, because the header
      is one template over per-year content: the next year's venue can be longer
      again, and only a copy that CANNOT reach the strip is safe for text nobody
-     has written yet. 180px is the worst case with 4px to spare — the layer sits
-     at «viewport − 200px» while the container's content edge is at «viewport −
-     24px» up to 1248px wide (a 176px bite), and above that the capped 1200px
-     container pulls away from the layer faster than the layer moves right. */
-  .ob-yh__in > * {
-    max-width: calc(100% - 180px);
-  }
-}
+     has written yet.
 
-.ob-yh__in {
-  position: relative;
-  padding-block: var(--sp-6) var(--sp-7);
+     The width is spelled out of its own sources rather than as the 180px they
+     currently add up to: `280px − 80px` of outdent is the strip the layer takes
+     from the window's right edge, `--container-pad` is the part of that strip
+     the container already keeps clear, and 4px is slack. Editing the layer's
+     geometry or the pad token therefore moves this reserve with it. The bite is
+     at its worst — a constant 176px — from 1024 up to the 1200px container:
+     both edges are pinned to the window there, so neither gains on the other.
+     Wider than that the centred container pulls away faster than the layer
+     moves right (776 − W/2, reaching zero around 1552px). */
+  .ob-yh__in > * {
+    max-width: calc(100% - (200px - var(--container-pad)) - 4px);
+  }
 }
 
 /* Breadcrumb back to the hub — the year page is otherwise a dead end for
@@ -1886,11 +1893,17 @@ details[open] > .ob-faq__q::after {
   margin: 0 0 var(--sp-2);
 }
 
+/* The venue line is the one string in this band that grows year on year, and it
+   is a <p> — `base.css` hands `overflow-wrap` to h1–h3 only, so the H1 above is
+   covered and this was not. The reserve beside the pattern bounds the BOX; an
+   unbreakable token (an address run together, a URL) would paint past that box
+   and land on the layer anyway. */
 .ob-yh__meta {
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
   color: var(--text-muted);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .ob-yh__draft {

@@ -80,10 +80,21 @@ test.describe('responsive', () => {
    * carries the very same motif under the very same design rule (#38) — a
    * second copy of this probe would be a second place to fix.
    */
-  async function probePattern(
-    page: Page,
-    { path, band, selectors, width }: { path: string; band: string; selectors: readonly string[]; width: number },
-  ) {
+  interface PatternProbe {
+    path: string;
+    band: string;
+    selectors: readonly string[];
+    width: number;
+  }
+
+  async function probePattern(page: Page, { path, band, selectors, width }: PatternProbe) {
+    // `width` is used as given — NOT `width - SCROLLBAR_GUTTER` like the
+    // overflow guards. There the question is «does the layout fit the usable
+    // width a real classic scrollbar leaves», here it is «where does the layer
+    // fall against the copy», and the nominal width is that question's worst
+    // case: the reserve beside the pattern is tightest at exactly 1024 CSS px,
+    // while a user whose window is 1024 gets ~1007 CSS px — below the
+    // breakpoint, where the layer is not painted at all.
     await page.setViewportSize({ width, height: 900 });
     await page.goto(path);
 
@@ -211,9 +222,16 @@ test.describe('responsive', () => {
    * a phone with real air is a legitimate way to satisfy it. At 1024 and up the
    * layer must be THERE and clear — otherwise deleting the decoration outright
    * would pass this suite.
+   *
+   * 1120 and 1199 join the canonical ladder for the same reason the hero guard
+   * samples 1120/1279: the band between the breakpoint and the 1200px container
+   * is where the reserve is tightest (4px), and the hero's geometry was already
+   * once «derived» correctly for the ladder's widths and wrong between them.
    */
+  const YEAR_PATTERN_WIDTHS = [...OVERFLOW_WIDTHS, 1120, 1199];
+
   for (const path of YEAR_ROUTES) {
-    for (const width of OVERFLOW_WIDTHS) {
+    for (const width of YEAR_PATTERN_WIDTHS) {
       test(`the year header pattern stays off the copy of ${path} at ${width}px`, async ({
         page,
       }) => {
@@ -225,6 +243,14 @@ test.describe('responsive', () => {
         });
         expect(textRight).toBeGreaterThan(0);
         const [p] = patterns;
+
+        // A missing element must not reach the clearance assertions below: with
+        // `left: 0` they would report a layer «crowding the text column» that
+        // is not in the DOM at all.
+        expect(
+          p.display,
+          `${p.selector} is not in the DOM on ${path} — the year header lost its brand motif`,
+        ).not.toBe('ABSENT');
 
         if (width >= 1024) {
           expect(

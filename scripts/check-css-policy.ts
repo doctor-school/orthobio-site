@@ -664,17 +664,7 @@ function atRuleBreakpointViolation(
 }
 
 function atRuleHasEscapedSyntax(name: string, params: string): boolean {
-  if (CSS_ESCAPE.test(name)) return true;
-  switch (name.toLowerCase()) {
-    case 'container':
-    case 'custom-media':
-    case 'media':
-      return valueHasEscapedSyntax(params);
-    case 'import':
-      return valueHasEscapedSyntax(importMediaQuery(params));
-    default:
-      return false;
-  }
+  return CSS_ESCAPE.test(name) || valueHasEscapedSyntax(params);
 }
 
 export function lintCssSource(

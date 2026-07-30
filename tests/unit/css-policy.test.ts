@@ -43,6 +43,10 @@ describe('CSS token policy', () => {
         String.raw`.b { color: r\65 d; }`,
         String.raw`.c { width: 1\70 x; }`,
         String.raw`@media (m\69 n-width: 900px) { .d { display: block; } }`,
+        String.raw`@m\65 dia (min-width: 900px) { .e { display: block; } }`,
+        String.raw`@c\6f ntainer (min-width: 900px) { .f { display: block; } }`,
+        String.raw`@c\75 stom-media --wide (min-width: 900px);`,
+        String.raw`@i\6d port url("x.css") screen and (min-width: 900px);`,
       ].join('\n'),
       { file: 'src/styles/components.css' },
     );
@@ -52,6 +56,10 @@ describe('CSS token policy', () => {
       { rule: 'escaped-syntax', line: 2 },
       { rule: 'escaped-syntax', line: 3 },
       { rule: 'escaped-syntax', line: 4 },
+      { rule: 'escaped-syntax', line: 5 },
+      { rule: 'escaped-syntax', line: 6 },
+      { rule: 'escaped-syntax', line: 7 },
+      { rule: 'escaped-syntax', line: 8 },
     ]);
   });
 

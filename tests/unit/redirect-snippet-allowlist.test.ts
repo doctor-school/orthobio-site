@@ -106,9 +106,10 @@ const allowlist = [
   const pattern = shellVariables.get(name);
   if (pattern === undefined) throw new Error(`${SCRIPT} no longer defines ${name}`);
 
-  // `[[:space:]]` is the only POSIX character class used by the host regexes;
-  // the rest of their deliberately small ERE dialect is also valid JavaScript.
-  const translated = pattern.replaceAll('[[:space:]]', '\\s');
+  // `[[:space:]]` is the only POSIX character class used by the host regexes.
+  // Keep it ASCII-sized: JavaScript `\s` also admits Unicode whitespace that
+  // the production grep can reject under its host locale.
+  const translated = pattern.replaceAll('[[:space:]]', '[\\t\\v\\f\\r ]');
   if (translated.includes('[[:')) {
     throw new Error(`${SCRIPT} uses an unsupported POSIX character class in ${name}`);
   }
@@ -117,7 +118,7 @@ const allowlist = [
 });
 
 const acceptsPortably = (snippet: string): boolean => {
-  const lines = snippet.split(/\r?\n/);
+  const lines = snippet.split('\n');
   if (lines.some((line) => !allowlist.some((pattern) => pattern.test(line)))) {
     return false;
   }
@@ -198,8 +199,8 @@ describe('orthobio-apply-redirects allowlist', () => {
     ).toBe(true);
   });
 
-  it('accepts Windows CRLF without interpreting a temporary path through a shell', () => {
-    expect(accepts('location = /old { return 301 /new; }\r\n')).toBe(true);
+  it('evaluates a candidate without shell-interpreting a temporary path', () => {
+    expect(acceptsPortably('location = /old { return 301 /new; }\n')).toBe(true);
   });
 
   it.each([

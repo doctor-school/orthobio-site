@@ -25,8 +25,8 @@ import { ROUTES } from './_routes';
  */
 const AXE_WIDTHS = [360, 768, 1024, 1280] as const;
 test('the skip link is the first tab stop and jumps to the content', async ({ page }) => {
-  // The primary nav is 8 wrapping items on every page; without this, a keyboard
-  // user walks all of them before reaching the content on every navigation.
+  // The persistent site chrome precedes every page. The link gives keyboard
+  // users a direct route to the content regardless of the active nav layout.
   await page.goto('/archive/2025');
   await page.keyboard.press('Tab');
   const focused = page.locator(':focus');

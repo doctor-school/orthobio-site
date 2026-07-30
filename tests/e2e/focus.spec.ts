@@ -106,6 +106,18 @@ test.describe('the focus ring survives every state it shares an element with', (
       })
       .toMatch(/16px/);
   });
+
+  test('the mobile menu trigger keeps its ring when focused and hovered', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto('/');
+    const trigger = page.locator('.ob-menu summary');
+
+    await focusByKeyboard(page, trigger);
+    await expectTwoToneRing(trigger, 'mobile menu trigger — focused');
+
+    await trigger.hover();
+    await expectTwoToneRing(trigger, 'mobile menu trigger — focused + hovered');
+  });
 });
 
 test('forced colours replace the ring with a system outline', async ({ page }) => {

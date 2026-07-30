@@ -114,9 +114,8 @@
 
 /* ── Skip link ───────────────────────────────────────────────────────────── */
 
-/* The nav is a wrapping row of 8 items (3 rows at 360px) repeated on every
-   page, so a keyboard user pays for it on every navigation. Off-screen until
-   focused, then a normal button-sized target. */
+/* The persistent chrome still precedes the page content on every route.
+   Off-screen until focused, then a normal button-sized target. */
 .ob-skip {
   position: absolute;
   left: -9999px;
@@ -140,6 +139,9 @@
 /* ── Site chrome: header ─────────────────────────────────────────────────── */
 
 .ob-head {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   border-bottom: 1px solid var(--hairline);
   background: var(--surface-page);
 }
@@ -154,22 +156,11 @@
   background: var(--grad-ribbon);
 }
 
-/* Sticky only where there is vertical room to spare: on a 360px phone a
-   sticky header + wrapped nav would eat a third of the viewport. */
-@media (min-width: 1024px) {
-  .ob-head {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-}
-
 .ob-head__in {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-3) var(--sp-5);
-  padding-block: var(--sp-3);
+  gap: var(--sp-4);
+  height: var(--sp-8);
 }
 
 .ob-head__logo {
@@ -218,8 +209,7 @@
 }
 
 .ob-nav {
-  display: flex;
-  flex-wrap: wrap;
+  display: none;
   gap: var(--sp-1);
 }
 
@@ -254,6 +244,119 @@
 .ob-nav a[aria-current='page']:hover {
   background: var(--ob-sky-tint);
   color: var(--ds-blue-pressed);
+}
+
+.ob-menu summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sp-7);
+  height: var(--sp-7);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  color: var(--text-body);
+  transition:
+    background var(--t-state),
+    color var(--t-state);
+}
+
+.ob-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.ob-menu summary:hover {
+  background: var(--surface-faint);
+  color: var(--text-link);
+}
+
+.ob-menu summary:active {
+  background: var(--surface);
+  color: var(--text-link-hover);
+}
+
+.ob-menu__icon {
+  width: var(--sp-5);
+  height: var(--sp-5);
+}
+
+.ob-menu__icon--close {
+  display: none;
+}
+
+.ob-menu[open] .ob-menu__icon--menu {
+  display: none;
+}
+
+.ob-menu[open] .ob-menu__icon--close {
+  display: block;
+}
+
+.ob-menu__panel {
+  position: absolute;
+  inset-inline: 0;
+  top: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-2) var(--container-pad) var(--sp-4);
+  background: var(--surface-page);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: var(--shadow-lift);
+}
+
+.ob-menu__panel a {
+  display: flex;
+  align-items: center;
+  min-height: var(--sp-7);
+  padding-inline: var(--sp-3);
+  border-bottom: 1px solid var(--surface);
+  border-radius: var(--r-sm);
+  color: var(--text-body);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  transition:
+    background var(--t-state),
+    color var(--t-state);
+}
+
+.ob-menu__panel a:last-child {
+  border-bottom: none;
+}
+
+.ob-menu__panel a:hover {
+  background: var(--surface-faint);
+  color: var(--text-link);
+}
+
+.ob-menu__panel a:active {
+  background: var(--surface);
+  color: var(--text-link-hover);
+}
+
+.ob-menu__panel a[aria-current='page'] {
+  background: var(--ob-sky-tint);
+  color: var(--ds-blue-dark);
+  font-weight: var(--fw-semibold);
+}
+
+.ob-menu__panel a[aria-current='page']:hover {
+  color: var(--ds-blue-pressed);
+}
+
+.ob-menu__panel a[aria-current='page']:active {
+  background: var(--surface);
+  color: var(--ds-blue-pressed);
+}
+
+@media (min-width: 1024px) {
+  .ob-nav {
+    display: flex;
+  }
+
+  .ob-menu {
+    display: none;
+  }
 }
 
 /* ── Site chrome: footer ─────────────────────────────────────────────────── */

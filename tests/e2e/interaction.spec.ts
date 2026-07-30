@@ -133,7 +133,10 @@ test.describe('without JavaScript', () => {
       // disclosure removes it from `:not([open])`, so a pre-resolved list
       // strands every later index on an element that no longer matches. The
       // initial count is the bound — one click opens exactly one.
-      const closed = page.locator('details:not([open]) > summary');
+      // The mobile menu is another native disclosure, but its summary is
+      // breakpoint-hidden at this test's desktop viewport. Restrict the loop
+      // to operable disclosures instead of waiting forever on hidden chrome.
+      const closed = page.locator('details:not([open]) > summary:visible');
       for (let remaining = await closed.count(); remaining > 0; remaining -= 1) {
         await closed.first().click();
       }
@@ -289,7 +292,7 @@ test('a partner without a site does not pretend to be clickable', async ({ page 
   await expect(static_).toHaveCSS('box-shadow', staticShadowAtRest);
 });
 
-test('the anchor offset exists only where the header is sticky', async ({ page }) => {
+test('the anchor offset clears the sticky header at every width', async ({ page }) => {
   // A real navigation target, not `[id]` first-in-document — that resolves to
   // the layout's <main id="main"> skip-link anchor, which nobody scrolls to and
   // which would pass the assertion without ever exercising the elements whose
@@ -297,13 +300,13 @@ test('the anchor offset exists only where the header is sticky', async ({ page }
   // lightbox's ✕ returns to.
   const target = page.locator('#pg2025');
 
-  // Below lg the header scrolls away with the page, so an 88px offset would
-  // park every anchor that far past its own heading.
   await page.setViewportSize({ width: 360, height: 900 });
   await page.goto('/archive/2025');
-  await expect(target).toHaveCSS('scroll-margin-top', '0px');
+  await expect(page.locator('.ob-head')).toHaveCSS('position', 'sticky');
+  await expect(target).toHaveCSS('scroll-margin-top', '88px');
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/archive/2025');
+  await expect(page.locator('.ob-head')).toHaveCSS('position', 'sticky');
   await expect(target).toHaveCSS('scroll-margin-top', '88px');
 });

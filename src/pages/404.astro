@@ -1,0 +1,21 @@
+---
+import Button from '@/components/Button.astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Страница не найдена" noindex>
+  <div class="ob-container ob-section">
+    <div class="ob-not-found">
+      <p class="ob-not-found__code">Ошибка 404</p>
+      <h1 class="ob-not-found__title">Страница не найдена</h1>
+      <p class="ob-not-found__text">
+        Возможно, адрес изменился или в ссылке есть ошибка. Вернитесь на главную страницу или
+        перейдите в архив конгрессов.
+      </p>
+      <div class="ob-not-found__actions">
+        <Button href="/">На главную</Button>
+        <Button href="/archive/" variant="secondary">Открыть архив</Button>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

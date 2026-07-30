@@ -169,6 +169,40 @@ jobs:
           grep -q 'ОРТОБИОЛОГИЯ' /tmp/home.html
           echo "Homepage served and contains the expected content."
 
+          robots_code=$(curl -sSL -o /tmp/robots.txt -D /tmp/robots.headers -w '%{http_code}' \
+            --resolve "${SITE_HOST}:80:${DEPLOY_HOST}" \
+            --resolve "${SITE_HOST}:443:${DEPLOY_HOST}" \
+            "http://${SITE_HOST}/robots.txt")
+          echo "GET /robots.txt -> ${robots_code}"
+          test "${robots_code}" = "200"
+          grep -Eqi '^content-type:[[:space:]]*text/plain' /tmp/robots.headers
+          grep -Fxq 'User-agent: *' /tmp/robots.txt
+          grep -Fxq 'Sitemap: https://orthobio.ru/sitemap.xml' /tmp/robots.txt
+
+          sitemap_code=$(curl -sSL -o /tmp/sitemap.xml -D /tmp/sitemap.headers -w '%{http_code}' \
+            --resolve "${SITE_HOST}:80:${DEPLOY_HOST}" \
+            --resolve "${SITE_HOST}:443:${DEPLOY_HOST}" \
+            "http://${SITE_HOST}/sitemap.xml")
+          echo "GET /sitemap.xml -> ${sitemap_code}"
+          test "${sitemap_code}" = "200"
+          grep -Eqi '^content-type:[[:space:]]*(application|text)/xml' /tmp/sitemap.headers
+          grep -Fq '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' /tmp/sitemap.xml
+          if grep -Fq 'new.orthobio.ru' /tmp/sitemap.xml; then
+            echo "::error::Sitemap contains the temporary preview hostname."
+            exit 1
+          fi
+
+          not_found_code=$(curl -sSL -o /tmp/not-found.html -D /tmp/not-found.headers -w '%{http_code}' \
+            --resolve "${SITE_HOST}:80:${DEPLOY_HOST}" \
+            --resolve "${SITE_HOST}:443:${DEPLOY_HOST}" \
+            "http://${SITE_HOST}/__orthobio_release_smoke_missing__")
+          echo "GET unknown route -> ${not_found_code}"
+          test "${not_found_code}" = "404"
+          grep -Eqi '^content-type:[[:space:]]*text/html' /tmp/not-found.headers
+          grep -q 'Страница не найдена' /tmp/not-found.html
+
+          grep -Fqi "frame-ancestors 'none'" /tmp/home.headers
+
           if grep -qi '^x-robots-tag:.*noindex' /tmp/home.headers; then
             indexable=false
           else
@@ -178,4 +212,13 @@ jobs:
           if [ "${indexable}" != "${SITE_INDEXABLE}" ]; then
             echo "::error::Indexing state mismatch. The vhost's X-Robots-Tag and the SITE_INDEXABLE variable disagree — see docs/infrastructure-decisions.md (switchover checklist)."
             exit 1
+          fi
+
+          if [ "${SITE_INDEXABLE}" = "true" ]; then
+            if ! grep -Fq "rel=\"canonical\" href=\"https://${SITE_HOST}/\"" /tmp/home.html; then
+              echo "::error::The canonical host does not match SITE_HOST."
+              exit 1
+            fi
+            grep -Fxq "Sitemap: https://${SITE_HOST}/sitemap.xml" /tmp/robots.txt
+            grep -Fq "<loc>https://${SITE_HOST}/</loc>" /tmp/sitemap.xml
           fi

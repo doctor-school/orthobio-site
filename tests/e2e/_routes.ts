@@ -3,35 +3,17 @@ import { fileURLToPath } from 'node:url';
 
 import { parse } from 'yaml';
 
+import { STATIC_PUBLIC_ROUTES } from '../../src/lib/seo';
+
 /**
  * Every public route of the site (ТЗ §4 page map) — the single list the
- * responsive and a11y guards iterate. A new page must be added here, so it can
- * never ship without an overflow + axe check.
+ * responsive and a11y guards iterate. Fixed routes come from the production
+ * SEO contract; years come from content below, so neither can join the sitemap
+ * without entering the browser matrix too.
  *
  * One exception, `PROFILE_ROUTES` at the bottom: 22 instances of ONE template,
  * derived from the content instead of listed here.
  */
-export const ROUTES = [
-  '/',
-  '/program',
-  '/participants',
-  '/orgs',
-  '/nmo',
-  '/partners',
-  '/contacts',
-  '/faq',
-  '/archive/',
-  '/archive/2026',
-  '/archive/2025',
-  '/archive/2024',
-  '/archive/2023',
-  '/archive/2022',
-  '/archive/2021',
-] as const;
-
-/** Archive year routes only — the data-driven year template. */
-export const YEAR_ROUTES = ROUTES.filter((r) => /\/archive\/\d{4}$/.test(r));
-
 /**
  * Partner profile routes (`/partners/<slug>/`, Issue #24).
  *
@@ -48,20 +30,31 @@ export const YEAR_ROUTES = ROUTES.filter((r) => /\/archive\/\d{4}$/.test(r));
  */
 const congressDir = fileURLToPath(new URL('../../src/content/congress', import.meta.url));
 
-export const PROFILE_ROUTES: string[] = readdirSync(congressDir)
+const congresses = readdirSync(congressDir)
   .filter((f) => f.endsWith('.yaml'))
-  .flatMap((f) => {
+  .map((f) => {
     const data = parse(readFileSync(`${congressDir}/${f}`, 'utf8')) as {
       draft?: boolean;
+      year: number;
       partners?: { slug?: string | null }[];
     };
-    // A draft year is not routed (getCongressYears filters it), so its partners
-    // must not be expected to have pages either.
-    if (data.draft === true) return [];
-    return (data.partners ?? [])
+    return data;
+  })
+  .filter(({ draft }) => draft !== true);
+
+/** Archive year routes only — derived from the same content that builds them. */
+export const YEAR_ROUTES = congresses
+  .map(({ year }) => `/archive/${year}/`)
+  .sort((a, b) => b.localeCompare(a));
+
+export const ROUTES = [...STATIC_PUBLIC_ROUTES, ...YEAR_ROUTES];
+
+export const PROFILE_ROUTES: string[] = congresses
+  .flatMap(({ partners }) =>
+    (partners ?? [])
       .map((p) => p.slug)
       .filter((s): s is string => typeof s === 'string')
-      .map((slug) => `/partners/${slug}/`);
-  })
+      .map((slug) => `/partners/${slug}/`),
+  )
   .filter((route, i, all) => all.indexOf(route) === i)
   .sort();

@@ -26,6 +26,20 @@ test.describe('responsive', () => {
     }
   }
 
+  test('/program keeps the footer on the bottom edge of a tall viewport', async ({ page }) => {
+    const viewport = { width: 1280, height: 1400 };
+    await page.setViewportSize(viewport);
+    await page.goto('/program');
+
+    const footerBottom = await page.locator('footer.ob-foot').evaluate((footer) => {
+      return footer.getBoundingClientRect().bottom;
+    });
+    expect(
+      Math.abs(footerBottom - viewport.height),
+      `footer ends at ${footerBottom}px instead of the ${viewport.height}px viewport edge`,
+    ).toBeLessThanOrEqual(1);
+  });
+
   // The FAQ answers are the longest running text on the site, and every guard
   // above measures them COLLAPSED — the expanded state was untested (audit
   // observation). Forcing every <details> open re-runs the same three checks

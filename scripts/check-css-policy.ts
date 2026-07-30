@@ -20,6 +20,7 @@ import ts from 'typescript';
 const CANONICAL_BREAKPOINTS = new Set([640, 768, 1024, 1280, 1536]);
 const TOKEN_SOURCE = 'src/styles/tokens.css';
 const MARKUP_EXTENSIONS = new Set(['.astro', '.html', '.jsx', '.tsx']);
+const CSS_ESCAPE = /\\(?:[\da-f]{1,6}\s?|[^\n\r\f])/i;
 const LENGTH_LITERAL =
   /(?<![\w.-])[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?(?:cap|ch|em|ex|ic|lh|rcap|rch|rem|rex|ric|rlh|[dls]?v(?:b|h|i|max|min|w)|cq(?:b|h|i|max|min|w)|cm|mm|q|in|pc|pt|px)\b/i;
 const HEX_COLOR = /^#[\da-f]{3,8}$/i;
@@ -255,6 +256,7 @@ export type CssPolicyRule =
   | 'ad-hoc-breakpoint'
   | 'desktop-first-breakpoint'
   | 'dynamic-style'
+  | 'escaped-syntax'
   | 'inline-style'
   | 'invalid-css'
   | 'invalid-markup'
@@ -278,6 +280,30 @@ function normalized(file: string): string {
 
 function compact(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function valueHasEscapedSyntax(value: string): boolean {
+  let found = false;
+  valueParser(value).walk((node) => {
+    if (found || node.type === 'string' || node.type === 'comment') {
+      return false;
+    }
+    if (
+      (node.type === 'function' || node.type === 'word') &&
+      CSS_ESCAPE.test(node.value)
+    ) {
+      found = true;
+      return false;
+    }
+    if (
+      node.type === 'function' &&
+      node.value.toLowerCase() === 'url'
+    ) {
+      return false;
+    }
+    return undefined;
+  });
+  return found;
 }
 
 function inspectValue(
@@ -616,7 +642,9 @@ function atRuleBreakpointViolation(
       const containerQuery = params.trim();
       const hasLeadingName =
         !containerQuery.startsWith('(') &&
-        !/^(?:scroll-state|style)\(/i.test(containerQuery);
+        !/^(?:not(?:\s|\()|scroll-state\(|style\()/i.test(
+          containerQuery,
+        );
       const nameEnd = containerQuery.search(/\s/);
       if (hasLeadingName && nameEnd === -1) return null;
       const query = hasLeadingName
@@ -632,6 +660,20 @@ function atRuleBreakpointViolation(
     }
     default:
       return null;
+  }
+}
+
+function atRuleHasEscapedSyntax(name: string, params: string): boolean {
+  if (CSS_ESCAPE.test(name)) return true;
+  switch (name.toLowerCase()) {
+    case 'container':
+    case 'custom-media':
+    case 'media':
+      return CSS_ESCAPE.test(params);
+    case 'import':
+      return CSS_ESCAPE.test(importMediaQuery(params));
+    default:
+      return false;
   }
 }
 
@@ -660,6 +702,16 @@ export function lintCssSource(
   }
 
   root.walkAtRules((atRule) => {
+    if (atRuleHasEscapedSyntax(atRule.name, atRule.params)) {
+      violations.push({
+        file: normalizedFile,
+        line: atRule.source?.start?.line ?? 1,
+        rule: 'escaped-syntax',
+        value: compact(atRule.toString()),
+      });
+      return;
+    }
+
     const rule = atRuleBreakpointViolation(atRule.name, atRule.params);
     if (!rule) return;
 
@@ -673,6 +725,19 @@ export function lintCssSource(
 
   root.walkDecls((declaration) => {
     const line = declaration.source?.start?.line ?? 1;
+
+    if (
+      CSS_ESCAPE.test(declaration.prop) ||
+      valueHasEscapedSyntax(declaration.value)
+    ) {
+      violations.push({
+        file: normalizedFile,
+        line,
+        rule: 'escaped-syntax',
+        value: compact(declaration.toString()),
+      });
+      return;
+    }
 
     if (hasLiteralLength(declaration.value)) {
       violations.push({
@@ -693,7 +758,7 @@ export function lintCssSource(
     }
   });
 
-  return violations;
+  return violations.sort((left, right) => left.line - right.line);
 }
 
 function sourceSnippet(

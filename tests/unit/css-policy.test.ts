@@ -36,6 +36,25 @@ describe('CSS token policy', () => {
     ]);
   });
 
+  it('rejects escaped CSS identifiers outside the token source', () => {
+    const violations = lintCssSource(
+      [
+        String.raw`.a { c\6flor: red; }`,
+        String.raw`.b { color: r\65 d; }`,
+        String.raw`.c { width: 1\70 x; }`,
+        String.raw`@media (m\69 n-width: 900px) { .d { display: block; } }`,
+      ].join('\n'),
+      { file: 'src/styles/components.css' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'escaped-syntax', line: 1 },
+      { rule: 'escaped-syntax', line: 2 },
+      { rule: 'escaped-syntax', line: 3 },
+      { rule: 'escaped-syntax', line: 4 },
+    ]);
+  });
+
   it('rejects every CSS length-unit family outside the token source', () => {
     const units = [
       'px',
@@ -247,6 +266,8 @@ describe('CSS token policy', () => {
         '@media (--small) { .x { display: none; } }',
         '@container (inline-size > 900px) { .x { display: none; } }',
         '@import url("x.css") supports((width: 1px));',
+        '@container not (min-width: 640px) { .x { display: none; } }',
+        '@container card not (min-width: 640px) { .x { display: none; } }',
       ].join('\n'),
       { file: 'src/styles/components.css' },
     );
@@ -258,6 +279,8 @@ describe('CSS token policy', () => {
       { rule: 'ad-hoc-breakpoint', line: 4 },
       { rule: 'ad-hoc-breakpoint', line: 5 },
       { rule: 'ad-hoc-breakpoint', line: 6 },
+      { rule: 'desktop-first-breakpoint', line: 8 },
+      { rule: 'desktop-first-breakpoint', line: 9 },
     ]);
   });
 

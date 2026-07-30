@@ -2,18 +2,24 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parse as parseAstro } from '@astrojs/compiler';
+import type {
+  Node as AstroNode,
+  TagLikeNode as AstroTagLikeNode,
+} from '@astrojs/compiler/types';
+import * as cssTree from 'css-tree';
+import {
+  parseFragment,
+  type DefaultTreeAdapterTypes as HtmlTree,
+  type ParserError,
+} from 'parse5';
 import postcss from 'postcss';
 import valueParser from 'postcss-value-parser';
+import ts from 'typescript';
 
 const CANONICAL_BREAKPOINTS = new Set([640, 768, 1024, 1280, 1536]);
 const TOKEN_SOURCE = 'src/styles/tokens.css';
 const MARKUP_EXTENSIONS = new Set(['.astro', '.html', '.jsx', '.tsx']);
-const WIDTH_QUERY_AT_RULES = new Set([
-  'container',
-  'custom-media',
-  'import',
-  'media',
-]);
 const LENGTH_LITERAL =
   /(?<![\w.-])[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?(?:cap|ch|em|ex|ic|lh|rcap|rch|rem|rex|ric|rlh|[dls]?v(?:b|h|i|max|min|w)|cq(?:b|h|i|max|min|w)|cm|mm|q|in|pc|pt|px)\b/i;
 const HEX_COLOR = /^#[\da-f]{3,8}$/i;
@@ -29,6 +35,22 @@ const FIXED_COLOR_FUNCTIONS = new Set([
   'oklch',
   'rgb',
   'rgba',
+]);
+const COLOR_VALUE_FUNCTIONS = new Set([
+  'color-mix',
+  'cross-fade',
+  'drop-shadow',
+  'image',
+  'image-set',
+  'light-dark',
+]);
+const WIDTH_FEATURES = new Set([
+  'inline-size',
+  'max-inline-size',
+  'max-width',
+  'min-inline-size',
+  'min-width',
+  'width',
 ]);
 const NAMED_COLORS = new Set([
   'aliceblue',
@@ -232,6 +254,7 @@ export type CssPolicyRule =
   | 'dynamic-style'
   | 'inline-style'
   | 'invalid-css'
+  | 'invalid-markup'
   | 'literal-color'
   | 'literal-size';
 
@@ -252,14 +275,6 @@ function normalized(file: string): string {
 
 function compact(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
-}
-
-function lineAt(source: string, index: number): number {
-  return source.slice(0, index).split('\n').length;
-}
-
-function maskPreservingLines(value: string): string {
-  return value.replace(/[^\r\n]/g, ' ');
 }
 
 function inspectValue(
@@ -304,50 +319,268 @@ function canContainNamedColor(property: string): boolean {
   );
 }
 
-function hasLiteralColor(property: string, value: string): boolean {
-  const acceptsNamedColor = canContainNamedColor(property);
-  return inspectValue(value, (word, isFunction) => {
-    const normalizedWord = word.toLowerCase();
-    return isFunction
-      ? FIXED_COLOR_FUNCTIONS.has(normalizedWord)
-      : HEX_COLOR.test(normalizedWord) ||
-          (acceptsNamedColor && NAMED_COLORS.has(normalizedWord));
-  });
+type ParsedValueNode = valueParser.Node;
+
+function isTrivia(node: ParsedValueNode): boolean {
+  return node.type === 'comment' || node.type === 'space';
 }
 
-function widthQueryViolation(
-  params: string,
-): Extract<
-  CssPolicyRule,
-  'ad-hoc-breakpoint' | 'desktop-first-breakpoint'
-> | null {
-  const query = params
-    .replace(/url\((?:[^()"']+|"(?:\\.|[^"])*"|'(?:\\.|[^'])*')*\)/gi, ' ')
-    .replace(/"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/g, ' ')
-    .replace(/--[\w-]+/g, ' ');
-  const widthFeature =
-    /(?:\b(?:min|max)-width\b|\bwidth\s*(?=[:<>=])|[<>=]\s*\bwidth\b)/i;
-  if (!widthFeature.test(query)) return null;
+function isTokenDerivedColorFunction(
+  node: valueParser.FunctionNode,
+): boolean {
+  const meaningful = node.nodes.filter((child) => !isTrivia(child));
+  const isRelative =
+    meaningful[0]?.type === 'word' &&
+    meaningful[0].value.toLowerCase() === 'from' &&
+    (meaningful[1]?.type === 'function'
+      ? meaningful[1].value.toLowerCase() === 'var'
+      : meaningful[1]?.type === 'word' &&
+        meaningful[1].value.toLowerCase() === 'currentcolor');
 
-  if (
-    /(?:^|[\s,])not\s+(?=all\b|screen\b|print\b|\()/i.test(query) ||
-    /\bmax-width\b/i.test(query)
-  ) {
-    return 'desktop-first-breakpoint';
+  if (isRelative) return true;
+
+  return (
+    meaningful.some(
+      (child) =>
+        child.type === 'function' && child.value.toLowerCase() === 'var',
+    ) &&
+    meaningful.every(
+      (child) =>
+        child.type === 'div' ||
+        (child.type === 'function' && child.value.toLowerCase() === 'var'),
+    )
+  );
+}
+
+function hasLiteralColor(property: string, value: string): boolean {
+  const acceptsNamedColor = canContainNamedColor(property);
+  let found = false;
+
+  function visit(nodes: ParsedValueNode[], insideColorFunction = false): void {
+    for (const node of nodes) {
+      if (found || node.type === 'string' || node.type === 'comment') continue;
+
+      if (node.type === 'word') {
+        const word = node.value.toLowerCase();
+        if (
+          HEX_COLOR.test(word) ||
+          ((acceptsNamedColor || insideColorFunction) &&
+            NAMED_COLORS.has(word))
+        ) {
+          found = true;
+        }
+        continue;
+      }
+
+      if (node.type !== 'function') continue;
+      const functionName = node.value.toLowerCase();
+      if (functionName === 'url') continue;
+
+      if (
+        FIXED_COLOR_FUNCTIONS.has(functionName) &&
+        !isTokenDerivedColorFunction(node)
+      ) {
+        found = true;
+        continue;
+      }
+
+      visit(
+        node.nodes,
+        insideColorFunction ||
+          COLOR_VALUE_FUNCTIONS.has(functionName) ||
+          functionName.endsWith('gradient'),
+      );
+    }
   }
 
-  const conditions = [...query.matchAll(/\(([^()]*)\)/g)]
-    .map((match) => match[1].trim())
-    .filter((condition) => widthFeature.test(condition));
+  visit(valueParser(value).nodes);
+  return found;
+}
 
-  if (conditions.length === 0) return 'ad-hoc-breakpoint';
+interface QueryNode {
+  type: string;
+  children?: QueryNode[];
+  condition?: QueryNode | null;
+  left?: QueryNode | null;
+  middle?: QueryNode | null;
+  modifier?: string | null;
+  name?: string;
+  right?: QueryNode | null;
+  unit?: string;
+  value?: string;
+}
 
-  const everyConditionIsCanonical = conditions.every((condition) => {
-    const match = condition.match(/^min-width\s*:\s*(\d+)px$/i);
-    return match && CANONICAL_BREAKPOINTS.has(Number(match[1]));
+type BreakpointRule = Extract<
+  CssPolicyRule,
+  'ad-hoc-breakpoint' | 'desktop-first-breakpoint'
+>;
+
+function visitQueryNodes(
+  node: QueryNode,
+  visitor: (node: QueryNode) => void,
+): void {
+  visitor(node);
+  for (const child of node.children ?? []) visitQueryNodes(child, visitor);
+  for (const child of [
+    node.condition,
+    node.left,
+    node.middle,
+    node.right,
+  ]) {
+    if (child) visitQueryNodes(child, visitor);
+  }
+}
+
+function queryViolation(
+  query: string,
+  context: 'condition' | 'mediaQueryList',
+): BreakpointRule | null {
+  let ast: QueryNode;
+
+  try {
+    // css-tree 3 understands Media Queries Level 4. Its published community
+    // types still model v2, so the plain AST is narrowed at this boundary.
+    ast = cssTree.toPlainObject(
+      cssTree.parse(query, { context }),
+    ) as unknown as QueryNode;
+  } catch {
+    return /(?:--[\w-]+|(?:inline-size|width))/i.test(query)
+      ? 'ad-hoc-breakpoint'
+      : null;
+  }
+
+  let hasAlias = false;
+  let hasNegation = false;
+  let hasSizeFeature = false;
+  let hasDesktopFirstFeature = false;
+  let hasInvalidFeature = false;
+
+  visitQueryNodes(ast, (node) => {
+    if (node.type === 'MediaQuery' && node.modifier === 'not') {
+      hasNegation = true;
+    }
+    if (
+      node.type === 'Condition' &&
+      node.children?.some(
+        (child) =>
+          child.type === 'Identifier' &&
+          child.name?.toLowerCase() === 'not',
+      )
+    ) {
+      hasNegation = true;
+    }
+
+    if (node.type === 'Feature') {
+      const name = node.name?.toLowerCase() ?? '';
+      if (name.startsWith('--')) {
+        hasAlias = true;
+        return;
+      }
+      if (!WIDTH_FEATURES.has(name)) return;
+
+      hasSizeFeature = true;
+      if (name.startsWith('max-')) {
+        hasDesktopFirstFeature = true;
+        return;
+      }
+      if (name !== 'min-width') {
+        hasInvalidFeature = true;
+        return;
+      }
+
+      const value = node.value as QueryNode | undefined;
+      if (
+        value?.type !== 'Dimension' ||
+        value.unit?.toLowerCase() !== 'px' ||
+        !CANONICAL_BREAKPOINTS.has(Number(value.value))
+      ) {
+        hasInvalidFeature = true;
+      }
+    }
+
+    if (node.type === 'FeatureRange') {
+      const parts = [node.left, node.middle, node.right].filter(
+        (part): part is QueryNode => Boolean(part),
+      );
+      if (
+        parts.some(
+          (part) =>
+            part.type === 'Identifier' &&
+            WIDTH_FEATURES.has(part.name?.toLowerCase() ?? ''),
+        )
+      ) {
+        hasSizeFeature = true;
+        hasInvalidFeature = true;
+      }
+    }
   });
 
-  return everyConditionIsCanonical ? null : 'ad-hoc-breakpoint';
+  // Custom-media aliases are intentionally unsupported: their polarity and
+  // width can change away from the use site, defeating local policy proof.
+  if (hasAlias) return 'ad-hoc-breakpoint';
+  if (hasSizeFeature && (hasNegation || hasDesktopFirstFeature)) {
+    return 'desktop-first-breakpoint';
+  }
+  return hasInvalidFeature ? 'ad-hoc-breakpoint' : null;
+}
+
+function importMediaQuery(params: string): string {
+  const nodes = valueParser(params).nodes;
+  let sourceFound = false;
+
+  const mediaNodes = nodes.filter((node) => {
+    if (isTrivia(node)) return sourceFound;
+
+    if (
+      !sourceFound &&
+      (node.type === 'string' ||
+        (node.type === 'function' &&
+          node.value.toLowerCase() === 'url'))
+    ) {
+      sourceFound = true;
+      return false;
+    }
+
+    if (!sourceFound) return false;
+    if (node.type === 'word' && node.value.toLowerCase() === 'layer') {
+      return false;
+    }
+    if (
+      node.type === 'function' &&
+      ['layer', 'supports'].includes(node.value.toLowerCase())
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  return valueParser.stringify(mediaNodes).trim();
+}
+
+function atRuleBreakpointViolation(
+  name: string,
+  params: string,
+): BreakpointRule | null {
+  switch (name.toLowerCase()) {
+    case 'custom-media':
+      return 'ad-hoc-breakpoint';
+    case 'media':
+      return queryViolation(params, 'mediaQueryList');
+    case 'container': {
+      const conditionStart = params.indexOf('(');
+      return conditionStart === -1
+        ? null
+        : queryViolation(params.slice(conditionStart), 'condition');
+    }
+    case 'import': {
+      const mediaQuery = importMediaQuery(params);
+      return mediaQuery
+        ? queryViolation(mediaQuery, 'mediaQueryList')
+        : null;
+    }
+    default:
+      return null;
+  }
 }
 
 export function lintCssSource(
@@ -375,8 +608,7 @@ export function lintCssSource(
   }
 
   root.walkAtRules((atRule) => {
-    if (!WIDTH_QUERY_AT_RULES.has(atRule.name.toLowerCase())) return;
-    const rule = widthQueryViolation(atRule.params);
+    const rule = atRuleBreakpointViolation(atRule.name, atRule.params);
     if (!rule) return;
 
     violations.push({
@@ -412,86 +644,345 @@ export function lintCssSource(
   return violations;
 }
 
-function withoutAstroFrontmatter(source: string): string {
-  if (!source.startsWith('---')) return source;
-  const closing = source.indexOf('\n---', 3);
-  if (closing === -1) return source;
+function sourceSnippet(
+  source: string,
+  start = 0,
+  end = source.length,
+): string {
+  return compact(source.slice(start, end));
+}
+
+function isAstroTag(node: AstroNode): node is AstroTagLikeNode {
   return (
-    maskPreservingLines(source.slice(0, closing + 4)) +
-    source.slice(closing + 4)
+    node.type === 'element' ||
+    node.type === 'component' ||
+    node.type === 'custom-element' ||
+    node.type === 'fragment'
   );
 }
 
-export function lintMarkupSource(
+async function lintAstroSource(
   source: string,
   { file }: LintOptions,
-): CssPolicyViolation[] {
+): Promise<CssPolicyViolation[]> {
   const normalizedFile = normalized(file);
-  const markup = withoutAstroFrontmatter(source).replace(
-    /<!--[\s\S]*?-->/g,
-    maskPreservingLines,
-  );
   const violations: CssPolicyViolation[] = [];
-  const inlineStyle = /<(?!style\b)[a-z][^>]*\sstyle(?::list)?\s*=/gi;
+  let result;
 
-  for (const match of markup.matchAll(inlineStyle)) {
-    violations.push({
-      file: normalizedFile,
-      line: lineAt(markup, match.index),
-      rule: 'inline-style',
-      value: compact(match[0]),
-    });
-  }
-
-  // An attribute spread is opaque at this boundary: even `{...props}` can
-  // publish a `style` attribute at runtime, so markup in this static site uses
-  // explicit attributes instead.
-  const attributeSpread = /<(?!style\b)[a-z][^>]*\s\{\s*\.\.\./gi;
-  for (const match of markup.matchAll(attributeSpread)) {
-    violations.push({
-      file: normalizedFile,
-      line: lineAt(markup, match.index),
-      rule: 'inline-style',
-      value: compact(match[0]),
-    });
-  }
-
-  const styleBlock =
-    /<style\b([^>]*?)(?:\/>|>([\s\S]*?)<\/style\s*>)/gi;
-  for (const match of markup.matchAll(styleBlock)) {
-    const attributes = match[1];
-    const content = match[2] ?? '';
-    const contentOffset = match.index + match[0].indexOf(content);
-    const firstContentLine = lineAt(markup, contentOffset);
-    const isDynamic =
-      /\b(?:dangerouslySetInnerHTML|define:vars|set:(?:html|text))\s*=/i.test(
-        attributes,
-      ) ||
-      /\{\s*\.\.\./.test(attributes) ||
-      /^\s*\{[\s\S]*\}\s*$/.test(content);
-
-    if (isDynamic) {
-      violations.push({
+  try {
+    result = await parseAstro(source, { position: true });
+  } catch (error) {
+    return [
+      {
         file: normalizedFile,
-        line: lineAt(markup, match.index),
-        rule: 'dynamic-style',
-        value: compact(match[0]),
-      });
-      continue;
+        line: 1,
+        rule: 'invalid-markup',
+        value: error instanceof Error ? error.message : 'Unable to parse Astro',
+      },
+    ];
+  }
+
+  if (result.diagnostics.length > 0) {
+    const diagnostic = result.diagnostics[0];
+    return [
+      {
+        file: normalizedFile,
+        line: diagnostic.location.line,
+        rule: 'invalid-markup',
+        value: diagnostic.text,
+      },
+    ];
+  }
+
+  function visit(node: AstroNode): void {
+    if (isAstroTag(node)) {
+      const isStyleTag =
+        node.type === 'element' && node.name.toLowerCase() === 'style';
+      const start = node.position?.start.offset ?? 0;
+      const end = node.position?.end?.offset ?? start;
+      const line = node.position?.start.line ?? 1;
+
+      if (!isStyleTag) {
+        for (const attribute of node.attributes) {
+          if (
+            attribute.kind === 'spread' ||
+            ['style', 'style:list'].includes(attribute.name.toLowerCase())
+          ) {
+            violations.push({
+              file: normalizedFile,
+              line: attribute.position?.start.line ?? line,
+              rule: 'inline-style',
+              value: sourceSnippet(source, start, end),
+            });
+          }
+        }
+      } else {
+        const dynamicAttribute = node.attributes.some(
+          (attribute) =>
+            attribute.kind === 'spread' ||
+            [
+              'children',
+              'dangerouslysetinnerhtml',
+              'define:vars',
+              'set:html',
+              'set:text',
+            ].includes(attribute.name.toLowerCase()),
+        );
+        const textChildren = node.children.filter(
+          (child) => child.type === 'text',
+        );
+        const content = textChildren.map((child) => child.value).join('');
+        const dynamicContent = /^\s*\{[\s\S]*\}\s*$/.test(content);
+
+        if (dynamicAttribute || dynamicContent) {
+          violations.push({
+            file: normalizedFile,
+            line,
+            rule: 'dynamic-style',
+            value: sourceSnippet(source, start, end),
+          });
+        } else if (content.trim()) {
+          const firstContentLine =
+            textChildren[0]?.position?.start.line ?? line;
+          violations.push(
+            ...lintCssSource(content, { file: normalizedFile }).map(
+              (violation) => ({
+                ...violation,
+                line: violation.line + firstContentLine - 1,
+              }),
+            ),
+          );
+        }
+      }
     }
 
-    violations.push(
-      ...lintCssSource(content, { file: normalizedFile }).map((violation) => ({
-        ...violation,
-        line: violation.line + firstContentLine - 1,
-      })),
-    );
+    if ('children' in node) {
+      for (const child of node.children) visit(child);
+    }
   }
 
+  visit(result.ast);
   return violations.sort(
     (left, right) =>
       left.line - right.line || left.rule.localeCompare(right.rule),
   );
+}
+
+function isHtmlElement(node: HtmlTree.Node): node is HtmlTree.Element {
+  return 'tagName' in node;
+}
+
+function lintHtmlSource(
+  source: string,
+  { file }: LintOptions,
+): CssPolicyViolation[] {
+  const normalizedFile = normalized(file);
+  const violations: CssPolicyViolation[] = [];
+  const parseErrors: ParserError[] = [];
+  const fragment = parseFragment(source, {
+    sourceCodeLocationInfo: true,
+    onParseError: (error) => parseErrors.push(error),
+  });
+
+  if (parseErrors.length > 0) {
+    const error = parseErrors[0];
+    return [
+      {
+        file: normalizedFile,
+        line: error.startLine,
+        rule: 'invalid-markup',
+        value: error.code,
+      },
+    ];
+  }
+
+  function visit(node: HtmlTree.Node): void {
+    if (isHtmlElement(node)) {
+      const location = node.sourceCodeLocation;
+      const styleLocation = location?.attrs?.style;
+
+      if (node.tagName !== 'style' && styleLocation) {
+        violations.push({
+          file: normalizedFile,
+          line: styleLocation.startLine,
+          rule: 'inline-style',
+          value: sourceSnippet(
+            source,
+            location?.startTag?.startOffset,
+            location?.startTag?.endOffset,
+          ),
+        });
+      }
+
+      if (
+        node.tagName === 'style' &&
+        location?.startTag &&
+        location.endTag
+      ) {
+        const content = source.slice(
+          location.startTag.endOffset,
+          location.endTag.startOffset,
+        );
+        violations.push(
+          ...lintCssSource(content, { file: normalizedFile }).map(
+            (violation) => ({
+              ...violation,
+              line: violation.line + location.startTag!.endLine - 1,
+            }),
+          ),
+        );
+      }
+    }
+
+    if ('childNodes' in node) {
+      for (const child of node.childNodes) visit(child);
+    }
+    if ('content' in node) visit(node.content);
+  }
+
+  visit(fragment);
+  return violations.sort(
+    (left, right) =>
+      left.line - right.line || left.rule.localeCompare(right.rule),
+  );
+}
+
+function lintJsxSource(
+  source: string,
+  { file }: LintOptions,
+): CssPolicyViolation[] {
+  const normalizedFile = normalized(file);
+  const violations: CssPolicyViolation[] = [];
+  const scriptKind = file.toLowerCase().endsWith('.tsx')
+    ? ts.ScriptKind.TSX
+    : ts.ScriptKind.JSX;
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
+
+  function lineOf(node: ts.Node): number {
+    return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile))
+      .line + 1;
+  }
+
+  function openingHasDynamicStyle(
+    opening: ts.JsxOpeningLikeElement,
+  ): boolean {
+    return opening.attributes.properties.some(
+      (attribute) =>
+        ts.isJsxSpreadAttribute(attribute) ||
+        (ts.isJsxAttribute(attribute) &&
+          ['children', 'dangerouslysetinnerhtml'].includes(
+            attribute.name.getText(sourceFile).toLowerCase(),
+          )),
+    );
+  }
+
+  function inspectNonStyleOpening(opening: ts.JsxOpeningLikeElement): void {
+    for (const attribute of opening.attributes.properties) {
+      if (
+        ts.isJsxSpreadAttribute(attribute) ||
+        (ts.isJsxAttribute(attribute) &&
+          attribute.name.getText(sourceFile).toLowerCase() === 'style')
+      ) {
+        violations.push({
+          file: normalizedFile,
+          line: lineOf(attribute),
+          rule: 'inline-style',
+          value: sourceSnippet(
+            source,
+            opening.getStart(sourceFile),
+            opening.getEnd(),
+          ),
+        });
+      }
+    }
+  }
+
+  function visit(node: ts.Node): void {
+    if (ts.isJsxSelfClosingElement(node)) {
+      if (node.tagName.getText(sourceFile) === 'style') {
+        if (openingHasDynamicStyle(node)) {
+          violations.push({
+            file: normalizedFile,
+            line: lineOf(node),
+            rule: 'dynamic-style',
+            value: sourceSnippet(
+              source,
+              node.getStart(sourceFile),
+              node.getEnd(),
+            ),
+          });
+        }
+      } else {
+        inspectNonStyleOpening(node);
+      }
+    }
+
+    if (ts.isJsxElement(node)) {
+      const opening = node.openingElement;
+      if (opening.tagName.getText(sourceFile) === 'style') {
+        const dynamicContent = node.children.some(
+          (child) =>
+            (ts.isJsxExpression(child) && Boolean(child.expression)) ||
+            (!ts.isJsxText(child) && !ts.isJsxExpression(child)),
+        );
+
+        if (openingHasDynamicStyle(opening) || dynamicContent) {
+          violations.push({
+            file: normalizedFile,
+            line: lineOf(node),
+            rule: 'dynamic-style',
+            value: sourceSnippet(
+              source,
+              node.getStart(sourceFile),
+              node.getEnd(),
+            ),
+          });
+        } else {
+          const textChildren = node.children.filter(ts.isJsxText);
+          const content = textChildren
+            .map((child) => child.getText(sourceFile))
+            .join('');
+          if (content.trim()) {
+            const firstContentLine = lineOf(textChildren[0]);
+            violations.push(
+              ...lintCssSource(content, { file: normalizedFile }).map(
+                (violation) => ({
+                  ...violation,
+                  line: violation.line + firstContentLine - 1,
+                }),
+              ),
+            );
+          }
+        }
+      } else {
+        inspectNonStyleOpening(opening);
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return violations.sort(
+    (left, right) =>
+      left.line - right.line || left.rule.localeCompare(right.rule),
+  );
+}
+
+export async function lintMarkupSource(
+  source: string,
+  options: LintOptions,
+): Promise<CssPolicyViolation[]> {
+  const extension = path.extname(options.file).toLowerCase();
+  if (extension === '.astro') return lintAstroSource(source, options);
+  if (extension === '.html') return lintHtmlSource(source, options);
+  return lintJsxSource(source, options);
 }
 
 async function collectFiles(directory: string): Promise<string[]> {
@@ -521,7 +1012,7 @@ export async function checkCssPolicy(
     violations.push(
       ...(extension === '.css'
         ? lintCssSource(source, { file })
-        : lintMarkupSource(source, { file })),
+        : await lintMarkupSource(source, { file })),
     );
   }
 

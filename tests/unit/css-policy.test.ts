@@ -129,6 +129,27 @@ describe('CSS token policy', () => {
     ]);
   });
 
+  it('finds named colours in image-producing functions on any property', () => {
+    const violations = lintCssSource(
+      [
+        '.example {',
+        '  mask-image: linear-gradient(red, blue);',
+        '  list-style-image: radial-gradient(white, black);',
+        '  content: linear-gradient(gold, transparent);',
+        '  shape-outside: conic-gradient(cyan, navy);',
+        '}',
+      ].join('\n'),
+      { file: 'src/styles/components.css' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'literal-color', line: 2 },
+      { rule: 'literal-color', line: 3 },
+      { rule: 'literal-color', line: 4 },
+      { rule: 'literal-color', line: 5 },
+    ]);
+  });
+
   it('grants raw-value access only to the exact token source', () => {
     expect(
       lintCssSource('.example { width: 10px; color: red; }', {
@@ -147,6 +168,7 @@ describe('CSS token policy', () => {
         '  color: currentColor;',
         '  border: var(--border-thin) solid var(--border-card);',
         '  background: color-mix(in oklab, var(--ink) 32%, var(--bg));',
+        '  color: rgb(from var(--brand) r g b / 50%);',
         '}',
       ].join('\n'),
       { file: 'src/styles/components.css' },
@@ -190,38 +212,104 @@ describe('CSS token policy', () => {
     ]);
   });
 
-  it.each(['astro', 'html', 'jsx', 'tsx'])(
-    'rejects style-bearing markup bypasses in .%s files',
-    (extension) => {
-      const violations = lintMarkupSource(
+  it('parses negated, ranged, aliased, and import width queries structurally', () => {
+    const violations = lintCssSource(
+      [
+        '@media (not (min-width: 640px)) { .x { display: none; } }',
+        '@container (not (min-width: 640px)) { .x { display: none; } }',
+        '@custom-media --wide (min-width: 640px);',
+        '@custom-media --small not (--wide);',
+        '@media (--small) { .x { display: none; } }',
+        '@container (inline-size > 900px) { .x { display: none; } }',
+        '@import url("x.css") supports((width: 1px));',
+      ].join('\n'),
+      { file: 'src/styles/components.css' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'desktop-first-breakpoint', line: 1 },
+      { rule: 'desktop-first-breakpoint', line: 2 },
+      { rule: 'ad-hoc-breakpoint', line: 3 },
+      { rule: 'ad-hoc-breakpoint', line: 4 },
+      { rule: 'ad-hoc-breakpoint', line: 5 },
+      { rule: 'ad-hoc-breakpoint', line: 6 },
+    ]);
+  });
+
+  it('rejects style-bearing Astro syntax using the Astro parser', async () => {
+    const violations = await lintMarkupSource(
+      [
+        '<div title="1 > 0" style="padding: 10px">Content</div>',
+        '<div title="1 > 0" style:list={{ color: "red" }}>List</div>',
+        '<div title="1 > 0" {...props}>Spread</div>',
+        '<style>',
+        '  .local { margin: 12px; }',
+        '</style>',
+        '<style set:html={dynamicCss}></style>',
+        '<style>{dynamicCss}</style>',
+        '<style {...styleProps} />',
+      ].join('\n'),
+      { file: 'src/pages/example.astro' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'inline-style', line: 1 },
+      { rule: 'inline-style', line: 2 },
+      { rule: 'inline-style', line: 3 },
+      { rule: 'literal-size', line: 5 },
+      { rule: 'dynamic-style', line: 7 },
+      { rule: 'dynamic-style', line: 8 },
+      { rule: 'dynamic-style', line: 9 },
+    ]);
+  });
+
+  it('rejects style-bearing HTML syntax using the HTML parser', async () => {
+    const violations = await lintMarkupSource(
+      [
+        '<div title="1 > 0" style="padding: 10px">Content</div>',
+        '<style>',
+        '  .local { margin: 12px; }',
+        '</style>',
+      ].join('\n'),
+      { file: 'src/pages/example.html' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'inline-style', line: 1 },
+      { rule: 'literal-size', line: 3 },
+    ]);
+  });
+
+  it.each(['jsx', 'tsx'])(
+    'rejects style-bearing JSX syntax in .%s files without scanning strings or comments',
+    async (extension) => {
+      const violations = await lintMarkupSource(
         [
-          '<div style="padding: 10px">Content</div>',
-          '<div {...props}>Spread</div>',
-          '<style>',
-          '  .local { margin: 12px; }',
-          '</style>',
-          '<style set:html={dynamicCss}></style>',
-          '<style>{dynamicCss}</style>',
-          '<style dangerouslySetInnerHTML={{ __html: dynamicCss }} />',
-          '<style {...styleProps} />',
+          'const ignored = `<div style="padding: 10px">String</div>`;',
+          'export const Example = () => <>',
+          '  {/* <div style="padding: 10px">Comment</div> */}',
+          '  <div title="1 > 0" style={{ padding: token }}>Content</div>',
+          '  <div title="1 > 0" {...props}>Spread</div>',
+          '  <style>{dynamicCss}</style>',
+          '  <style children={dynamicCss} />',
+          '  <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />',
+          '</>;',
         ].join('\n'),
         { file: `src/pages/example.${extension}` },
       );
 
       expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
-        { rule: 'inline-style', line: 1 },
-        { rule: 'inline-style', line: 2 },
-        { rule: 'literal-size', line: 4 },
+        { rule: 'inline-style', line: 4 },
+        { rule: 'inline-style', line: 5 },
         { rule: 'dynamic-style', line: 6 },
         { rule: 'dynamic-style', line: 7 },
         { rule: 'dynamic-style', line: 8 },
-        { rule: 'dynamic-style', line: 9 },
       ]);
     },
   );
 
-  it('rejects Astro style:list directives', () => {
-    const violations = lintMarkupSource(
+  it('rejects Astro style:list directives', async () => {
+    const violations = await lintMarkupSource(
       '<div style:list={{ color: "red" }}>Content</div>',
       { file: 'src/pages/example.astro' },
     );
@@ -231,9 +319,9 @@ describe('CSS token policy', () => {
     ]);
   });
 
-  it('does not confuse an object spread inside an explicit prop with an attribute spread', () => {
+  it('does not confuse an object spread inside an explicit prop with an attribute spread', async () => {
     expect(
-      lintMarkupSource('<SectionLayout page={{ ...page, blocks }} />', {
+      await lintMarkupSource('<SectionLayout page={{ ...page, blocks }} />', {
         file: 'src/pages/example.astro',
       }),
     ).toEqual([]);

@@ -36,9 +36,13 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@astrojs/compiler": "^4.0.0",
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.62.0",
+    "@types/css-tree": "^2.3.11",
     "@types/node": "^22.20.1",
+    "css-tree": "^3.2.1",
+    "parse5": "^8.0.1",
     "postcss": "^8.5.6",
     "postcss-value-parser": "^4.2.0",
     "sharp": "^0.35.3",

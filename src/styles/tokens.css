@@ -231,6 +231,10 @@
      and a state that wants the elevation gone sets it back to `initial`. */
 
   /* --- Layout & focus ------------------------------------------------------ */
+  /* `vh` keeps the shell compatible with older browsers; the feature query
+     below swaps in the dynamic viewport so mobile browser chrome cannot expose
+     a strip below the footer as it expands and collapses. */
+  --page-min-height: 100vh;
   --container: 1200px;
   /* Fluid gutter (design v2): 16px on a phone, 24px once the window can afford
      it — the container no longer hugs the viewport edge on a desktop. */
@@ -249,4 +253,10 @@
 
   /* State transition — the only motion in the system (120–160ms ease-out). */
   --t-state: 0.13s ease-out;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --page-min-height: 100dvh;
+  }
 }

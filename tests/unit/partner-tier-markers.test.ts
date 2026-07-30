@@ -32,6 +32,15 @@ const read = (path: string): string =>
 const COMPONENTS_CSS = read('../../src/styles/components.css');
 const TOKENS_CSS = read('../../src/styles/tokens.css');
 
+const token = (name: string): string => {
+  const declaration = new RegExp(
+    `^\\s*${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\s*([^;]+);`,
+    'm',
+  ).exec(TOKENS_CSS);
+  if (!declaration) throw new Error(`${name} is not declared in tokens.css`);
+  return declaration[1].trim();
+};
+
 /**
  * `.ob-pt__dot--<tier> { … background: var(--token) … }`, as authored.
  *
@@ -88,8 +97,9 @@ describe('PartnerTier tier markers', () => {
     const body = base?.[1] ?? '';
     expect(body).toMatch(/position:\s*absolute/);
     expect(body).toMatch(/inset-inline-start:\s*0/);
-    expect(body).toMatch(/width:\s*9px/);
-    expect(body).toMatch(/height:\s*9px/);
+    expect(body).toMatch(/width:\s*var\(--partner-marker-size\)/);
+    expect(body).toMatch(/height:\s*var\(--partner-marker-size\)/);
+    expect(token('--partner-marker-size')).toBe('9px');
     expect(body).toMatch(/border-radius:\s*var\(--r-pill\)/);
     /* Centred on the FIRST line box of the heading, so a label that wraps keeps
        its marker beside the first line instead of halfway down the block. What
@@ -115,10 +125,10 @@ describe('PartnerTier tier markers', () => {
    */
   it('reserves the marker slot inside the column, never out in the gutter', () => {
     const title = COMPONENTS_CSS.match(/\.ob-pt__title\s*\{([^}]*)\}/)?.[1] ?? '';
-    expect(
-      title.match(/padding-inline-start:\s*(\d+)px/)?.[1],
-      'the heading must reserve the marker slot',
-    ).toBe('19');
+    expect(title).toMatch(
+      /padding-inline-start:\s*var\(--partner-title-indent\)/,
+    );
+    expect(token('--partner-title-indent')).toBe('19px');
     expect(title, 'the slot must not hang into the page gutter').not.toMatch(
       /margin-inline-start:\s*-/,
     );

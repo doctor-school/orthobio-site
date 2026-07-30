@@ -301,14 +301,21 @@ describe('focus indicator under forced colours', () => {
     const body = block![1];
     // `Highlight` is the palette the USER chose. A token of ours would be either
     // substituted away by the UA or invisible against a palette we cannot see,
-    // so the assertion is specifically «a system colour keyword», not «a colour».
-    expect(body).toMatch(
-      /outline:\s*(?:[\d.]+px\s+solid\s+(Highlight|CanvasText|LinkText|ButtonText)|(Highlight|CanvasText|LinkText|ButtonText)\s+solid\s+[\d.]+px)/,
+    // so the token must resolve to a system colour keyword, not «a colour».
+    expect(body).toMatch(/outline:\s*var\(--forced-outline\)/);
+    const outline = /([\d.]+)px\s+solid\s+var\((--[\w-]+)\)/.exec(
+      token('--forced-outline'),
+    );
+    expect(outline, 'unparsable --forced-outline').not.toBeNull();
+    expect(Number(outline![1])).toBeGreaterThan(0);
+    expect(token(outline![2])).toMatch(
+      /^(Highlight|CanvasText|LinkText|ButtonText)$/,
     );
     // A zero offset would let the outline sit on the glyphs; the box-shadow ring
     // it replaces stood off the element by the width of its halo.
-    const offset = /outline-offset:\s*([\d.]+)px/.exec(body);
-    expect(offset, 'no outline-offset in the forced-colors block').not.toBeNull();
+    expect(body).toMatch(/outline-offset:\s*var\(--forced-outline-offset\)/);
+    const offset = /^([\d.]+)px$/.exec(token('--forced-outline-offset'));
+    expect(offset, 'unparsable --forced-outline-offset').not.toBeNull();
     expect(Number(offset![1])).toBeGreaterThan(0);
     // The unlayered position matters here too: a layered forced-colours rule
     // would lose to any component `:hover` exactly the way the ring did.

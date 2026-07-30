@@ -40,13 +40,9 @@ const DATES_2027 = 'Весна 2027, даты уточняются';
           </Button>
         ) : (
           <>
-            {/* Канал подписки не выбран (TODO(Антон) в config/site.ts): блок
-                остаётся, но как честное утверждение, а не мёртвая кнопка. */}
+            {/* Issue #54: no subscription CTA before registration opens. */}
             <p class="ob-hero__cta-pending">
               Регистрация откроется в {REGISTRATION_OPENS.prepositional} года
-            </p>
-            <p class="ob-hero__cta-note">
-              Канал, в котором можно узнать об открытии регистрации первым, будет объявлен здесь.
             </p>
           </>
         )

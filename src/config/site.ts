@@ -66,16 +66,10 @@ export const REGISTRATION_OPENS = {
 } as const;
 
 /**
- * ⚠️ TODO(Антон): куда ведёт CTA «узнать первым» — t.me/DoctorSchool или
- * отдельный канал конгресса (Issue #4, ТЗ §6 open question 5)?
- *
- * The design v2 mockup draws the CTA as a live button to `t.me/DoctorSchool`,
- * but which channel receives the traffic is an account decision, not a design
- * one — so the value stays `null` until the owner confirms it. While null the
- * home page renders the CTA block as a static statement («Регистрация
- * откроется в ноябре 2026») plus a note that the subscription channel will be
- * announced — an honest state, not a dead button. Setting a URL here turns the
- * same block into the primary CTA button and needs no template change.
+ * Owner decision (Issue #54, 2026-07-30): launch without a subscription CTA
+ * until registration opens in November. `null` is the approved production
+ * state, not a pending account decision. The home page renders only the opening
+ * date; setting a URL later turns the same block into the primary CTA.
  */
 export const SUBSCRIBE_URL: string | null = null;
 
@@ -83,33 +77,25 @@ export const SUBSCRIBE_URL: string | null = null;
 export const SUBSCRIBE_LABEL = `Регистрация откроется в ${REGISTRATION_OPENS.prepositional} — узнать первым`;
 
 /**
- * ⚠️ TODO(Антон): контактный адрес оргкомитета конгресса-2027.
- * ЯВНО НЕ welcome@congress-ph.ru — это адрес технического оператора ООО «Ай Си
- * Эс» (текущий сайт), а не наш (Issue #4, ТЗ §4 /contacts).
- *
- * `null` until the owner decides; /contacts and /partners then render «контакты
- * будут опубликованы», never a made-up address.
+ * Public congress contacts approved by the owner in Issue #54 (2026-07-30).
+ * These belong to Doctor.School, not to the outgoing site's technical operator.
  */
-export const CONTACT_EMAIL: string | null = null;
-
-/** ⚠️ TODO(Антон): телефон оргкомитета, если он вообще будет публичным. */
-export const CONTACT_PHONE: string | null = null;
+export const CONTACT_EMAIL: string | null = 'manager@doctor.school';
+export const CONTACT_PHONE: string | null = '8 (495) 410-04-90';
 
 /**
- * ⚠️ TODO(Антон): 20 из 23 архивных видео (2021-2024) лежат на YouTube, 3
- * (2025) — на Rutube. Для врача из РФ YouTube с 2024 года — лотерея, а
- * RF-доступность у нас жёсткое ограничение.
+ * Owner decision (Issue #54, 2026-07-30): leave the 20 YouTube archive links
+ * unchanged. They remain an explicit exception to the RF-accessibility rule;
+ * three 2025 videos stay on Rutube.
  *
  * Что уже сделано (Issue #19): три ролика Rutube играют прямо на странице года
  * (click-to-load плеер), двадцать роликов YouTube остаются внешней ссылкой с
  * явной пометкой «откроется на YouTube» — встраивать фрейм, который у половины
  * аудитории не прогрузится, мы не стали.
  *
- * Что остаётся за владельцем: перезаливать ли 20 роликов на Rutube (или в наш
- * S3). Да → все 23 играют на сайте одинаково и `ALLOWED_VIDEO_HOSTS` со
- * временем схлопнется до Rutube; нет → архив 2021-2024 навсегда уводит зрителя
- * на чужой хост. Кода это не касается: обе ветки уже реализованы, поменяются
- * только `url` в `src/content/congress/<year>.yaml`.
+ * The exception is intentionally contained: YouTube is never loaded by the
+ * page, only opened after an explicit outbound click. Replacing the links with
+ * Rutube later remains a content-only change in the year YAML files.
  */
 
 /**

@@ -2,11 +2,9 @@
 /**
  * /contacts — ТЗ §4.
  *
- * ⚠️ The congress contact is undecided (CONTACT_EMAIL / CONTACT_PHONE are
- * TODO(Антон) in config/site.ts) and MUST NOT be welcome@congress-ph.ru — that
- * mailbox belongs to the 2026 site's technical operator. Until the owner
- * decides, the page says so through the `Stub` block: the prose alone read as
- * an unfinished page rather than a declared state (content audit М3).
+ * Issue #54 supplied the public Doctor.School contacts. The outgoing operator's
+ * mailbox remains forbidden; this page now renders the approved address and
+ * phone while retaining the honest stub as the null-state fallback.
  *
  * One config value really does flip the whole page, and that costs a rule in
  * contacts.yaml: EVERY sentence about the address being undecided lives in the
@@ -30,7 +28,7 @@ const blocks = hasContacts ? page.blocks.filter((b) => b.kind !== 'stub') : page
   {
     hasContacts && (
       <div class="ob-container ob-section">
-        <SectionHeading title="Оргкомитет" />
+        <SectionHeading title="По вопросам участия" />
         <ul class="ob-list">
           {CONTACT_EMAIL && (
             <li>

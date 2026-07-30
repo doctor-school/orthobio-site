@@ -141,12 +141,11 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           SITE_HOST: ${{ vars.SITE_HOST || 'new.orthobio.ru' }}
-          # The hard gate for the temporary noindex (PR #15 review). Unset or
-          # `false` while the URL is temporary: the deploy asserts the site IS
-          # marked noindex. Set it to `true` at the switchover and this step
-          # fails until the header is actually gone from the vhost — so the
-          # real launch cannot stay invisible to search because a prose TODO
-          # was missed.
+          # The hard gate for the preview noindex (PR #15 review). Keep this
+          # `false` while SITE_HOST names the preview: the deploy asserts that
+          # vhost IS marked noindex. Issue #6 switches SITE_HOST and this
+          # Variable together to a separate production vhost without the
+          # header, so the preview remains protected after launch.
           SITE_INDEXABLE: ${{ vars.SITE_INDEXABLE || 'false' }}
         run: |
           set -euo pipefail

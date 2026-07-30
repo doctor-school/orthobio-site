@@ -65,6 +65,10 @@ describe('SEO artifacts', () => {
 describe('release infrastructure', () => {
   const nginx = readFileSync('infra/nginx/new.orthobio.ru.conf', 'utf8');
   const deploy = readFileSync('.github/workflows/deploy.yml', 'utf8');
+  const infrastructureDecisions = readFileSync(
+    'docs/infrastructure-decisions.md',
+    'utf8',
+  );
 
   it('serves the branded document for unknown routes while preserving status 404', () => {
     expect(nginx).toMatch(/error_page\s+404\s+\/404\.html;/);
@@ -74,6 +78,12 @@ describe('release infrastructure', () => {
 
   it('keeps preview noindex and installs focused static-site hardening', () => {
     expect(nginx).toContain('add_header X-Robots-Tag "noindex, nofollow" always;');
+    expect(nginx).toContain('Do not remove this line from the preview vhost');
+    expect(nginx).not.toContain('Remove this line at the domain switchover');
+    expect(infrastructureDecisions).toContain(
+      'Do not delete the preview `X-Robots-Tag` header',
+    );
+    expect(infrastructureDecisions).toContain('separate production vhost');
     expect(nginx).toMatch(
       /add_header Content-Security-Policy ".*frame-ancestors 'none'.*" always;/,
     );

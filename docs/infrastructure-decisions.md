@@ -106,34 +106,38 @@ temporary hostname or the 404 document. The response header, not a divergent
 preview-only artifact, is what keeps `new.orthobio.ru` out of the index. This
 means the bytes promoted at cutover are the bytes already verified on preview.
 
-This is **not** guarded by prose alone. The deploy's live check reads the header
-off the real response and compares it to the `SITE_INDEXABLE` repo Variable, so
-the two can never drift silently: forgetting to remove the header at launch
-fails every deploy, and so does removing it without flipping the Variable. When
-`SITE_INDEXABLE=true`, the same check additionally requires the live host,
+This is **not** guarded by prose alone. While `SITE_HOST=new.orthobio.ru`, the
+deploy's live check requires `SITE_INDEXABLE=false` and reads the response
+header from the resolve-pinned preview vhost. Issue #6 must add a separate
+production vhost without that header, then switch `SITE_HOST=orthobio.ru` and
+`SITE_INDEXABLE=true` together. In that mode the same resolve-pinned check
+requires the production response to be indexable and requires the live host,
 homepage canonical, robots sitemap URL, and sitemap root URL to agree. The
-canonical host is the apex `orthobio.ru`; the production vhost prepared in
-Issue #6 must redirect `www` to the apex in one hop.
+production vhost must redirect `www` to the apex in one hop.
 
 ### Switchover checklist (Issue #6)
 
 In this order:
 
-1. Set the `SITE_INDEXABLE` repo Variable to `true`. The next deploy fails —
-   that is the gate proving the header is still there.
-2. Delete the `add_header X-Robots-Tag …` line from
-   `infra/nginx/new.orthobio.ru.conf`, re-run `sh infra/host/provision.sh …`.
-   The deploy goes green again.
-3. Set `SITE_HOST=orthobio.ru`; verify the production vhost redirects `www` to
-   the apex, while an unknown path returns the branded document with status
-   `404`. The deploy refuses an indexable host whose canonical/sitemap still
-   names anything else.
-4. Fill `infra/redirects.yaml` with the map from the old URLs and deploy. For a
+1. Prepare and validate the separate production vhost, document root and TLS
+   certificate for `orthobio.ru`/`www` without changing DNS. It omits the
+   preview-only `X-Robots-Tag` header and redirects `www` to the apex in one hop.
+2. Do not delete the preview `X-Robots-Tag` header from
+   `infra/nginx/new.orthobio.ru.conf`. Keep the preview independently reachable
+   and non-indexable after launch.
+3. When the production vhost is ready, set `SITE_HOST=orthobio.ru` and
+   `SITE_INDEXABLE=true` together, then run the deploy. Its `--resolve`-pinned
+   smoke reaches our production vhost before DNS changes and refuses a response
+   whose indexability, canonical, robots or sitemap names anything else.
+4. Re-check `new.orthobio.ru` separately: it must still return
+   `X-Robots-Tag: noindex, nofollow`. Check that an unknown production path
+   returns the branded document with status `404`.
+5. Fill `infra/redirects.yaml` with the map from the old URLs and deploy. For a
    wholesale move, one entry does it: `from: /`, `match: prefix`, `to:` the new
    home. That case renders as a regex location rather than `location ^~ /`,
    which would collide with the vhost's own catch-all, and it spares `/.well-known/`
    so certbot renewals keep working.
-5. Review the HSTS `max-age` (below) against whatever the new host serves, so a
+6. Review the HSTS `max-age` (below) against whatever the new host serves, so a
    pin set here cannot outlive this hostname.
 
 ### 8. Branded 404 and focused CSP

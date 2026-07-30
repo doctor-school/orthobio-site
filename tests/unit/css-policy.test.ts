@@ -150,6 +150,25 @@ describe('CSS token policy', () => {
     ]);
   });
 
+  it('finds named colours in vendor-prefixed and uncommon colour consumers', () => {
+    const violations = lintCssSource(
+      [
+        '.example {',
+        '  -webkit-text-stroke: var(--border-thin) red;',
+        '  -webkit-box-shadow: 0 0 var(--sp-1) red;',
+        '  viewport-fill: red;',
+        '}',
+      ].join('\n'),
+      { file: 'src/styles/components.css' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'literal-color', line: 2 },
+      { rule: 'literal-color', line: 3 },
+      { rule: 'literal-color', line: 4 },
+    ]);
+  });
+
   it('grants raw-value access only to the exact token source', () => {
     expect(
       lintCssSource('.example { width: 10px; color: red; }', {
@@ -198,6 +217,9 @@ describe('CSS token policy', () => {
         '@import url("legacy.css") screen and (max-width: 900px);',
         '@container (min-width: 900px) { .x { display: block; } }',
         '@media (width >= 640px) { .x { display: block; } }',
+        '@media (min-device-width: 900px) { .x { display: block; } }',
+        '@media (max-device-width: 900px) { .x { display: none; } }',
+        '@media (device-width: 900px) { .x { display: block; } }',
       ].join('\n'),
       { file: 'src/styles/components.css' },
     );
@@ -209,6 +231,9 @@ describe('CSS token policy', () => {
       { rule: 'desktop-first-breakpoint', line: 4 },
       { rule: 'ad-hoc-breakpoint', line: 5 },
       { rule: 'ad-hoc-breakpoint', line: 6 },
+      { rule: 'ad-hoc-breakpoint', line: 7 },
+      { rule: 'desktop-first-breakpoint', line: 8 },
+      { rule: 'ad-hoc-breakpoint', line: 9 },
     ]);
   });
 
@@ -234,6 +259,21 @@ describe('CSS token policy', () => {
       { rule: 'ad-hoc-breakpoint', line: 5 },
       { rule: 'ad-hoc-breakpoint', line: 6 },
     ]);
+  });
+
+  it('scopes negation to size conditions and allows container style queries', () => {
+    expect(
+      lintCssSource(
+        [
+          '@media (min-width: 640px) and (not (orientation: landscape)) {',
+          '  .x { display: block; }',
+          '}',
+          '@container style(--theme: dark) { .x { display: block; } }',
+          '@container card style(--theme: dark) { .x { display: block; } }',
+        ].join('\n'),
+        { file: 'src/styles/components.css' },
+      ),
+    ).toEqual([]);
   });
 
   it('rejects style-bearing Astro syntax using the Astro parser', async () => {
@@ -279,6 +319,36 @@ describe('CSS token policy', () => {
       { rule: 'literal-size', line: 3 },
     ]);
   });
+
+  it.each([
+    {
+      extension: 'astro',
+      source: '<style style="color:red"></style>',
+    },
+    {
+      extension: 'html',
+      source: '<style style="color:red"></style>',
+    },
+    {
+      extension: 'jsx',
+      source: 'export const Example = () => <style style={{ color: "red" }} />;',
+    },
+    {
+      extension: 'tsx',
+      source: 'export const Example = () => <style style={{ color: "red" }} />;',
+    },
+  ])(
+    'rejects an inline style attribute on the style element in .$extension',
+    async ({ extension, source }) => {
+      const violations = await lintMarkupSource(source, {
+        file: `src/pages/example.${extension}`,
+      });
+
+      expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+        { rule: 'inline-style', line: 1 },
+      ]);
+    },
+  );
 
   it.each(['jsx', 'tsx'])(
     'rejects style-bearing JSX syntax in .%s files without scanning strings or comments',

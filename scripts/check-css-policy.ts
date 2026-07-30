@@ -45,9 +45,12 @@ const COLOR_VALUE_FUNCTIONS = new Set([
   'light-dark',
 ]);
 const WIDTH_FEATURES = new Set([
+  'device-width',
   'inline-size',
   'max-inline-size',
+  'max-device-width',
   'max-width',
+  'min-device-width',
   'min-inline-size',
   'min-width',
   'width',
@@ -309,10 +312,12 @@ function hasLiteralLength(value: string): boolean {
 }
 
 function canContainNamedColor(property: string): boolean {
-  const normalizedProperty = property.toLowerCase();
+  const normalizedProperty = property
+    .toLowerCase()
+    .replace(/^-(?:moz|ms|o|webkit)-/, '');
   return (
     normalizedProperty.startsWith('--') ||
-    /(?:^|-)color$/.test(normalizedProperty) ||
+    /(?:^|-)(?:color|fill|stroke)$/.test(normalizedProperty) ||
     /^(?:accent|background|border|caret|column-rule|fill|filter|flood|initial-value|lighting|mask-border|outline|scrollbar|stroke|text-decoration|text-emphasis|text-shadow|box-shadow)(?:$|-)/.test(
       normalizedProperty,
     )
@@ -407,7 +412,7 @@ interface QueryNode {
   name?: string;
   right?: QueryNode | null;
   unit?: string;
-  value?: string;
+  value?: QueryNode | string;
 }
 
 type BreakpointRule = Extract<
@@ -431,6 +436,35 @@ function visitQueryNodes(
   }
 }
 
+function queryNodeContainsSizeFeature(node: QueryNode): boolean {
+  let found = false;
+  visitQueryNodes(node, (descendant) => {
+    if (
+      descendant.type === 'Feature' &&
+      WIDTH_FEATURES.has(descendant.name?.toLowerCase() ?? '')
+    ) {
+      found = true;
+    }
+    if (descendant.type === 'FeatureRange') {
+      const parts = [
+        descendant.left,
+        descendant.middle,
+        descendant.right,
+      ];
+      if (
+        parts.some(
+          (part) =>
+            part?.type === 'Identifier' &&
+            WIDTH_FEATURES.has(part.name?.toLowerCase() ?? ''),
+        )
+      ) {
+        found = true;
+      }
+    }
+  });
+  return found;
+}
+
 function queryViolation(
   query: string,
   context: 'condition' | 'mediaQueryList',
@@ -450,14 +484,19 @@ function queryViolation(
   }
 
   let hasAlias = false;
-  let hasNegation = false;
+  let hasNegatedSizeFeature = false;
   let hasSizeFeature = false;
   let hasDesktopFirstFeature = false;
   let hasInvalidFeature = false;
 
   visitQueryNodes(ast, (node) => {
-    if (node.type === 'MediaQuery' && node.modifier === 'not') {
-      hasNegation = true;
+    if (
+      node.type === 'MediaQuery' &&
+      node.modifier === 'not' &&
+      node.condition &&
+      queryNodeContainsSizeFeature(node.condition)
+    ) {
+      hasNegatedSizeFeature = true;
     }
     if (
       node.type === 'Condition' &&
@@ -465,9 +504,10 @@ function queryViolation(
         (child) =>
           child.type === 'Identifier' &&
           child.name?.toLowerCase() === 'not',
-      )
+      ) &&
+      queryNodeContainsSizeFeature(node)
     ) {
-      hasNegation = true;
+      hasNegatedSizeFeature = true;
     }
 
     if (node.type === 'Feature') {
@@ -488,11 +528,14 @@ function queryViolation(
         return;
       }
 
-      const value = node.value as QueryNode | undefined;
+      const value =
+        typeof node.value === 'object' ? node.value : undefined;
       if (
         value?.type !== 'Dimension' ||
         value.unit?.toLowerCase() !== 'px' ||
-        !CANONICAL_BREAKPOINTS.has(Number(value.value))
+        !CANONICAL_BREAKPOINTS.has(
+          Number(typeof value.value === 'string' ? value.value : NaN),
+        )
       ) {
         hasInvalidFeature = true;
       }
@@ -518,7 +561,10 @@ function queryViolation(
   // Custom-media aliases are intentionally unsupported: their polarity and
   // width can change away from the use site, defeating local policy proof.
   if (hasAlias) return 'ad-hoc-breakpoint';
-  if (hasSizeFeature && (hasNegation || hasDesktopFirstFeature)) {
+  if (
+    hasSizeFeature &&
+    (hasNegatedSizeFeature || hasDesktopFirstFeature)
+  ) {
     return 'desktop-first-breakpoint';
   }
   return hasInvalidFeature ? 'ad-hoc-breakpoint' : null;
@@ -567,10 +613,16 @@ function atRuleBreakpointViolation(
     case 'media':
       return queryViolation(params, 'mediaQueryList');
     case 'container': {
-      const conditionStart = params.indexOf('(');
-      return conditionStart === -1
-        ? null
-        : queryViolation(params.slice(conditionStart), 'condition');
+      const containerQuery = params.trim();
+      const hasLeadingName =
+        !containerQuery.startsWith('(') &&
+        !/^(?:scroll-state|style)\(/i.test(containerQuery);
+      const nameEnd = containerQuery.search(/\s/);
+      if (hasLeadingName && nameEnd === -1) return null;
+      const query = hasLeadingName
+        ? containerQuery.slice(nameEnd).trim()
+        : containerQuery;
+      return query ? queryViolation(query, 'condition') : null;
     }
     case 'import': {
       const mediaQuery = importMediaQuery(params);
@@ -702,21 +754,21 @@ async function lintAstroSource(
       const end = node.position?.end?.offset ?? start;
       const line = node.position?.start.line ?? 1;
 
-      if (!isStyleTag) {
-        for (const attribute of node.attributes) {
-          if (
-            attribute.kind === 'spread' ||
-            ['style', 'style:list'].includes(attribute.name.toLowerCase())
-          ) {
-            violations.push({
-              file: normalizedFile,
-              line: attribute.position?.start.line ?? line,
-              rule: 'inline-style',
-              value: sourceSnippet(source, start, end),
-            });
-          }
+      for (const attribute of node.attributes) {
+        if (
+          ['style', 'style:list'].includes(attribute.name.toLowerCase()) ||
+          (!isStyleTag && attribute.kind === 'spread')
+        ) {
+          violations.push({
+            file: normalizedFile,
+            line: attribute.position?.start.line ?? line,
+            rule: 'inline-style',
+            value: sourceSnippet(source, start, end),
+          });
         }
-      } else {
+      }
+
+      if (isStyleTag) {
         const dynamicAttribute = node.attributes.some(
           (attribute) =>
             attribute.kind === 'spread' ||
@@ -801,7 +853,7 @@ function lintHtmlSource(
       const location = node.sourceCodeLocation;
       const styleLocation = location?.attrs?.style;
 
-      if (node.tagName !== 'style' && styleLocation) {
+      if (styleLocation) {
         violations.push({
           file: normalizedFile,
           line: styleLocation.startLine,
@@ -882,10 +934,13 @@ function lintJsxSource(
     );
   }
 
-  function inspectNonStyleOpening(opening: ts.JsxOpeningLikeElement): void {
+  function inspectInlineStyleAttributes(
+    opening: ts.JsxOpeningLikeElement,
+    includeSpreads: boolean,
+  ): void {
     for (const attribute of opening.attributes.properties) {
       if (
-        ts.isJsxSpreadAttribute(attribute) ||
+        (includeSpreads && ts.isJsxSpreadAttribute(attribute)) ||
         (ts.isJsxAttribute(attribute) &&
           attribute.name.getText(sourceFile).toLowerCase() === 'style')
       ) {
@@ -906,6 +961,7 @@ function lintJsxSource(
   function visit(node: ts.Node): void {
     if (ts.isJsxSelfClosingElement(node)) {
       if (node.tagName.getText(sourceFile) === 'style') {
+        inspectInlineStyleAttributes(node, false);
         if (openingHasDynamicStyle(node)) {
           violations.push({
             file: normalizedFile,
@@ -919,13 +975,14 @@ function lintJsxSource(
           });
         }
       } else {
-        inspectNonStyleOpening(node);
+        inspectInlineStyleAttributes(node, true);
       }
     }
 
     if (ts.isJsxElement(node)) {
       const opening = node.openingElement;
       if (opening.tagName.getText(sourceFile) === 'style') {
+        inspectInlineStyleAttributes(opening, false);
         const dynamicContent = node.children.some(
           (child) =>
             (ts.isJsxExpression(child) && Boolean(child.expression)) ||
@@ -961,7 +1018,7 @@ function lintJsxSource(
           }
         }
       } else {
-        inspectNonStyleOpening(opening);
+        inspectInlineStyleAttributes(opening, true);
       }
     }
 

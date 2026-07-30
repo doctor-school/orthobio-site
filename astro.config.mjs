@@ -7,6 +7,8 @@ import { defineConfig } from 'astro/config';
 export default defineConfig({
   site: 'https://orthobio.ru',
   outDir: 'dist',
+  // Preserve Astro 6 whitespace semantics during the v7 security upgrade.
+  compressHTML: true,
   // No CSS framework: styling is the `.ob-*` layer over the tokens in
   // src/styles (AGENTS.md → Code style). Tailwind was removed at review of
   // PR #14 — no utility class was ever used.

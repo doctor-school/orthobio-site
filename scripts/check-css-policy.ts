@@ -669,9 +669,9 @@ function atRuleHasEscapedSyntax(name: string, params: string): boolean {
     case 'container':
     case 'custom-media':
     case 'media':
-      return CSS_ESCAPE.test(params);
+      return valueHasEscapedSyntax(params);
     case 'import':
-      return CSS_ESCAPE.test(importMediaQuery(params));
+      return valueHasEscapedSyntax(importMediaQuery(params));
     default:
       return false;
   }

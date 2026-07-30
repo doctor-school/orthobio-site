@@ -293,6 +293,8 @@ describe('CSS token policy', () => {
           '}',
           '@container style(--theme: dark) { .x { display: block; } }',
           '@container card style(--theme: dark) { .x { display: block; } }',
+          String.raw`@container style(--label: "A\ B") { .x { display: block; } }`,
+          String.raw`@container card style(--asset: url("https://example.com/x\ y.svg")) { .x { display: block; } }`,
         ].join('\n'),
         { file: 'src/styles/components.css' },
       ),

@@ -27,7 +27,7 @@ interface Props {
   /** Page title without the site-name suffix. */
   title: string;
   description?: string | null;
-  /** Keep the page out of the index (draft fixtures). */
+  /** Keep the page out of the index (draft fixtures and the 404 document). */
   noindex?: boolean;
 }
 
@@ -57,7 +57,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     {description && <meta name="description" content={description} />}
-    {noindex && <meta name="robots" content="noindex" />}
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     {!noindex && <link rel="canonical" href={canonical} />}
     {
       /* Icons (audit nit N1): without a declared icon the browser requests

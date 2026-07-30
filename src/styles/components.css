@@ -112,6 +112,41 @@
   color: var(--ob-sky);
 }
 
+/* ── Not found page ───────────────────────────────────────────────────────── */
+
+.ob-not-found {
+  display: grid;
+  gap: var(--sp-4);
+  max-width: var(--measure);
+  padding-bottom: var(--sp-sec);
+}
+
+.ob-not-found__code {
+  color: var(--ob-sky-text);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+}
+
+.ob-not-found__title {
+  color: var(--text-body);
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-h1);
+}
+
+.ob-not-found__text {
+  color: var(--text-muted);
+  max-width: var(--measure);
+}
+
+.ob-not-found__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
 /* ── Skip link ───────────────────────────────────────────────────────────── */
 
 /* The persistent chrome still precedes the page content on every route.

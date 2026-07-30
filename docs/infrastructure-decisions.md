@@ -90,37 +90,73 @@ responsive/a11y) gates `deploy.yml` through `workflow_run`, which additionally
 requires `conclusion == success` and `head_branch == main`. Actions are pinned
 to commit SHAs, `permissions` is `contents: read`, and `concurrency` serialises
 deploys without cancelling one mid-rsync. The deploy ends by fetching the live
-homepage and asserting `200` plus expected content — a config-only "deploy
-succeeded" cannot pass.
+homepage, `robots.txt`, `sitemap.xml`, and an intentionally unknown route. It
+asserts their status, content type, canonical host, indexing state, CSP, and
+branded 404 content — a config-only "deploy succeeded" cannot pass.
 
-### 7. Not indexed while temporary — with a mechanical gate
+### 7. SEO essentials and the temporary noindex gate
 
 The vhost sends `X-Robots-Tag: noindex, nofollow`. `orthobio.ru` still serves
 the previous site, and two near-identical sites in the index would split it.
 
-This is **not** guarded by prose alone. The deploy's live check reads the header
-off the real response and compares it to the `SITE_INDEXABLE` repo Variable, so
-the two can never drift silently: forgetting to remove the header at launch
-fails every deploy, and so does removing it without flipping the Variable.
+The deployed artifact is nevertheless production-ready: `robots.txt` allows
+crawling and points at `https://orthobio.ru/sitemap.xml`; that sitemap is built
+from the Content Layer and lists the 37 canonical apex routes, never the
+temporary hostname or the 404 document. The response header, not a divergent
+preview-only artifact, is what keeps `new.orthobio.ru` out of the index. This
+means the bytes promoted at cutover are the bytes already verified on preview.
+
+This is **not** guarded by prose alone. While `SITE_HOST=new.orthobio.ru`, the
+deploy's live check requires `SITE_INDEXABLE=false` and reads the response
+header from the resolve-pinned preview vhost. Issue #6 must add a separate
+production vhost without that header, then switch `SITE_HOST=orthobio.ru` and
+`SITE_INDEXABLE=true` together. In that mode the same resolve-pinned check
+requires the production response to be indexable and requires the live host,
+homepage canonical, robots sitemap URL, and sitemap root URL to agree. The
+production vhost must redirect `www` to the apex in one hop.
 
 ### Switchover checklist (Issue #6)
 
 In this order:
 
-1. Set the `SITE_INDEXABLE` repo Variable to `true`. The next deploy fails —
-   that is the gate proving the header is still there.
-2. Delete the `add_header X-Robots-Tag …` line from
-   `infra/nginx/new.orthobio.ru.conf`, re-run `sh infra/host/provision.sh …`.
-   The deploy goes green again.
-3. Fill `infra/redirects.yaml` with the map from the old URLs and deploy. For a
+1. Prepare and validate the separate production vhost, document root and TLS
+   certificate for `orthobio.ru`/`www` without changing DNS. It omits the
+   preview-only `X-Robots-Tag` header and redirects `www` to the apex in one hop.
+2. Do not delete the preview `X-Robots-Tag` header from
+   `infra/nginx/new.orthobio.ru.conf`. Keep the preview independently reachable
+   and non-indexable after launch.
+3. When the production vhost is ready, set `SITE_HOST=orthobio.ru` and
+   `SITE_INDEXABLE=true` together, then run the deploy. Its `--resolve`-pinned
+   smoke reaches our production vhost before DNS changes and refuses a response
+   whose indexability, canonical, robots or sitemap names anything else.
+4. Re-check `new.orthobio.ru` separately: it must still return
+   `X-Robots-Tag: noindex, nofollow`. Check that an unknown production path
+   returns the branded document with status `404`.
+5. Fill `infra/redirects.yaml` with the map from the old URLs and deploy. For a
    wholesale move, one entry does it: `from: /`, `match: prefix`, `to:` the new
    home. That case renders as a regex location rather than `location ^~ /`,
    which would collide with the vhost's own catch-all, and it spares `/.well-known/`
    so certbot renewals keep working.
-4. Review the HSTS `max-age` (below) against whatever the new host serves, so a
+6. Review the HSTS `max-age` (below) against whatever the new host serves, so a
    pin set here cannot outlive this hostname.
 
-### 8. HSTS — added with the certificate
+### 8. Branded 404 and focused CSP
+
+Astro builds `404.html`; nginx maps missing routes to it with `error_page 404`
+without changing the original `404` status. The page carries its own
+`noindex, nofollow`, no canonical, normal site navigation, and two recovery
+links. Playwright covers it at the five canonical widths and runs axe.
+
+The vhost also sends a deliberately focused CSP:
+`base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'`,
+plus legacy `X-Frame-Options: DENY`. A broad `default-src` policy was evaluated
+and rejected for this temporary static site: five archive pages contain Astro's
+inline module for the Rutube facade, so that policy would need
+`script-src 'unsafe-inline'` and advertise stronger protection than it provides.
+The focused policy blocks embedding, base-URL injection, forms, and plugin
+documents without weakening or breaking the existing page.
+
+### 9. HSTS — added with the certificate
 
 ```nginx
 add_header Strict-Transport-Security "max-age=86400" always;

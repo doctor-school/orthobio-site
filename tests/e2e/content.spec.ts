@@ -3,7 +3,7 @@ import { ROUTES, YEAR_ROUTES } from './_routes';
 
 /**
  * Content-integrity guards for the ТЗ §4 principles: honest placeholders, no
- * external archive links, no operator contact, 2026 never dressed up as 2027.
+ * external archive links, approved contacts only, 2026 never dressed up as 2027.
  */
 
 test('every route of the §4 map is reachable', async ({ page }) => {
@@ -35,14 +35,47 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
   await expect(page.locator('body')).not.toContainText('2020');
 });
 
-test('the operator mailbox is never published', async ({ page }) => {
+test('the home page launches without a subscription CTA', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Регистрация откроется в ноябре 2026 года')).toBeVisible();
+  await expect(page.getByRole('link', { name: /узнать первым/i })).toHaveCount(0);
+  await expect(page.getByText(/канал.*будет объявлен/i)).toHaveCount(0);
+});
+
+test('only the owner-approved public contacts are published', async ({ page }) => {
   for (const path of ['/contacts', '/partners', '/faq', '/']) {
     await page.goto(path);
     const html = await page.content();
     expect(html, `${path} must not carry the operator mailbox`).not.toContain(
       'welcome@congress-ph.ru',
     );
+    expect(html, `${path} must not carry the operator phone`).not.toContain('+7 (812) 677-31-56');
   }
+
+  await page.goto('/contacts');
+  const main = page.locator('#main');
+  await expect(main.getByRole('link', { name: 'manager@doctor.school' })).toHaveAttribute(
+    'href',
+    'mailto:manager@doctor.school',
+  );
+  await expect(main.getByRole('link', { name: '8 (495) 410-04-90' })).toHaveAttribute(
+    'href',
+    'tel:84954100490',
+  );
+  const footer = page.getByRole('contentinfo');
+  await expect(footer.getByRole('link', { name: 'manager@doctor.school' })).toHaveAttribute(
+    'href',
+    'mailto:manager@doctor.school',
+  );
+  await expect(footer.getByRole('link', { name: '8 (495) 410-04-90' })).toHaveAttribute(
+    'href',
+    'tel:84954100490',
+  );
+
+  await page.goto('/partners');
+  await expect(
+    page.getByRole('link', { name: 'Стать партнёром — написать команде конгресса' }),
+  ).toHaveAttribute('href', 'mailto:manager@doctor.school');
 });
 
 test('archive pages link to no external content host', async ({ page }) => {

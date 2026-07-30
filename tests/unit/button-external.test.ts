@@ -9,8 +9,8 @@ import Button from '../../src/components/Button.astro';
  * DELIBERATE EXCEPTION to «unit tests are pure logic, rendering is the e2e
  * suite's job» (vitest.config.ts), for the same reason as
  * `video-card.test.ts`: the branch is not reachable from any built page. The
- * only caller is the «узнать первым» CTA on `/`, and `SUBSCRIBE_URL` is `null`
- * until the owner supplies a Telegram/email target — so the e2e sweep walks
+ * only caller is the «узнать первым» CTA on `/`, and Issue #54 deliberately
+ * keeps `SUBSCRIBE_URL` null until registration opens — so the e2e sweep walks
  * zero external Buttons and would stay green if this branch never announced
  * anything at all. It is the one component whose fix nothing else can see.
  *

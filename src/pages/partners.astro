@@ -11,11 +11,9 @@
  * audit made that last one the condition for keeping the registry on the page
  * at all, because the tier headings are where the double reading happens.
  *
- * The «стать партнёром» action is a mailto: built from CONTACT_EMAIL
- * (⚠️ TODO(Антон) in config/site.ts). While that is null the page states where
- * the address will appear instead of shipping a broken link — and the copy in
- * partners.yaml matches that state instead of inviting a request to nobody
- * (content audit К2).
+ * The «стать партнёром» action is a mailto: built from the owner-approved
+ * CONTACT_EMAIL (Issue #54). The null fallback stays honest for a future config
+ * transition instead of shipping a broken link (content audit К2).
  */
 import PartnerTier from '@/components/PartnerTier.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
@@ -43,7 +41,7 @@ const sponsorCount = sponsorTiers.reduce((sum, g) => sum + g.items.length, 0);
     {
       CONTACT_EMAIL ? (
         <Button variant="secondary" href={`mailto:${CONTACT_EMAIL}`}>
-          Стать партнёром — написать оргкомитету
+          Стать партнёром — написать команде конгресса
         </Button>
       ) : (
         <p class="ob-note">

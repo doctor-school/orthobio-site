@@ -115,7 +115,7 @@ export const CONTACT_PHONE: string | null = null;
 /**
  * Primary navigation. Covers the ТЗ §4 page map; the design mockup's 6-item nav
  * is extended with «Участникам» and «НМО» so no §4 route is reachable only from
- * the footer. The nav wraps (never scrolls) at 360px.
+ * the footer. Below lg the same data renders in the design's disclosure menu.
  */
 export const NAV = [
   { href: '/', label: 'Главная' },

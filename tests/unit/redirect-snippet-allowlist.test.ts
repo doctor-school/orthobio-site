@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -19,44 +19,156 @@ import { join } from 'node:path';
  *  - too loose: it installs something the generator would never emit.
  *
  * The regex under test is READ OUT OF THE SCRIPT rather than copied here, so
- * the two can never drift; the test exercises it through `sh`, exactly as the
- * host does.
+ * the two can never drift. The test evaluates the POSIX ERE subset in Node:
+ * requiring a workstation `sh` made every rejection look successful when the
+ * interpreter itself was missing on Windows.
  */
 
 const SCRIPT = 'infra/host/orthobio-apply-redirects';
+const SCRIPT_SOURCE = readFileSync(SCRIPT, 'utf8');
 
-/**
- * The allowlist + brace-balance section of the real script, as a runnable
- * fragment reading `$STAGED`. Cut by markers instead of by line number so
- * editing the script above or below cannot silently change what is tested.
- */
-const validator = (() => {
-  const src = readFileSync(SCRIPT, 'utf8');
+const hostShellValidator = (() => {
   const section = (from: string) => {
-    const start = src.indexOf(from);
+    const start = SCRIPT_SOURCE.indexOf(from);
     expect(start, `${SCRIPT} no longer contains "${from}"`).toBeGreaterThan(-1);
-    const end = src.indexOf('\nfi\n', start);
-    return src.slice(start, end + 4);
+    const end = SCRIPT_SOURCE.indexOf('\nfi\n', start);
+    return SCRIPT_SOURCE.slice(start, end + 4);
   };
+
   return `set -eu\n${section('# Allowlist:')}\n${section('# Block structure, by DEPTH')}\n`;
 })();
 
-/** Run the real allowlist over a candidate snippet. */
-const accepts = (snippet: string): boolean => {
+/**
+ * Expand the quoted shell assignments that define the host-side EREs. This is
+ * deliberately a tiny evaluator for the assignment syntax used by the script,
+ * not a general shell parser.
+ */
+const shellVariables = (() => {
+  const values = new Map<string, string>();
+
+  const expandDoubleQuoted = (raw: string): string => {
+    let expanded = '';
+
+    for (let index = 0; index < raw.length; index += 1) {
+      const char = raw[index];
+
+      if (char === '\\') {
+        const next = raw[index + 1];
+        if (next !== undefined && '$`"\\'.includes(next)) {
+          expanded += next;
+          index += 1;
+        } else {
+          expanded += char;
+        }
+        continue;
+      }
+
+      if (char === '$' && /[A-Za-z_]/.test(raw[index + 1] ?? '')) {
+        let end = index + 2;
+        while (/[A-Za-z0-9_]/.test(raw[end] ?? '')) end += 1;
+        const name = raw.slice(index + 1, end);
+        const value = values.get(name);
+        if (value === undefined) {
+          throw new Error(`${SCRIPT} references ${name} before defining it`);
+        }
+        expanded += value;
+        index = end - 1;
+        continue;
+      }
+
+      expanded += char;
+    }
+
+    return expanded;
+  };
+
+  for (const line of SCRIPT_SOURCE.split('\n')) {
+    const assignment = line.match(/^([A-Z][A-Z0-9_]*)=(['"])(.*)\2$/);
+    if (!assignment) continue;
+
+    const [, name, quote, raw] = assignment;
+    values.set(name, quote === "'" ? raw : expandDoubleQuoted(raw));
+  }
+
+  return values;
+})();
+
+const allowlist = [
+  'A_BLANK',
+  'A_EXACT',
+  'A_PREFIX',
+  'A_ROOT',
+  'A_OPEN',
+  'A_IF',
+  'A_RETURN',
+  'A_CLOSE',
+].map((name) => {
+  const pattern = shellVariables.get(name);
+  if (pattern === undefined) throw new Error(`${SCRIPT} no longer defines ${name}`);
+
+  // `[[:space:]]` is the only POSIX character class used by the host regexes.
+  // Keep it ASCII-sized: JavaScript `\s` also admits Unicode whitespace that
+  // the production grep can reject under its host locale.
+  const translated = pattern.replaceAll('[[:space:]]', '[\\t\\v\\f\\r ]');
+  if (translated.includes('[[:')) {
+    throw new Error(`${SCRIPT} uses an unsupported POSIX character class in ${name}`);
+  }
+
+  return new RegExp(translated);
+});
+
+const acceptsPortably = (snippet: string): boolean => {
+  const lines = snippet.split('\n');
+  if (lines.some((line) => !allowlist.some((pattern) => pattern.test(line)))) {
+    return false;
+  }
+
+  let depth = 0;
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/#.*/, '');
+    if (depth === 0 && /^[\s]*(?:if|return)/.test(line)) return false;
+
+    depth += (line.match(/\{/g) ?? []).length;
+    depth -= (line.match(/\}/g) ?? []).length;
+    if (depth < 0) return false;
+  }
+
+  return depth === 0;
+};
+
+/**
+ * Linux CI is the production-shell parity check. It is additive: every
+ * security assertion runs through the portable validator on every OS, while
+ * the host's actual grep/awk sections must agree whenever its interpreter is
+ * available. Windows therefore needs no Git Bash or WSL.
+ */
+const acceptsWithHostShell = (snippet: string): boolean => {
   const dir = mkdtempSync(join(tmpdir(), 'redirect-allowlist-'));
-  const staged = join(dir, 'snippet.conf');
-  const runner = join(dir, 'check.sh');
-  writeFileSync(staged, snippet);
-  writeFileSync(runner, validator);
   try {
-    execFileSync('sh', [runner], {
-      env: { ...process.env, STAGED: staged },
+    writeFileSync(join(dir, 'snippet.conf'), snippet);
+    writeFileSync(join(dir, 'check.sh'), hostShellValidator);
+    execFileSync('sh', ['check.sh'], {
+      cwd: dir,
+      env: { ...process.env, STAGED: 'snippet.conf' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     return true;
   } catch {
     return false;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
+};
+
+/** Run the real allowlist over a candidate snippet. */
+const accepts = (snippet: string): boolean => {
+  const portableResult = acceptsPortably(snippet);
+  if (process.platform === 'linux') {
+    expect(acceptsWithHostShell(snippet), 'portable validator drifted from the host shell').toBe(
+      portableResult,
+    );
+  }
+  return portableResult;
 };
 
 describe('orthobio-apply-redirects allowlist', () => {
@@ -85,6 +197,10 @@ describe('orthobio-apply-redirects allowlist', () => {
           '}\n',
       ),
     ).toBe(true);
+  });
+
+  it('evaluates a candidate without shell-interpreting a temporary path', () => {
+    expect(acceptsPortably('location = /old { return 301 /new; }\n')).toBe(true);
   });
 
   it.each([

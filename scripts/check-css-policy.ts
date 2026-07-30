@@ -3,129 +3,233 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import postcss from 'postcss';
+import valueParser from 'postcss-value-parser';
 
 const CANONICAL_BREAKPOINTS = new Set([640, 768, 1024, 1280, 1536]);
 const TOKEN_SOURCE = 'src/styles/tokens.css';
 const MARKUP_EXTENSIONS = new Set(['.astro', '.html', '.jsx', '.tsx']);
-const LENGTH_LITERAL =
-  /(?<![\w.-])-?(?:\d*\.\d+|\d+)(?:px|r?em|v(?:w|h|min|max)|dvh|svh|lvh|ch|ex|cap|ic|lh|rlh|cm|mm|q|in|pt|pc)\b/i;
-const FIXED_COLOR_FUNCTION =
-  /(?:^|[^\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\s*\(/i;
-const HEX_COLOR = /#[\da-f]{3,8}\b/i;
-const COLOR_PROPERTIES = new Set([
-  'accent-color',
-  'background',
-  'background-color',
-  'border',
-  'border-block',
-  'border-block-color',
-  'border-bottom',
-  'border-bottom-color',
-  'border-color',
-  'border-inline',
-  'border-inline-color',
-  'border-left',
-  'border-left-color',
-  'border-right',
-  'border-right-color',
-  'border-top',
-  'border-top-color',
-  'box-shadow',
-  'caret-color',
-  'color',
-  'column-rule',
-  'fill',
-  'outline',
-  'outline-color',
-  'stroke',
-  'text-decoration',
-  'text-decoration-color',
-  'text-shadow',
+const WIDTH_QUERY_AT_RULES = new Set([
+  'container',
+  'custom-media',
+  'import',
+  'media',
 ]);
-const COLOR_SYNTAX_WORDS = new Set([
-  'a98-rgb',
-  'at',
-  'background',
-  'border-box',
-  'bottom',
-  'calc',
-  'center',
-  'circle',
-  'closest-corner',
-  'closest-side',
-  'color-mix',
-  'contain',
-  'content-box',
-  'cover',
-  'currentcolor',
-  'dashed',
-  'decreasing',
-  'display-p3',
-  'dotted',
-  'double',
-  'ellipse',
-  'farthest-corner',
-  'farthest-side',
-  'fixed',
-  'from',
-  'groove',
-  'hidden',
+const LENGTH_LITERAL =
+  /(?<![\w.-])[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?(?:cap|ch|em|ex|ic|lh|rcap|rch|rem|rex|ric|rlh|[dls]?v(?:b|h|i|max|min|w)|cq(?:b|h|i|max|min|w)|cm|mm|q|in|pc|pt|px)\b/i;
+const HEX_COLOR = /^#[\da-f]{3,8}$/i;
+const FIXED_COLOR_FUNCTIONS = new Set([
+  'color',
+  'device-cmyk',
   'hsl',
-  'hue',
+  'hsla',
   'hwb',
-  'in',
-  'increasing',
-  'inherit',
-  'initial',
-  'inset',
   'lab',
   'lch',
-  'left',
-  'linear-gradient',
-  'line-through',
-  'local',
-  'longer',
-  'no-repeat',
-  'none',
-  'normal',
   'oklab',
   'oklch',
-  'outset',
-  'overline',
-  'padding-box',
-  'prophoto-rgb',
-  'radial-gradient',
-  'rec2020',
-  'repeat',
-  'repeat-x',
-  'repeat-y',
-  'repeating-linear-gradient',
-  'repeating-radial-gradient',
-  'revert',
-  'revert-layer',
-  'ridge',
-  'right',
-  'round',
-  'scroll',
-  'shorter',
-  'solid',
-  'space',
-  'srgb',
-  'srgb-linear',
-  'to',
-  'top',
-  'unset',
-  'underline',
-  'var',
-  'wavy',
-  'xyz',
-  'xyz-d50',
-  'xyz-d65',
+  'rgb',
+  'rgba',
+]);
+const NAMED_COLORS = new Set([
+  'aliceblue',
+  'antiquewhite',
+  'aqua',
+  'aquamarine',
+  'azure',
+  'beige',
+  'bisque',
+  'black',
+  'blanchedalmond',
+  'blue',
+  'blueviolet',
+  'brown',
+  'burlywood',
+  'cadetblue',
+  'chartreuse',
+  'chocolate',
+  'coral',
+  'cornflowerblue',
+  'cornsilk',
+  'crimson',
+  'cyan',
+  'darkblue',
+  'darkcyan',
+  'darkgoldenrod',
+  'darkgray',
+  'darkgreen',
+  'darkgrey',
+  'darkkhaki',
+  'darkmagenta',
+  'darkolivegreen',
+  'darkorange',
+  'darkorchid',
+  'darkred',
+  'darksalmon',
+  'darkseagreen',
+  'darkslateblue',
+  'darkslategray',
+  'darkslategrey',
+  'darkturquoise',
+  'darkviolet',
+  'deeppink',
+  'deepskyblue',
+  'dimgray',
+  'dimgrey',
+  'dodgerblue',
+  'firebrick',
+  'floralwhite',
+  'forestgreen',
+  'fuchsia',
+  'gainsboro',
+  'ghostwhite',
+  'gold',
+  'goldenrod',
+  'gray',
+  'green',
+  'greenyellow',
+  'grey',
+  'honeydew',
+  'hotpink',
+  'indianred',
+  'indigo',
+  'ivory',
+  'khaki',
+  'lavender',
+  'lavenderblush',
+  'lawngreen',
+  'lemonchiffon',
+  'lightblue',
+  'lightcoral',
+  'lightcyan',
+  'lightgoldenrodyellow',
+  'lightgray',
+  'lightgreen',
+  'lightgrey',
+  'lightpink',
+  'lightsalmon',
+  'lightseagreen',
+  'lightskyblue',
+  'lightslategray',
+  'lightslategrey',
+  'lightsteelblue',
+  'lightyellow',
+  'lime',
+  'limegreen',
+  'linen',
+  'magenta',
+  'maroon',
+  'mediumaquamarine',
+  'mediumblue',
+  'mediumorchid',
+  'mediumpurple',
+  'mediumseagreen',
+  'mediumslateblue',
+  'mediumspringgreen',
+  'mediumturquoise',
+  'mediumvioletred',
+  'midnightblue',
+  'mintcream',
+  'mistyrose',
+  'moccasin',
+  'navajowhite',
+  'navy',
+  'oldlace',
+  'olive',
+  'olivedrab',
+  'orange',
+  'orangered',
+  'orchid',
+  'palegoldenrod',
+  'palegreen',
+  'paleturquoise',
+  'palevioletred',
+  'papayawhip',
+  'peachpuff',
+  'peru',
+  'pink',
+  'plum',
+  'powderblue',
+  'purple',
+  'rebeccapurple',
+  'red',
+  'rosybrown',
+  'royalblue',
+  'saddlebrown',
+  'salmon',
+  'sandybrown',
+  'seagreen',
+  'seashell',
+  'sienna',
+  'silver',
+  'skyblue',
+  'slateblue',
+  'slategray',
+  'slategrey',
+  'snow',
+  'springgreen',
+  'steelblue',
+  'tan',
+  'teal',
+  'thistle',
+  'tomato',
+  'transparent',
+  'turquoise',
+  'violet',
+  'wheat',
+  'white',
+  'whitesmoke',
+  'yellow',
+  'yellowgreen',
+  // System colours are contextual to the OS, but still cross the same reviewed
+  // token boundary as `Highlight` in the forced-colours focus treatment.
+  'accentcolor',
+  'accentcolortext',
+  'activeborder',
+  'activecaption',
+  'activetext',
+  'appworkspace',
+  'background',
+  'buttonborder',
+  'buttonface',
+  'buttonhighlight',
+  'buttonshadow',
+  'buttontext',
+  'canvas',
+  'canvastext',
+  'captiontext',
+  'field',
+  'fieldtext',
+  'graytext',
+  'highlight',
+  'highlighttext',
+  'inactiveborder',
+  'inactivecaption',
+  'inactivecaptiontext',
+  'infobackground',
+  'infotext',
+  'linktext',
+  'mark',
+  'marktext',
+  'menu',
+  'menutext',
+  'scrollbar',
+  'selecteditem',
+  'selecteditemtext',
+  'threeddarkshadow',
+  'threedface',
+  'threedhighlight',
+  'threedlightshadow',
+  'threedshadow',
+  'visitedtext',
+  'window',
+  'windowframe',
+  'windowtext',
 ]);
 
 export type CssPolicyRule =
   | 'ad-hoc-breakpoint'
   | 'desktop-first-breakpoint'
+  | 'dynamic-style'
   | 'inline-style'
   | 'invalid-css'
   | 'literal-color'
@@ -158,63 +262,92 @@ function maskPreservingLines(value: string): string {
   return value.replace(/[^\r\n]/g, ' ');
 }
 
-function maskFunction(value: string, functionName: string): string {
-  const chars = [...value];
-  const expression = new RegExp(`\\b${functionName}\\s*\\(`, 'gi');
+function inspectValue(
+  value: string,
+  predicate: (word: string, isFunction: boolean) => boolean,
+): boolean {
+  let found = false;
 
-  for (const match of value.matchAll(expression)) {
-    const start = match.index;
-    const opening = value.indexOf('(', start);
-    let depth = 0;
-    let quote = '';
-
-    for (let index = opening; index < value.length; index += 1) {
-      const character = value[index];
-
-      if (quote) {
-        if (character === quote && value[index - 1] !== '\\') quote = '';
-        continue;
+  valueParser(value).walk((node) => {
+    if (found) return false;
+    if (node.type === 'function') {
+      if (node.value.toLowerCase() === 'url') return false;
+      if (predicate(node.value, true)) {
+        found = true;
+        return false;
       }
-
-      if (character === '"' || character === "'") {
-        quote = character;
-      } else if (character === '(') {
-        depth += 1;
-      } else if (character === ')') {
-        depth -= 1;
-        if (depth === 0) {
-          chars.fill(' ', start, index + 1);
-          break;
-        }
-      }
+    } else if (node.type === 'word' && predicate(node.value, false)) {
+      found = true;
+      return false;
     }
-  }
+    return undefined;
+  });
 
-  return chars.join('');
+  return found;
+}
+
+function hasLiteralLength(value: string): boolean {
+  return inspectValue(
+    value,
+    (word, isFunction) => !isFunction && LENGTH_LITERAL.test(word),
+  );
+}
+
+function canContainNamedColor(property: string): boolean {
+  const normalizedProperty = property.toLowerCase();
+  return (
+    normalizedProperty.startsWith('--') ||
+    /(?:^|-)color$/.test(normalizedProperty) ||
+    /^(?:accent|background|border|caret|column-rule|fill|filter|flood|initial-value|lighting|mask-border|outline|scrollbar|stroke|text-decoration|text-emphasis|text-shadow|box-shadow)(?:$|-)/.test(
+      normalizedProperty,
+    )
+  );
 }
 
 function hasLiteralColor(property: string, value: string): boolean {
-  const withoutUrls = maskFunction(value, 'url');
+  const acceptsNamedColor = canContainNamedColor(property);
+  return inspectValue(value, (word, isFunction) => {
+    const normalizedWord = word.toLowerCase();
+    return isFunction
+      ? FIXED_COLOR_FUNCTIONS.has(normalizedWord)
+      : HEX_COLOR.test(normalizedWord) ||
+          (acceptsNamedColor && NAMED_COLORS.has(normalizedWord));
+  });
+}
+
+function widthQueryViolation(
+  params: string,
+): Extract<
+  CssPolicyRule,
+  'ad-hoc-breakpoint' | 'desktop-first-breakpoint'
+> | null {
+  const query = params
+    .replace(/url\((?:[^()"']+|"(?:\\.|[^"])*"|'(?:\\.|[^'])*')*\)/gi, ' ')
+    .replace(/"(?:\\.|[^"])*"|'(?:\\.|[^'])*'/g, ' ')
+    .replace(/--[\w-]+/g, ' ');
+  const widthFeature =
+    /(?:\b(?:min|max)-width\b|\bwidth\s*(?=[:<>=])|[<>=]\s*\bwidth\b)/i;
+  if (!widthFeature.test(query)) return null;
+
   if (
-    HEX_COLOR.test(withoutUrls) ||
-    FIXED_COLOR_FUNCTION.test(withoutUrls)
+    /(?:^|[\s,])not\s+(?=all\b|screen\b|print\b|\()/i.test(query) ||
+    /\bmax-width\b/i.test(query)
   ) {
-    return true;
+    return 'desktop-first-breakpoint';
   }
 
-  const isColorValue =
-    property.startsWith('--') || COLOR_PROPERTIES.has(property.toLowerCase());
-  if (!isColorValue) return false;
+  const conditions = [...query.matchAll(/\(([^()]*)\)/g)]
+    .map((match) => match[1].trim())
+    .filter((condition) => widthFeature.test(condition));
 
-  const withoutCustomPropertyNames = withoutUrls
-    .replace(/--[\w-]+/g, '')
-    .replace(/-?(?:\d*\.\d+|\d+)(?:[a-z%]+)?/gi, '');
-  const words =
-    withoutCustomPropertyNames.match(/[a-z][\w-]*/gi)?.map((word) =>
-      word.toLowerCase(),
-    ) ?? [];
+  if (conditions.length === 0) return 'ad-hoc-breakpoint';
 
-  return words.some((word) => !COLOR_SYNTAX_WORDS.has(word));
+  const everyConditionIsCanonical = conditions.every((condition) => {
+    const match = condition.match(/^min-width\s*:\s*(\d+)px$/i);
+    return match && CANONICAL_BREAKPOINTS.has(Number(match[1]));
+  });
+
+  return everyConditionIsCanonical ? null : 'ad-hoc-breakpoint';
 }
 
 export function lintCssSource(
@@ -222,7 +355,7 @@ export function lintCssSource(
   { file }: LintOptions,
 ): CssPolicyViolation[] {
   const normalizedFile = normalized(file);
-  if (normalizedFile.endsWith(TOKEN_SOURCE)) return [];
+  if (normalizedFile === TOKEN_SOURCE) return [];
 
   const violations: CssPolicyViolation[] = [];
   let root;
@@ -241,46 +374,23 @@ export function lintCssSource(
     ];
   }
 
-  root.walkAtRules('media', (atRule) => {
-    const widthCondition = /\((min|max)-width\s*:\s*([^)]+)\)/gi;
-    let sawWidthCondition = false;
+  root.walkAtRules((atRule) => {
+    if (!WIDTH_QUERY_AT_RULES.has(atRule.name.toLowerCase())) return;
+    const rule = widthQueryViolation(atRule.params);
+    if (!rule) return;
 
-    for (const match of atRule.params.matchAll(widthCondition)) {
-      sawWidthCondition = true;
-      const [, direction, rawWidth] = match;
-      const width = rawWidth.trim().match(/^(\d+)px$/i);
-
-      if (direction.toLowerCase() === 'max') {
-        violations.push({
-          file: normalizedFile,
-          line: atRule.source?.start?.line ?? 1,
-          rule: 'desktop-first-breakpoint',
-          value: compact(atRule.toString()),
-        });
-      } else if (!width || !CANONICAL_BREAKPOINTS.has(Number(width[1]))) {
-        violations.push({
-          file: normalizedFile,
-          line: atRule.source?.start?.line ?? 1,
-          rule: 'ad-hoc-breakpoint',
-          value: compact(atRule.toString()),
-        });
-      }
-    }
-
-    if (!sawWidthCondition && /\bwidth\b/i.test(atRule.params)) {
-      violations.push({
-        file: normalizedFile,
-        line: atRule.source?.start?.line ?? 1,
-        rule: 'ad-hoc-breakpoint',
-        value: compact(atRule.toString()),
-      });
-    }
+    violations.push({
+      file: normalizedFile,
+      line: atRule.source?.start?.line ?? 1,
+      rule,
+      value: compact(atRule.toString()),
+    });
   });
 
   root.walkDecls((declaration) => {
     const line = declaration.source?.start?.line ?? 1;
 
-    if (LENGTH_LITERAL.test(declaration.value)) {
+    if (hasLiteralLength(declaration.value)) {
       violations.push({
         file: normalizedFile,
         line,
@@ -322,7 +432,7 @@ export function lintMarkupSource(
     maskPreservingLines,
   );
   const violations: CssPolicyViolation[] = [];
-  const inlineStyle = /<(?!style\b)[a-z][^>]*\sstyle\s*=/gi;
+  const inlineStyle = /<(?!style\b)[a-z][^>]*\sstyle(?::list)?\s*=/gi;
 
   for (const match of markup.matchAll(inlineStyle)) {
     violations.push({
@@ -333,11 +443,42 @@ export function lintMarkupSource(
     });
   }
 
-  const styleBlock = /<style(?:\s[^>]*)?>([\s\S]*?)<\/style\s*>/gi;
+  // An attribute spread is opaque at this boundary: even `{...props}` can
+  // publish a `style` attribute at runtime, so markup in this static site uses
+  // explicit attributes instead.
+  const attributeSpread = /<(?!style\b)[a-z][^>]*\s\{\s*\.\.\./gi;
+  for (const match of markup.matchAll(attributeSpread)) {
+    violations.push({
+      file: normalizedFile,
+      line: lineAt(markup, match.index),
+      rule: 'inline-style',
+      value: compact(match[0]),
+    });
+  }
+
+  const styleBlock =
+    /<style\b([^>]*?)(?:\/>|>([\s\S]*?)<\/style\s*>)/gi;
   for (const match of markup.matchAll(styleBlock)) {
-    const content = match[1];
+    const attributes = match[1];
+    const content = match[2] ?? '';
     const contentOffset = match.index + match[0].indexOf(content);
     const firstContentLine = lineAt(markup, contentOffset);
+    const isDynamic =
+      /\b(?:dangerouslySetInnerHTML|define:vars|set:(?:html|text))\s*=/i.test(
+        attributes,
+      ) ||
+      /\{\s*\.\.\./.test(attributes) ||
+      /^\s*\{[\s\S]*\}\s*$/.test(content);
+
+    if (isDynamic) {
+      violations.push({
+        file: normalizedFile,
+        line: lineAt(markup, match.index),
+        rule: 'dynamic-style',
+        value: compact(match[0]),
+      });
+      continue;
+    }
 
     violations.push(
       ...lintCssSource(content, { file: normalizedFile }).map((violation) => ({
@@ -347,7 +488,10 @@ export function lintMarkupSource(
     );
   }
 
-  return violations;
+  return violations.sort(
+    (left, right) =>
+      left.line - right.line || left.rule.localeCompare(right.rule),
+  );
 }
 
 async function collectFiles(directory: string): Promise<string[]> {

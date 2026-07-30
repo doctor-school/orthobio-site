@@ -36,6 +36,107 @@ describe('CSS token policy', () => {
     ]);
   });
 
+  it('rejects every CSS length-unit family outside the token source', () => {
+    const units = [
+      'px',
+      'em',
+      'rem',
+      'ch',
+      'rch',
+      'cap',
+      'rcap',
+      'ic',
+      'ric',
+      'lh',
+      'rlh',
+      'vw',
+      'dvw',
+      'svw',
+      'lvw',
+      'vh',
+      'dvh',
+      'svh',
+      'lvh',
+      'vi',
+      'dvi',
+      'svi',
+      'lvi',
+      'vb',
+      'dvb',
+      'svb',
+      'lvb',
+      'vmin',
+      'dvmin',
+      'svmin',
+      'lvmin',
+      'vmax',
+      'dvmax',
+      'svmax',
+      'lvmax',
+      'cqw',
+      'cqh',
+      'cqi',
+      'cqb',
+      'cqmin',
+      'cqmax',
+      'cm',
+      'mm',
+      'q',
+      'in',
+      'pt',
+      'pc',
+    ];
+    const source = units
+      .map((unit, index) => `.u-${index} { width: 10${unit}; }`)
+      .join('\n');
+
+    expect(
+      lintCssSource(source, { file: 'src/styles/components.css' }).map(
+        ({ rule, line }) => ({ rule, line }),
+      ),
+    ).toEqual(
+      units.map((_, index) => ({
+        rule: 'literal-size',
+        line: index + 1,
+      })),
+    );
+  });
+
+  it('finds named colours by value without treating strings as colours', () => {
+    const violations = lintCssSource(
+      [
+        '.example {',
+        '  background-image: linear-gradient(red, blue);',
+        '  filter: drop-shadow(0 0 var(--sp-1) red);',
+        '  stop-color: rebeccapurple;',
+        '  content: "#fff red";',
+        '  --animation-name: fade;',
+        '}',
+        '@property --accent {',
+        '  syntax: "<color>";',
+        '  inherits: false;',
+        '  initial-value: red;',
+        '}',
+      ].join('\n'),
+      { file: 'src/styles/components.css' },
+    );
+
+    expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+      { rule: 'literal-color', line: 2 },
+      { rule: 'literal-color', line: 3 },
+      { rule: 'literal-color', line: 4 },
+      { rule: 'literal-color', line: 11 },
+    ]);
+  });
+
+  it('grants raw-value access only to the exact token source', () => {
+    expect(
+      lintCssSource('.example { width: 10px; color: red; }', {
+        file: 'fixtures/src/styles/tokens.css',
+      }).map(({ rule }) => rule),
+    ).toEqual(['literal-size', 'literal-color']);
+  });
+
   it('allows contextual ratios and colours assembled from tokens', () => {
     const violations = lintCssSource(
       [
@@ -56,7 +157,11 @@ describe('CSS token policy', () => {
 
   it('permits only mobile-first canonical width breakpoints', () => {
     const canonical = [640, 768, 1024, 1280, 1536]
-      .map((width) => `@media (min-width: ${width}px) { .x { display: block; } }`)
+      .flatMap((width) => [
+        `@media (min-width: ${width}px) { .x { display: block; } }`,
+        `@container (min-width: ${width}px) { .x { display: block; } }`,
+        `@import url("not-width.css") screen and (min-width: ${width}px);`,
+      ])
       .join('\n');
 
     expect(
@@ -67,6 +172,10 @@ describe('CSS token policy', () => {
       [
         '@media (min-width: 900px) { .x { display: block; } }',
         '@media (max-width: 768px) { .x { display: none; } }',
+        '@media not all and (min-width: 640px) { .x { display: none; } }',
+        '@import url("legacy.css") screen and (max-width: 900px);',
+        '@container (min-width: 900px) { .x { display: block; } }',
+        '@media (width >= 640px) { .x { display: block; } }',
       ].join('\n'),
       { file: 'src/styles/components.css' },
     );
@@ -74,24 +183,60 @@ describe('CSS token policy', () => {
     expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
       { rule: 'ad-hoc-breakpoint', line: 1 },
       { rule: 'desktop-first-breakpoint', line: 2 },
+      { rule: 'desktop-first-breakpoint', line: 3 },
+      { rule: 'desktop-first-breakpoint', line: 4 },
+      { rule: 'ad-hoc-breakpoint', line: 5 },
+      { rule: 'ad-hoc-breakpoint', line: 6 },
     ]);
   });
 
-  it('rejects inline styles and policy bypasses in Astro style blocks', () => {
+  it.each(['astro', 'html', 'jsx', 'tsx'])(
+    'rejects style-bearing markup bypasses in .%s files',
+    (extension) => {
+      const violations = lintMarkupSource(
+        [
+          '<div style="padding: 10px">Content</div>',
+          '<div {...props}>Spread</div>',
+          '<style>',
+          '  .local { margin: 12px; }',
+          '</style>',
+          '<style set:html={dynamicCss}></style>',
+          '<style>{dynamicCss}</style>',
+          '<style dangerouslySetInnerHTML={{ __html: dynamicCss }} />',
+          '<style {...styleProps} />',
+        ].join('\n'),
+        { file: `src/pages/example.${extension}` },
+      );
+
+      expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
+        { rule: 'inline-style', line: 1 },
+        { rule: 'inline-style', line: 2 },
+        { rule: 'literal-size', line: 4 },
+        { rule: 'dynamic-style', line: 6 },
+        { rule: 'dynamic-style', line: 7 },
+        { rule: 'dynamic-style', line: 8 },
+        { rule: 'dynamic-style', line: 9 },
+      ]);
+    },
+  );
+
+  it('rejects Astro style:list directives', () => {
     const violations = lintMarkupSource(
-      [
-        '<div style="padding: 10px">Content</div>',
-        '<style>',
-        '  .local { margin: 12px; }',
-        '</style>',
-      ].join('\n'),
+      '<div style:list={{ color: "red" }}>Content</div>',
       { file: 'src/pages/example.astro' },
     );
 
     expect(violations.map(({ rule, line }) => ({ rule, line }))).toEqual([
       { rule: 'inline-style', line: 1 },
-      { rule: 'literal-size', line: 3 },
     ]);
+  });
+
+  it('does not confuse an object spread inside an explicit prop with an attribute spread', () => {
+    expect(
+      lintMarkupSource('<SectionLayout page={{ ...page, blocks }} />', {
+        file: 'src/pages/example.astro',
+      }),
+    ).toEqual([]);
   });
 
   it('keeps the repository compliant', async () => {

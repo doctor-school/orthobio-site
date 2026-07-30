@@ -44,7 +44,7 @@
 /* Alternating faintly tinted band (design: «секции чередуются подложкой»). */
 .ob-band {
   background: var(--surface-section);
-  border-block: 1px solid var(--hairline);
+  border-block: var(--border-thin) solid var(--hairline);
   margin-top: var(--sp-sec);
   padding-bottom: var(--sp-sec);
 }
@@ -54,12 +54,14 @@
 .ob-cards {
   display: grid;
   gap: var(--sp-4);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  grid-template-columns:
+    repeat(auto-fill, minmax(min(100%, var(--grid-card-floor)), 1fr));
 }
 
 .ob-cards--narrow {
   gap: var(--sp-3);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  grid-template-columns:
+    repeat(auto-fill, minmax(min(100%, var(--grid-card-floor-narrow)), 1fr));
 }
 
 /* Prose column: measure-limited running text under a section heading. */
@@ -153,7 +155,7 @@
    Off-screen until focused, then a normal button-sized target. */
 .ob-skip {
   position: absolute;
-  left: -9999px;
+  left: var(--offscreen-position);
   top: 0;
   z-index: 20;
   background: var(--btn-primary-bg);
@@ -161,7 +163,7 @@
   font-size: var(--fs-small);
   font-weight: var(--fw-semibold);
   text-decoration: none;
-  padding: 10px 18px;
+  padding: var(--button-pad-md);
   border-radius: var(--r-md);
 }
 
@@ -177,7 +179,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: var(--border-thin) solid var(--hairline);
   background: var(--surface-page);
 }
 
@@ -187,7 +189,7 @@
 .ob-head::before {
   content: '';
   display: block;
-  height: 3px;
+  height: var(--chrome-ribbon-height);
   background: var(--grad-ribbon);
 }
 
@@ -223,24 +225,24 @@
 }
 
 .ob-head__logo img {
-  width: 36px;
-  height: 36px;
+  width: var(--head-logo-size);
+  height: var(--head-logo-size);
   flex: none;
 }
 
 .ob-head__name {
-  font-size: 15px;
+  font-size: var(--fs-brand);
   font-weight: var(--fw-bold);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-brand);
   display: block;
   transition: color var(--t-state);
 }
 
 .ob-head__sub {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-brand-caption);
   color: var(--muted);
-  letter-spacing: 0.06em;
+  letter-spacing: var(--ls-brand-caption);
 }
 
 .ob-nav {
@@ -253,7 +255,7 @@
   font-weight: var(--fw-medium);
   color: var(--text-body);
   text-decoration: none;
-  padding: 8px 12px;
+  padding: var(--nav-link-pad);
   border-radius: var(--r-sm);
   transition:
     background var(--t-state),
@@ -335,7 +337,7 @@
   flex-direction: column;
   padding: var(--sp-2) var(--container-pad) var(--sp-4);
   background: var(--surface-page);
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: var(--border-thin) solid var(--hairline);
   box-shadow: var(--shadow-lift);
 }
 
@@ -344,7 +346,7 @@
   align-items: center;
   min-height: var(--sp-7);
   padding-inline: var(--sp-3);
-  border-bottom: 1px solid var(--surface);
+  border-bottom: var(--border-thin) solid var(--surface);
   border-radius: var(--r-sm);
   color: var(--text-body);
   font-size: var(--fs-body);
@@ -397,7 +399,7 @@
 /* ── Site chrome: footer ─────────────────────────────────────────────────── */
 
 .ob-foot {
-  border-top: 1px solid var(--hairline);
+  border-top: var(--border-thin) solid var(--hairline);
   background: var(--surface-faint);
   margin-top: var(--sp-sec);
 }
@@ -406,7 +408,7 @@
 .ob-foot::after {
   content: '';
   display: block;
-  height: 3px;
+  height: var(--chrome-ribbon-height);
   background: var(--grad-ribbon);
 }
 
@@ -433,7 +435,7 @@
 
 .ob-foot__col p {
   margin: 0 0 var(--sp-2);
-  max-width: 42ch;
+  max-width: var(--measure-compact);
 }
 
 .ob-foot__title {
@@ -448,20 +450,20 @@
 .ob-foot__mark {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: var(--gap-control);
+  margin-bottom: var(--gap-control);
 }
 
 .ob-foot__mark img {
-  height: 40px;
-  width: 40px;
+  height: var(--footer-mark-size);
+  width: var(--footer-mark-size);
   flex: none;
 }
 
 .ob-foot__mark b {
-  font-size: 15px;
+  font-size: var(--fs-brand);
   color: var(--ink);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-brand);
 }
 
 .ob-foot__slogan {
@@ -478,14 +480,14 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 2px;
+  gap: var(--gap-micro);
 }
 
 /* Footer link rows are 19px tall from the small type alone — padded to clear
    the 24px pointer-target floor (WCAG 2.2 §2.5.8) without changing the look. */
 .ob-foot__map a {
   display: inline-block;
-  padding-block: 5px;
+  padding-block: var(--footer-map-pad-block);
   color: var(--text-muted);
   text-decoration: none;
 }
@@ -493,7 +495,7 @@
 .ob-foot__map a:hover {
   color: var(--text-link);
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--link-underline-offset-hover);
 }
 
 /* Baseline row: copyright on the left, the Doctor.School mark opposite. The
@@ -507,7 +509,7 @@
   gap: var(--sp-4);
   flex-wrap: wrap;
   padding-block: var(--sp-4) var(--sp-5);
-  border-top: 1px solid var(--hairline);
+  border-top: var(--border-thin) solid var(--hairline);
 }
 
 .ob-foot__base p {
@@ -517,7 +519,7 @@
 }
 
 .ob-foot__ds {
-  height: 34px;
+  height: var(--footer-ds-logo-height);
   width: auto;
 }
 
@@ -532,7 +534,7 @@
   border-radius: var(--r-md);
   cursor: pointer;
   text-decoration: none;
-  border: 1px solid transparent;
+  border: var(--border-thin) solid var(--color-transparent);
   transition:
     background var(--t-state),
     color var(--t-state),
@@ -545,12 +547,12 @@
 
 .ob-btn--md {
   font-size: var(--fs-small);
-  padding: 10px 18px;
+  padding: var(--button-pad-md);
 }
 
 .ob-btn--lg {
   font-size: var(--fs-body);
-  padding: 14px 24px;
+  padding: var(--button-pad-lg);
 }
 
 .ob-btn--primary {
@@ -584,7 +586,7 @@
 }
 
 .ob-btn--ghost {
-  background: transparent;
+  background: var(--color-transparent);
   color: var(--text-link);
   padding-inline: 0;
   border-radius: var(--r-sm);
@@ -627,7 +629,7 @@
   letter-spacing: var(--ls-overline);
   text-transform: uppercase;
   color: var(--ob-sky-text);
-  margin-bottom: 6px;
+  margin-bottom: var(--gap-tight);
 }
 
 .ob-sh__title {
@@ -653,7 +655,7 @@
   line-height: 1;
   color: var(--text-muted);
   font-weight: var(--fw-regular);
-  margin-left: 10px;
+  margin-left: var(--gap-control);
   white-space: nowrap;
 }
 
@@ -663,7 +665,7 @@
 .ob-stub__link {
   display: inline-flex;
   align-items: center;
-  min-height: 24px;
+  min-height: var(--inline-link-min-height);
 }
 
 .ob-sh__link {
@@ -687,7 +689,7 @@
 .ob-stat {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--gap-micro);
   min-width: 0;
 }
 
@@ -708,18 +710,18 @@
 
 .ob-stub {
   background: var(--surface-faint);
-  border: 1px dashed var(--hairline);
+  border: var(--border-thin) dashed var(--hairline);
   border-radius: var(--r-lg);
   padding: var(--sp-7) var(--sp-5);
   text-align: center;
-  max-width: 640px;
+  max-width: var(--measure-medium);
 }
 
 /* Icon plate — the type of the missing content is readable at a glance
    (design v2: calendar for a program, people for a committee, …). */
 .ob-stub__badge {
-  width: 56px;
-  height: 56px;
+  width: var(--stub-badge-size);
+  height: var(--stub-badge-size);
   border-radius: var(--r-pill);
   background: var(--ob-sky-tint);
   color: var(--ob-sky-text);
@@ -731,15 +733,15 @@
 }
 
 .ob-stub__badge svg {
-  width: 26px;
-  height: 26px;
+  width: var(--stub-badge-icon-size);
+  height: var(--stub-badge-icon-size);
 }
 
 .ob-stub__title {
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
   font-weight: var(--fw-semibold);
-  margin: 0 0 6px;
+  margin: 0 0 var(--gap-tight);
   color: var(--text-body);
 }
 
@@ -747,7 +749,7 @@
   font-size: var(--fs-body);
   color: var(--text-muted);
   margin: 0 auto var(--sp-4);
-  max-width: 46ch;
+  max-width: var(--measure-copy);
 }
 
 .ob-stub__link {
@@ -764,19 +766,19 @@
   gap: var(--sp-4);
   text-align: left;
   padding: var(--sp-5);
-  max-width: 720px;
+  max-width: var(--measure-wide);
   border-radius: var(--r-md);
 }
 
 .ob-stub--compact .ob-stub__badge {
   margin: 0;
-  width: 44px;
-  height: 44px;
+  width: var(--stub-badge-compact-size);
+  height: var(--stub-badge-compact-size);
 }
 
 .ob-stub--compact .ob-stub__badge svg {
-  width: 22px;
-  height: 22px;
+  width: var(--stub-badge-compact-icon-size);
+  height: var(--stub-badge-compact-icon-size);
 }
 
 .ob-stub--compact .ob-stub__box {
@@ -789,7 +791,7 @@
 }
 
 .ob-stub--compact .ob-stub__text {
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-2);
   max-width: none;
   font-size: var(--fs-small);
   line-height: var(--lh-small);
@@ -807,7 +809,7 @@
      also what keeps it from creating horizontal page scroll. */
   overflow: hidden;
   background: var(--surface-page);
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: var(--border-thin) solid var(--hairline);
 }
 
 .ob-hero__in {
@@ -849,9 +851,9 @@
      `components/hero/Hero` places instance A with no opacity and instance B at
      0.5. The former 0.22/0.12 override greyed the identity out of the page. */
   .ob-hero__pattern--a {
-    width: 320px;
-    top: -90px;
-    right: -70px;
+  width: var(--hero-pattern-a-width);
+  top: var(--hero-pattern-a-top);
+  right: var(--hero-pattern-a-right);
   }
 
   /* Instance B is rotated, so it paints a box 2.2× its CSS width — the bundle's
@@ -867,9 +869,9 @@
      whole band and returns to the bundle's own geometry at 1280 below, where
      the window can hold it. */
   .ob-hero__pattern--b {
-    width: 140px;
-    bottom: -120px;
-    right: 110px;
+  width: var(--hero-pattern-b-width);
+  bottom: var(--hero-pattern-b-bottom);
+  right: var(--hero-pattern-b-right);
     transform: rotate(150deg);
     opacity: 0.5;
   }
@@ -879,8 +881,8 @@
   /* The bundle's placement for instance B, restored as soon as the viewport has
      room for it beside the text column (see the note above). */
   .ob-hero__pattern--b {
-    width: 240px;
-    right: 220px;
+    width: var(--hero-pattern-b-width-wide);
+    right: var(--hero-pattern-b-right-wide);
   }
 }
 
@@ -900,11 +902,11 @@
      mid-word («ОРТОБИОЛОГИ / Я») — no page overflow, but a broken headline.
      Stepping the size down by viewport width keeps the word whole; the token
      stays the desktop ceiling. */
-  font-size: min(var(--fs-display), 10vw);
+  font-size: min(var(--fs-display), var(--hero-title-viewport-cap));
   line-height: var(--lh-display);
   font-weight: var(--fw-bold);
   margin: 0 0 var(--sp-3);
-  max-width: 16em;
+  max-width: var(--hero-title-measure);
 }
 
 .ob-hero__dates {
@@ -918,12 +920,12 @@
   font-size: var(--fs-body);
   line-height: var(--lh-body);
   color: var(--text-muted);
-  max-width: 640px;
+  max-width: var(--measure-medium);
   margin: 0 0 var(--sp-6);
 }
 
 .ob-hero__lead p {
-  margin: 0 0 10px;
+  margin: 0 0 var(--gap-control);
 }
 
 .ob-hero__lead p:last-child {
@@ -938,7 +940,7 @@
   color: var(--ob-sky-text);
   font-weight: var(--fw-semibold);
   border-radius: var(--r-md);
-  padding: 14px 24px;
+  padding: var(--button-pad-lg);
   max-width: 100%;
 }
 
@@ -946,7 +948,7 @@
   font-size: var(--fs-small);
   color: var(--text-muted);
   margin: var(--sp-3) 0 0;
-  max-width: 640px;
+  max-width: var(--measure-medium);
 }
 
 .ob-hero__stats {
@@ -955,7 +957,7 @@
   flex-wrap: wrap;
   margin-top: var(--sp-7);
   padding-top: var(--sp-5);
-  border-top: 1px solid var(--hairline);
+  border-top: var(--border-thin) solid var(--hairline);
 }
 
 /* ── ArchiveYearCard ─────────────────────────────────────────────────────── */
@@ -965,7 +967,7 @@
   flex-direction: column;
   min-width: 0;
   background: var(--surface-card);
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-md);
   overflow: hidden;
   text-decoration: none;
@@ -1003,11 +1005,11 @@ a.ob-yc:active {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--gap-micro);
 }
 
 .ob-yc__nocover b {
-  font-size: 2.6rem;
+  font-size: var(--fs-year-number);
   font-weight: var(--fw-bold);
   /* --ob-sky on the tint measures 2.52:1 — below the 3:1 large-text floor;
      the deep sky keeps the light-blue reading of the design at 3.6:1. */
@@ -1027,7 +1029,7 @@ a.ob-yc:active {
   padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--gap-tight);
   flex: 1;
   min-width: 0;
 }
@@ -1055,7 +1057,7 @@ a.ob-yc:active {
 
 .ob-yc__tags {
   display: flex;
-  gap: 6px;
+  gap: var(--gap-tight);
   flex-wrap: wrap;
   margin-top: auto;
   padding-top: var(--sp-2);
@@ -1067,14 +1069,14 @@ a.ob-yc:active {
   color: var(--muted);
   background: var(--surface);
   border-radius: var(--r-pill);
-  padding: 2px 10px;
+  padding: var(--card-tag-pad);
 }
 
 /* ── ProgramSession ──────────────────────────────────────────────────────── */
 
 .ob-ps {
   background: var(--surface-card);
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-md);
   padding: var(--sp-4) var(--sp-5);
   min-width: 0;
@@ -1082,21 +1084,21 @@ a.ob-yc:active {
 
 .ob-ps__meta {
   display: flex;
-  gap: 10px;
+  gap: var(--gap-control);
   flex-wrap: wrap;
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
   color: var(--ob-sky-text);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 6px;
+  letter-spacing: var(--ls-brand);
+  margin-bottom: var(--gap-tight);
 }
 
 .ob-ps__title {
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
   font-weight: var(--fw-semibold);
-  margin: 0 0 4px;
+  margin: 0 0 var(--sp-1);
   overflow-wrap: anywhere;
 }
 
@@ -1112,7 +1114,7 @@ a.ob-yc:active {
   color: var(--warn-text);
   background: var(--warn-wash);
   border-radius: var(--r-sm);
-  padding: 6px 10px;
+  padding: var(--session-note-pad);
   margin: 0 0 var(--sp-3);
   overflow-wrap: anywhere;
 }
@@ -1126,8 +1128,8 @@ a.ob-yc:active {
 }
 
 .ob-ps__talk {
-  padding: 10px 0;
-  border-top: 1px solid var(--hairline);
+  padding: var(--session-talk-pad);
+  border-top: var(--border-thin) solid var(--hairline);
 }
 
 .ob-ps__talk-t {
@@ -1142,7 +1144,7 @@ a.ob-yc:active {
 .ob-ps__talk-s {
   font-size: var(--fs-small);
   color: var(--text-muted);
-  margin: 2px 0 0;
+  margin: var(--gap-micro) 0 0;
   overflow-wrap: anywhere;
 }
 
@@ -1185,7 +1187,7 @@ a.ob-yc:active {
 .ob-pt__h {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: var(--gap-control);
   margin: 0 0 var(--sp-3);
   flex-wrap: nowrap;
 }
@@ -1222,9 +1224,12 @@ a.ob-yc:active {
 .ob-pt__dot {
   position: absolute;
   inset-inline-start: 0;
-  top: calc((1em * var(--lh-h3) - 9px) / 2);
-  width: 9px;
-  height: 9px;
+  top: calc(
+    (var(--partner-marker-line-unit) * var(--lh-h3) - var(--partner-marker-size)) /
+      2
+  );
+  width: var(--partner-marker-size);
+  height: var(--partner-marker-size);
   border-radius: var(--r-pill);
   /* Fallback for a tier added to the schema before its rung is designed: a
      neutral marker rather than an invisible 9px hole. */
@@ -1278,7 +1283,7 @@ a.ob-yc:active {
    the count would be pushed out of the container. */
 .ob-pt__title {
   position: relative;
-  padding-inline-start: 19px;
+  padding-inline-start: var(--partner-title-indent);
   font-size: var(--fs-h3);
   line-height: var(--lh-h3);
   font-weight: var(--fw-semibold);
@@ -1300,11 +1305,19 @@ a.ob-yc:active {
 }
 
 .ob-pt--major .ob-pt__grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(min(100%, var(--grid-partner-major-floor)), 1fr)
+    );
 }
 
 .ob-pt--minor .ob-pt__grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(min(100%, var(--grid-partner-minor-floor)), 1fr)
+    );
   gap: var(--sp-2);
 }
 
@@ -1314,10 +1327,10 @@ a.ob-yc:active {
   justify-content: center;
   text-align: center;
   background: var(--surface-card);
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-md);
   padding: var(--sp-4);
-  min-height: 76px;
+  min-height: var(--partner-card-height);
   min-width: 0;
   font-size: var(--fs-small);
   font-weight: var(--fw-medium);
@@ -1333,13 +1346,13 @@ a.ob-yc:active {
 }
 
 .ob-pt--major .ob-pt__card {
-  min-height: 96px;
+  min-height: var(--partner-card-height-major);
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
 }
 
 .ob-pt--minor .ob-pt__card {
-  min-height: 56px;
+  min-height: var(--partner-card-height-minor);
   padding: var(--sp-3);
   color: var(--muted);
 }
@@ -1370,7 +1383,7 @@ a.ob-pt__card:active {
    quietly disappearing. */
 .ob-pt__card--static {
   background: var(--surface-section);
-  border-color: transparent;
+  border-color: var(--color-transparent);
   cursor: default;
   transition: none;
 }
@@ -1391,10 +1404,10 @@ a.ob-pt__card:active {
 .ob-pt__more {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--inline-link-gap);
   /* WCAG 2.2 §2.5.8 floor, same as the other standalone text links — even
      though the whole card is the target, the row reads as one. */
-  min-height: 24px;
+  min-height: var(--inline-link-min-height);
   font-size: var(--fs-small);
   font-weight: var(--fw-medium);
   color: var(--text-link);
@@ -1413,11 +1426,11 @@ a.ob-pt__card:active {
 
 a.ob-pt__card--profile:hover .ob-pt__more {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--link-underline-offset-hover);
 }
 
 a.ob-pt__card--profile:hover .ob-pt__more::after {
-  translate: 3px 0;
+  translate: var(--inline-link-nudge) 0;
 }
 
 /* Fixed slot: the logo box is reserved before the file loads, so a tier grid
@@ -1428,8 +1441,8 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
    thumbnails. 72px is what makes the square marks readable while still letting
    the wide 240×101 institutional logos use the full 120px width. */
 .ob-pt__card img {
-  width: 120px;
-  height: 72px;
+  width: var(--logo-lockup-width);
+  height: var(--logo-lockup-height);
   max-width: 80%;
   object-fit: contain;
 }
@@ -1441,7 +1454,7 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
   gap: var(--sp-4);
   align-items: flex-start;
   background: var(--surface-card);
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-md);
   padding: var(--sp-4);
   min-width: 0;
@@ -1450,8 +1463,8 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
 .ob-pc__photo,
 .ob-pc__initial {
   flex: none;
-  width: 72px;
-  height: 72px;
+  width: var(--profile-photo-size);
+  height: var(--profile-photo-size);
   border-radius: var(--r-pill);
   object-fit: cover;
   background: var(--surface);
@@ -1482,7 +1495,7 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
 .ob-pc__name {
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
-  margin: 2px 0;
+  margin: var(--gap-micro) 0;
   overflow-wrap: anywhere;
 }
 
@@ -1514,7 +1527,8 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
   /* 340px floor, not 300: the card now leads with a 72px portrait circle, and
      regalia run to 238 characters — a narrower column turned the text into a
      ribbon two or three words wide. */
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  grid-template-columns:
+    repeat(auto-fill, minmax(min(100%, var(--grid-contact-floor)), 1fr));
 }
 
 /* The card chrome comes from `.ob-pc` (PersonCard) inside — the list item is
@@ -1553,9 +1567,11 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
   font-weight: var(--fw-semibold);
   color: var(--ds-blue-dark);
   background: var(--surface-card);
-  border: 1px solid color-mix(in oklab, var(--ds-blue-dark) 32%, var(--bg));
+  border:
+    var(--border-thin) solid
+    color-mix(in oklab, var(--ds-blue-dark) 32%, var(--bg));
   border-radius: var(--r-pill);
-  padding: 10px 20px;
+  padding: var(--disclosure-pad);
   transition:
     background var(--t-state),
     border-color var(--t-state);
@@ -1604,7 +1620,8 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
 .ob-mg__grid {
   display: grid;
   gap: var(--sp-4);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  grid-template-columns:
+    repeat(auto-fill, minmax(min(100%, var(--grid-card-floor)), 1fr));
 }
 
 /* ── PhotoGrid ───────────────────────────────────────────────────────────── */
@@ -1734,13 +1751,13 @@ html:has(.ob-pg__lb:target) {
 .ob-pg__lb figure {
   margin: 0;
   position: relative;
-  max-width: min(1100px, 94vw);
+  max-width: var(--lightbox-figure-width);
 }
 
 .ob-pg__lb figure img {
   width: 100%;
   height: auto;
-  max-height: 80vh;
+  max-height: var(--lightbox-figure-height);
   object-fit: contain;
   border-radius: var(--r-md);
   display: block;
@@ -1752,13 +1769,13 @@ html:has(.ob-pg__lb:target) {
   gap: var(--sp-4);
   color: var(--lightbox-caption);
   font-size: var(--fs-small);
-  margin-top: 10px;
+  margin-top: var(--gap-control);
 }
 
 .ob-pg__nav,
 .ob-pg__close {
-  width: 44px;
-  height: 44px;
+  width: var(--control-square);
+  height: var(--control-square);
   border-radius: var(--r-pill);
   background: var(--lightbox-control);
   color: var(--on-dark);
@@ -1781,21 +1798,21 @@ html:has(.ob-pg__lb:target) {
 .ob-pg__nav {
   top: 50%;
   translate: 0 -50%;
-  font-size: 20px;
+  font-size: var(--fs-icon);
 }
 
 .ob-pg__nav--prev {
-  left: 10px;
+  left: var(--lightbox-nav-inset);
 }
 
 .ob-pg__nav--next {
-  right: 10px;
+  right: var(--lightbox-nav-inset);
 }
 
 .ob-pg__close {
-  top: 14px;
-  right: 14px;
-  font-size: 18px;
+  top: var(--lightbox-close-inset);
+  right: var(--lightbox-close-inset);
+  font-size: var(--fs-icon-sm);
   z-index: 61;
 }
 
@@ -1803,7 +1820,7 @@ html:has(.ob-pg__lb:target) {
 
 .ob-vc {
   display: block;
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-md);
   overflow: hidden;
   background: var(--surface-card);
@@ -1867,8 +1884,8 @@ html:has(.ob-pg__lb:target) {
    positioned, and a statically-positioned play button paints UNDERNEATH it. */
 .ob-vc__play {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: var(--video-play-size);
+  height: var(--video-play-size);
   border-radius: var(--r-pill);
   background: var(--scrim-play);
   display: flex;
@@ -1878,19 +1895,19 @@ html:has(.ob-pg__lb:target) {
 }
 
 .ob-vc__play svg {
-  width: 24px;
-  height: 24px;
+  width: var(--video-play-icon-size);
+  height: var(--video-play-icon-size);
   fill: var(--on-dark);
-  margin-left: 3px;
+  margin-left: var(--video-play-icon-nudge);
 }
 
 .ob-vc__host {
   position: absolute;
-  top: 10px;
-  left: 12px;
+  top: var(--video-host-top);
+  left: var(--video-host-left);
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
-  letter-spacing: 0.04em;
+  letter-spacing: var(--ls-brand);
   color: var(--video-host-fg);
   text-transform: uppercase;
 }
@@ -1902,9 +1919,9 @@ html:has(.ob-pg__lb:target) {
    comes after the img», and the sibling form would silently drop the pill the
    day someone reorders the facade. */
 .ob-vc__facade:has(.ob-vc__poster) .ob-vc__host {
-  top: 8px;
-  left: 8px;
-  padding: 2px 8px;
+  top: var(--video-host-poster-inset);
+  left: var(--video-host-poster-inset);
+  padding: var(--video-host-poster-pad);
   border-radius: var(--r-pill);
   background: var(--scrim-video-badge);
 }
@@ -1914,7 +1931,7 @@ html:has(.ob-pg__lb:target) {
    — the text sat flush against the plate while the padding hung over it. */
 .ob-vc__title {
   display: block;
-  padding: 10px 14px;
+  padding: var(--video-title-pad);
   font-size: var(--fs-small);
   color: var(--text-body);
   margin: 0;
@@ -1928,15 +1945,15 @@ html:has(.ob-pg__lb:target) {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  padding: 0 14px 10px;
+  padding: var(--video-external-pad);
   font-size: var(--fs-caption);
   color: var(--text-muted);
 }
 
 .ob-vc__ext svg {
   flex: none;
-  width: 12px;
-  height: 12px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
   fill: currentColor;
 }
 
@@ -1947,7 +1964,7 @@ html:has(.ob-pg__lb:target) {
   align-items: center;
   gap: var(--sp-4);
   background: var(--surface-card);
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-lg);
   padding: var(--sp-4) var(--sp-5);
   text-decoration: none;
@@ -1955,7 +1972,7 @@ html:has(.ob-pg__lb:target) {
   transition:
     box-shadow var(--t-state),
     border-color var(--t-state);
-  max-width: 560px;
+  max-width: var(--measure-narrow);
   min-width: 0;
 }
 
@@ -1972,8 +1989,8 @@ a.ob-dc:active {
 
 .ob-dc__icon {
   flex: none;
-  width: 48px;
-  height: 48px;
+  width: var(--doc-icon-tile-size);
+  height: var(--doc-icon-tile-size);
   border-radius: var(--r-md);
   background: var(--ob-sky-tint);
   color: var(--ob-sky-text);
@@ -1983,15 +2000,15 @@ a.ob-dc:active {
 }
 
 .ob-dc__icon svg {
-  width: 22px;
-  height: 22px;
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .ob-dc__title {
   display: block;
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
-  margin: 0 0 2px;
+  margin: 0 0 var(--gap-micro);
   overflow-wrap: anywhere;
 }
 
@@ -2005,11 +2022,11 @@ a.ob-dc:active {
 .ob-faq {
   display: flex;
   flex-direction: column;
-  max-width: 720px;
+  max-width: var(--measure-wide);
 }
 
 .ob-faq__item {
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: var(--border-thin) solid var(--hairline);
 }
 
 .ob-faq__q {
@@ -2064,7 +2081,7 @@ details[open] > .ob-faq__q::after {
 .ob-yh {
   position: relative;
   overflow: hidden;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: var(--border-thin) solid var(--hairline);
   background: var(--ob-sky-tint);
 }
 
@@ -2087,9 +2104,9 @@ details[open] > .ob-faq__q::after {
 .ob-yh__pattern {
   display: none;
   position: absolute;
-  right: -80px;
-  top: -90px;
-  width: 280px;
+  right: var(--year-pattern-right);
+  top: var(--year-pattern-top);
+  width: var(--year-pattern-width);
   color: var(--ob-green);
   /* The source SVG carries width/height attributes; height must follow the CSS
      width or the artwork letterboxes inside its own box. */
@@ -2131,7 +2148,9 @@ details[open] > .ob-faq__q::after {
      Wider than that the centred container pulls away faster than the layer
      moves right (776 − W/2, reaching zero around 1552px). */
   .ob-yh__in > * {
-    max-width: calc(100% - (200px - var(--container-pad)) - 4px);
+    max-width: calc(
+      100% - (var(--year-pattern-strip) - var(--container-pad)) - var(--sp-1)
+    );
   }
 }
 
@@ -2145,8 +2164,8 @@ details[open] > .ob-faq__q::after {
 .ob-crumb a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 24px;
+  gap: var(--inline-link-gap);
+  min-height: var(--inline-link-min-height);
   font-weight: var(--fw-medium);
   text-decoration: none;
 }
@@ -2158,11 +2177,11 @@ details[open] > .ob-faq__q::after {
 
 .ob-crumb a:hover {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--link-underline-offset-hover);
 }
 
 .ob-crumb a:hover::before {
-  translate: -3px 0;
+  translate: calc(var(--inline-link-nudge) * -1) 0;
 }
 
 .ob-crumb a:active {
@@ -2224,21 +2243,21 @@ details[open] > .ob-faq__q::after {
   justify-content: center;
   flex: none;
   background: var(--surface-card);
-  border: 1px solid var(--border-card);
+  border: var(--border-thin) solid var(--border-card);
   border-radius: var(--r-md);
   padding: var(--sp-3);
 }
 
 .ob-cp__logo img {
   display: block;
-  width: 120px;
-  height: 72px;
+  width: var(--logo-lockup-width);
+  height: var(--logo-lockup-height);
   object-fit: contain;
 }
 
 .ob-cp__id {
   min-width: 0;
-  flex: 1 1 240px;
+  flex: 1 1 var(--company-copy-basis);
 }
 
 .ob-cp__tier {
@@ -2280,7 +2299,7 @@ details[open] > .ob-faq__q::after {
   /* `minmax(0, …)` on both tracks — a bare `auto`/`1fr` pair lets a long email
      address widen the grid past the viewport. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 2px;
+  gap: var(--gap-micro);
 }
 
 .ob-cp__fact dt {
@@ -2303,7 +2322,7 @@ details[open] > .ob-faq__q::after {
 
 .ob-cp__fact dd a:hover {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--link-underline-offset-hover);
 }
 
 .ob-cp__fact dd a:active {
@@ -2312,7 +2331,8 @@ details[open] > .ob-faq__q::after {
 
 @media (min-width: 768px) {
   .ob-cp__fact {
-    grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+    grid-template-columns:
+      minmax(0, var(--company-fact-label)) minmax(0, 1fr);
     align-items: baseline;
     gap: var(--sp-4);
   }

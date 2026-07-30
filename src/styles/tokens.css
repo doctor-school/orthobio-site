@@ -1,10 +1,12 @@
 /* ============================================================================
    ОРТОБИОЛОГИЯ — design tokens (single source of truth for the site).
 
-   Ported VERBATIM from the Claude.design bundle (`tokens/colors.css`,
-   `tokens/typography.css`, `tokens/layout.css`) — this file is the ONLY place
-   in the repo where a raw colour/size literal may appear. Components and pages
-   reference `var(--token)` and never a literal (AGENTS.md → Code style).
+   The colour, typography and layout foundations are ported from the
+   Claude.design bundle (`tokens/colors.css`, `tokens/typography.css`,
+   `tokens/layout.css`). Project-specific component geometry follows the same
+   boundary below: this file is the ONLY place in the repo where a raw
+   colour/size literal may appear. Components and pages reference
+   `var(--token)` and never a literal (AGENTS.md → Code style).
 
    Palette roles (design bundle §VISUAL FOUNDATIONS): the congress accents
    (sky/green/lime) are an IDENTITY layer and do NOT pass AA as text on white —
@@ -34,7 +36,7 @@
   --ob-green-tint: #eef8e8;
 
   /* DELIBERATELY DECLARED WITHOUT A CONSUMER: --ob-green-deep, --ob-lime-tint,
-     --ob-green-tint, --ds-blue, --ds-blue-light and --sp-9 further down. They
+     --ob-green-tint, --ds-blue and --ds-blue-light further down. They
      are ramp members of the design bundle's own token files, and this file is
      their 1:1 port — the green/lime rungs exist so the ramps are symmetrical,
      not because a component was dropped. The two blue rungs are the same kind of
@@ -196,6 +198,13 @@
   --fw-semibold: 600;
   --fw-bold: 700;
   --ls-overline: 0.08em;
+  --ls-brand: 0.04em;
+  --ls-brand-caption: 0.06em;
+  --fs-brand: 15px;
+  --fs-brand-caption: 10px;
+  --fs-year-number: 2.6rem;
+  --fs-icon: 20px;
+  --fs-icon-sm: 18px;
 
   /* --- Spacing (4px step), radii, shadows ---------------------------------- */
   --sp-1: 4px;
@@ -206,7 +215,6 @@
   --sp-6: 32px;
   --sp-7: 48px;
   --sp-8: 64px;
-  /* Top of the 4px ramp; no consumer today — see the note above the tints. */
   --sp-9: 96px;
   --r-sm: 6px;
   --r-md: 10px;
@@ -229,6 +237,105 @@
      the two states add up instead of one erasing the other. Nothing declares it
      at rest — the focus rule supplies `--shadow-none` as the var() fallback,
      and a state that wants the elevation gone sets it back to `initial`. */
+
+  /* --- Policy primitives ---------------------------------------------------
+     Relative proportions (`%`, `fr`, unitless ratios) stay contextual in
+     component CSS. Fixed lengths and colours cross this boundary instead.
+     These aliases describe the few values shared across unrelated components;
+     one-off geometry remains named for the component that owns it below. */
+  --color-transparent: transparent;
+  --forced-highlight: Highlight;
+  --border-thin: 1px;
+  --anchor-scroll-offset: 88px;
+  --link-decoration-thickness: 1px;
+  --link-underline-offset: 2px;
+  --link-underline-offset-hover: 3px;
+  --inline-link-gap: 6px;
+  --inline-link-min-height: 24px;
+  --inline-link-pad-block: 2px;
+  --inline-link-nudge: 3px;
+  --sr-only-size: 1px;
+  --sr-only-offset: -1px;
+  --offscreen-position: -9999px;
+  --forced-outline: 2px solid var(--forced-highlight);
+  --forced-outline-offset: 2px;
+  --gap-micro: 2px;
+  --gap-tight: 6px;
+  --gap-control: 10px;
+  --control-square: 44px;
+  --icon-xs: 12px;
+  --icon-md: 22px;
+  --measure-compact: 42ch;
+  --measure-copy: 46ch;
+  --measure-narrow: 560px;
+  --measure-medium: 640px;
+  --measure-wide: 720px;
+  --grid-card-floor: 300px;
+  --grid-card-floor-narrow: 260px;
+  --grid-partner-major-floor: 240px;
+  --grid-partner-minor-floor: 170px;
+  --grid-contact-floor: 340px;
+  --logo-lockup-width: 120px;
+  --logo-lockup-height: 72px;
+
+  /* --- Component geometry --------------------------------------------------
+     These values are intentionally component-specific: promoting them to the
+     spacing/type ramps would imply interchangeability that the design does not
+     have. Centralising them still makes every visual constant reviewable and
+     lets the automated policy reject a literal added beside component rules. */
+  --chrome-ribbon-height: 3px;
+  --head-logo-size: 36px;
+  --nav-link-pad: 8px 12px;
+  --footer-mark-size: 40px;
+  --footer-ds-logo-height: 34px;
+  --footer-map-pad-block: 5px;
+  --button-pad-md: 10px 18px;
+  --button-pad-lg: 14px 24px;
+  --stub-badge-size: 56px;
+  --stub-badge-icon-size: 26px;
+  --stub-badge-compact-size: 44px;
+  --stub-badge-compact-icon-size: 22px;
+  --hero-pattern-a-width: 320px;
+  --hero-pattern-a-top: -90px;
+  --hero-pattern-a-right: -70px;
+  --hero-pattern-b-width: 140px;
+  --hero-pattern-b-bottom: -120px;
+  --hero-pattern-b-right: 110px;
+  --hero-pattern-b-width-wide: 240px;
+  --hero-pattern-b-right-wide: 220px;
+  --hero-title-viewport-cap: 10vw;
+  --hero-title-measure: 16em;
+  --card-tag-pad: 2px 10px;
+  --session-note-pad: 6px 10px;
+  --session-talk-pad: 10px 0;
+  --partner-marker-size: 9px;
+  --partner-marker-line-unit: 1em;
+  --partner-title-indent: 19px;
+  --partner-card-height: 76px;
+  --partner-card-height-major: 96px;
+  --partner-card-height-minor: 56px;
+  --profile-photo-size: 72px;
+  --disclosure-pad: 10px 20px;
+  --lightbox-figure-width: min(1100px, 94vw);
+  --lightbox-figure-height: 80vh;
+  --lightbox-nav-inset: 10px;
+  --lightbox-close-inset: 14px;
+  --video-play-icon-nudge: 3px;
+  --video-play-size: var(--sp-8);
+  --video-play-icon-size: var(--sp-5);
+  --video-host-top: 10px;
+  --video-host-left: 12px;
+  --video-host-poster-inset: 8px;
+  --video-host-poster-pad: 2px 8px;
+  --video-title-pad: 10px 14px;
+  --video-external-pad: 0 14px 10px;
+  --doc-icon-tile-size: var(--sp-7);
+  --year-pattern-right: -80px;
+  --year-pattern-top: -90px;
+  --year-pattern-width: 280px;
+  --year-pattern-strip: 200px;
+  --company-copy-basis: 240px;
+  --company-fact-label: 200px;
 
   /* --- Layout & focus ------------------------------------------------------ */
   /* `vh` keeps the shell compatible with older browsers; the feature query

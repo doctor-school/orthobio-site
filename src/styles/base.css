@@ -102,14 +102,14 @@ p {
    the compact sticky header. The offset also leaves a small reading margin
    below the chrome instead of pinning the heading to its bottom border. */
 [id] {
-  scroll-margin-top: 88px;
+  scroll-margin-top: var(--anchor-scroll-offset);
 }
 
 a {
   color: var(--text-link);
   text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-thickness: 1px;
+  text-underline-offset: var(--link-underline-offset);
+  text-decoration-thickness: var(--link-decoration-thickness);
   transition: color var(--t-state);
 }
 
@@ -133,9 +133,9 @@ a:hover {
 a.ob-arrow {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 24px;
-  padding-block: 2px;
+  gap: var(--inline-link-gap);
+  min-height: var(--inline-link-min-height);
+  padding-block: var(--inline-link-pad-block);
   font-weight: var(--fw-medium);
   text-decoration: none;
 }
@@ -147,11 +147,11 @@ a.ob-arrow::after {
 
 a.ob-arrow:hover {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--link-underline-offset-hover);
 }
 
 a.ob-arrow:hover::after {
-  translate: 3px 0;
+  translate: var(--inline-link-nudge) 0;
 }
 
 ::selection {
@@ -219,10 +219,10 @@ button {
    width — the overflow ladder measures that claim on every route. */
 .ob-sr-only {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: var(--sr-only-size);
+  height: var(--sr-only-size);
   padding: 0;
-  margin: -1px;
+  margin: var(--sr-only-offset);
   border: 0;
   overflow: hidden;
   clip: rect(0 0 0 0);
@@ -252,7 +252,7 @@ button {
    this very change (PR #44). */
 @media (forced-colors: active) {
   :focus-visible {
-    outline: 2px solid Highlight;
-    outline-offset: 2px;
+    outline: var(--forced-outline);
+    outline-offset: var(--forced-outline-offset);
   }
 }

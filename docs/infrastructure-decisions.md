@@ -25,7 +25,7 @@ Why this over the S3 + CDN pattern of `bbm.academy`: this site is replaced by
 the Doctor.School platform module around November 2026, and every published URL
 has to keep resolving afterwards. nginx gives path-level 301 control; a CDN in
 front of an S3 origin does not. That requirement outranks the edge caching we
-would gain, for a 4.4 MB / 15-page site whose heavy media is on S3 anyway.
+would gain for a temporary static site whose heavy media is on S3 anyway.
 
 `portal-prod-tw` was considered and rejected: its Caddy runs inside a
 `docker compose` stack owned by `bbm-portal`, so hosting here would mean
@@ -170,6 +170,9 @@ A day is still long enough to protect a returning visitor.
 It was not added before the certificate existed: an HSTS header sent over plain
 HTTP is ignored by browsers, so it would have been decoration.
 
+The pre-certificate comment on Issue #6 that asked to add HSTS is superseded by
+this live decision and by the current baseline in the issue body.
+
 ## Needs Anton (owner)
 
 ### A. ~~One DNS A-record~~ — **DONE 2026-07-27**
@@ -215,9 +218,27 @@ which has no CI gate of its own. It does **not** gate the `workflow_run` arm: a
 passes there regardless of what triggered the run. The fork path is closed by
 the four `if:` guards in `deploy.yml` alone.
 
-`main` also has branch protection (PR required, force-push and deletion blocked,
-`verify` required), because the deploy trusts "green CI on main" as its
-authority.
+As of 2026-07-31, the repository accepts **squash merges only** and deletes
+merged branches automatically. `main` protection applies to administrators,
+requires a PR whose branch is current with `main`, the `verify` check, linear
+history, and resolved review conversations; force-push and branch deletion are
+blocked. The deploy therefore trusts "current green CI on protected `main`",
+not an unreviewed administrator push, as its authority.
+
+GitHub's approving-review count remains zero for a concrete identity
+limitation: both the CLI implementer and the mandated independent agent reviewer
+publish through `sidorovanthon`, and GitHub does not accept self-approval.
+`AGENTS.md` therefore remains the enforceable review contract: the orchestrator
+must dispatch `orthobio-pr-reviewer`, its labeled verdict is retained in the PR,
+and every `[BLOCKER]`/`[IMPORTANT]` is fixed or answered before merge. Branch
+protection still requires the PR boundary and resolved conversations.
+
+Dependabot alerts and security updates, secret scanning, and secret-scanning
+push protection are enabled. The API also received requests for non-provider
+pattern scanning and validity checks, but this repository reports both as
+disabled under the current GitHub organization capabilities. The compensating
+controls are push protection, the no-secrets policy in `AGENTS.md`, environment-
+scoped deploy secrets, and `pnpm audit` in release-readiness checks.
 
 **Variables** — non-secret, optional, all have working defaults:
 
@@ -257,7 +278,7 @@ here.
 
 - **Analytics** — none. Yandex Metrica is the ecosystem default if the owner
   wants numbers before November.
-- **CDN** — none. A 4.4 MB static site on an RF VPS, with media already on S3.
+- **CDN** — none. A temporary static site on an RF VPS, with media already on S3.
 - **Uptime monitoring** — the ecosystem's `mon-prod-tw` blackbox prober could
   take this URL once the DNS record exists; worth doing only if the site is
   expected to matter for longer than the migration.

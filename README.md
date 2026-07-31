@@ -24,7 +24,9 @@ pnpm install        # зависимости
 pnpm dev            # дев-сервер (http://localhost:4321)
 pnpm build          # статическая сборка → dist/
 pnpm preview        # локальный просмотр собранного dist/
+pnpm lint:css       # token-only policy: цвета, размеры, breakpoints, inline styles
 pnpm typecheck      # astro check + tsc --noEmit (строгий TS)
+pnpm test           # Vitest: чистая логика и значения контента
 pnpm test:e2e       # Playwright: overflow-лестница + axe на каждый маршрут
 ```
 
@@ -94,9 +96,11 @@ workflow `Deploy` собирает, синхронизирует `dist/` на х
 **не** доставляются — после их правки нужен `sh infra/host/provision.sh <ssh-target>`
 с машины, у ключа которой есть sudo на хосте.
 
-**Ждёт владельца:** одна A-запись в Beget (`new.orthobio.ru` → IP хоста) — после
-неё certbot выпускает сертификат, и временный URL открывается по HTTPS.
-Подробности — в `docs/infrastructure-decisions.md`.
+**Live preview:** [`https://new.orthobio.ru/`](https://new.orthobio.ru/) работает
+с 2026-07-27: A-запись в Beget добавлена, сертификат выпущен, HTTP перенаправляет
+на HTTPS, HSTS включён. Preview намеренно отдаёт `X-Robots-Tag: noindex,
+nofollow`; apex `orthobio.ru` остаётся на старой площадке до отдельного
+переключения по Issue #6. Подробности — в `docs/infrastructure-decisions.md`.
 
 ## Вне scope
 

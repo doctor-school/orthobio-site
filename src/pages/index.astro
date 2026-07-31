@@ -12,7 +12,12 @@ import Hero from '@/components/Hero.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Stat from '@/components/Stat.astro';
 import Stub from '@/components/Stub.astro';
-import { REGISTRATION_OPENS, SUBSCRIBE_LABEL, SUBSCRIBE_URL } from '@/config/site';
+import {
+  REGISTRATION_OPENS,
+  SUBSCRIBE_LABEL,
+  SUBSCRIBE_URL,
+  UPCOMING_CONGRESS_DATES,
+} from '@/config/site';
 import { getCongressYears, getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 
@@ -23,13 +28,10 @@ const programStub = programPage.blocks.find((b) => b.kind === 'stub');
 // Teaser: the three most recent congresses; the hub has them all.
 const recentYears = (await getCongressYears()).slice(0, 3);
 
-// Dates for 2027 are not announced (ТЗ §6, open question 3) — the placeholder
-// IS the fact, not a missing value.
-const DATES_2027 = 'Весна 2027, даты уточняются';
 ---
 
 <BaseLayout title={page.title} description={page.description}>
-  <Hero overline={page.overline} title={page.title} dates={DATES_2027}>
+  <Hero overline={page.overline} title={page.title} dates={UPCOMING_CONGRESS_DATES.display}>
     {page.lead.map((p) => <p>{p}</p>)}
 
     <div slot="cta">

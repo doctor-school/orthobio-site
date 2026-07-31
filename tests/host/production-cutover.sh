@@ -22,6 +22,9 @@ fail() {
     exit 1
 }
 
+# shellcheck source=../../infra/host/orthobio-provision-transaction
+. "$REPO_ROOT/infra/host/orthobio-provision-transaction"
+
 test_partial_seed_retry() {
     root=$TEST_ROOT/release
     legacy=$TEST_ROOT/legacy
@@ -60,9 +63,6 @@ test_failed_rollback_retains_backup() {
         rmdir "$BACKUP"
     }
 
-    # shellcheck source=../../infra/host/orthobio-provision-transaction
-    . "$REPO_ROOT/infra/host/orthobio-provision-transaction"
-
     if rollback_transaction 2> "$TEST_ROOT/rollback.err"; then
         fail "failed restore was reported as successful"
     fi
@@ -71,6 +71,43 @@ test_failed_rollback_retains_backup() {
         fail "failed rollback did not retain recovery material"
     grep -Fq "$BACKUP" "$TEST_ROOT/rollback.err" ||
         fail "failed rollback did not report retained backup path"
+}
+
+test_failed_backup_aborts() {
+    BACKUP=$TEST_ROOT/backup-copy-failure
+    continued=$TEST_ROOT/continued-after-copy-failure
+    mkdir "$BACKUP"
+
+    backup_source_exists() { return 0; }
+    copy_backup_source() { return 1; }
+
+    # Calling a function from an `if` condition suppresses POSIX `set -e`
+    # within that function. The explicit exit in backup_file must still stop
+    # this subshell before the marker can be written.
+    if (
+        backup_file /source preview.conf
+        printf 'unsafe\n' > "$continued"
+    ) 2> "$TEST_ROOT/backup-copy.err"
+    then
+        fail "failed backup copy did not abort provisioning"
+    fi
+
+    [ ! -e "$continued" ] ||
+        fail "provisioning continued after failed backup copy"
+    grep -Fq "$BACKUP/preview.conf" "$TEST_ROOT/backup-copy.err" ||
+        fail "failed backup copy did not report its destination"
+
+    copied_absent=0
+    backup_source_exists() { return 1; }
+    copy_backup_source() {
+        copied_absent=1
+        return 0
+    }
+    if backup_file /absent absent.conf; then
+        fail "absent backup source was reported as captured"
+    fi
+    [ "$copied_absent" = 0 ] ||
+        fail "absent backup source triggered a copy"
 }
 
 test_successful_rollback_cleans_backup() {
@@ -98,6 +135,7 @@ test_successful_rollback_cleans_backup() {
 }
 
 test_partial_seed_retry
+test_failed_backup_aborts
 test_failed_rollback_retains_backup
 test_successful_rollback_cleans_backup
 

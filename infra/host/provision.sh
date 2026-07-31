@@ -100,14 +100,12 @@ fi
 
 BACKUP=$(mktemp -d /tmp/orthobio-provision.XXXXXX)
 
-backup_file() {
-    path=$1
-    name=$2
-    if sudo -n test -e "$path"; then
-        sudo -n cp -a "$path" "$BACKUP/$name"
-        return 0
-    fi
-    return 1
+backup_source_exists() {
+    sudo -n test -e "$1"
+}
+
+copy_backup_source() {
+    sudo -n cp -a "$1" "$2"
 }
 
 HAD_CACHE=0
@@ -122,23 +120,6 @@ PREVIEW_LINK_TARGET=
 PRODUCTION_LINK_TARGET=
 CHANGES_STARTED=0
 COMMITTED=0
-
-if backup_file "$CACHE_MAP" cache-map.conf; then HAD_CACHE=1; fi
-if backup_file "$PREVIEW_VHOST" preview.conf; then HAD_PREVIEW=1; fi
-if backup_file "$PRODUCTION_VHOST" production.conf; then HAD_PRODUCTION=1; fi
-if backup_file "$FORCED_COMMAND" orthobio-deploy; then HAD_FORCED_COMMAND=1; fi
-if backup_file "$REDIRECT_INSTALLER" orthobio-apply-redirects; then
-    HAD_REDIRECT_INSTALLER=1
-fi
-if backup_file "$REDIRECT_SNIPPET" redirects.conf; then HAD_REDIRECT_SNIPPET=1; fi
-if sudo -n test -L "$PREVIEW_LINK"; then
-    HAD_PREVIEW_LINK=1
-    PREVIEW_LINK_TARGET=$(sudo -n readlink "$PREVIEW_LINK")
-fi
-if sudo -n test -L "$PRODUCTION_LINK"; then
-    HAD_PRODUCTION_LINK=1
-    PRODUCTION_LINK_TARGET=$(sudo -n readlink "$PRODUCTION_LINK")
-fi
 
 restore_file() {
     had_file=$1
@@ -245,6 +226,25 @@ on_exit() {
 trap 'exit 130' INT
 trap 'exit 143' TERM
 trap on_exit EXIT
+
+# Capture every rollback source before the first host mutation. A missing source
+# is a normal HAD_*=0 state; a failed copy exits explicitly from backup_file.
+if backup_file "$CACHE_MAP" cache-map.conf; then HAD_CACHE=1; fi
+if backup_file "$PREVIEW_VHOST" preview.conf; then HAD_PREVIEW=1; fi
+if backup_file "$PRODUCTION_VHOST" production.conf; then HAD_PRODUCTION=1; fi
+if backup_file "$FORCED_COMMAND" orthobio-deploy; then HAD_FORCED_COMMAND=1; fi
+if backup_file "$REDIRECT_INSTALLER" orthobio-apply-redirects; then
+    HAD_REDIRECT_INSTALLER=1
+fi
+if backup_file "$REDIRECT_SNIPPET" redirects.conf; then HAD_REDIRECT_SNIPPET=1; fi
+if sudo -n test -L "$PREVIEW_LINK"; then
+    HAD_PREVIEW_LINK=1
+    PREVIEW_LINK_TARGET=$(sudo -n readlink "$PREVIEW_LINK")
+fi
+if sudo -n test -L "$PRODUCTION_LINK"; then
+    HAD_PRODUCTION_LINK=1
+    PRODUCTION_LINK_TARGET=$(sudo -n readlink "$PRODUCTION_LINK")
+fi
 
 # Seed the full release tree and its completion marker in a sibling directory,
 # then expose it with one same-filesystem rename. An interrupted copy can never

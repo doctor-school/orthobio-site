@@ -25,6 +25,19 @@ export const SITE = {
 } as const;
 
 /**
+ * Dates of the upcoming congress, confirmed by the owner on 2026-07-31.
+ *
+ * The display form is authored with Russian typography because config strings
+ * do not pass through the Content Layer's `prose()` transform. ISO values are
+ * kept alongside it for machine-readable consumers and regression checks.
+ */
+export const UPCOMING_CONGRESS_DATES = {
+  display: '23–24 апреля 2027',
+  startDate: '2027-04-23',
+  endDate: '2027-04-24',
+} as const;
+
+/**
  * Public base URL of our Timeweb S3 bucket (`orthobio-media`, provisioned in
  * Issue #2 — see infra/terraform/ and docs/assets-manifest.yaml
  * `meta.s3_public_base_url`).

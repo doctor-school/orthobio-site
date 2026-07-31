@@ -26,8 +26,8 @@ test('/program is an honest stub pointing at the 2026 program', async ({ page })
 test('the home page never presents 2026 content as 2027', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('2027');
-  // The dates placeholder IS the fact — no invented 2027 dates.
-  await expect(page.getByText(/даты уточняются/i)).toBeVisible();
+  // Exact values matter: geometry/a11y stay green if a plausible wrong date ships.
+  await expect(page.getByText('23–24 апреля 2027', { exact: true })).toBeVisible();
   // Figures are labelled as past congresses…
   await expect(page.getByText(/прошедших конгрессов/i)).toBeVisible();
   // …and the caption dates only the range the archive can show. 2020 was an

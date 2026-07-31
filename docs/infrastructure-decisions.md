@@ -121,8 +121,10 @@ branded 404 content — a config-only "deploy succeeded" cannot pass.
 
 ### 7. SEO essentials and the temporary noindex gate
 
-The vhost sends `X-Robots-Tag: noindex, nofollow`. `orthobio.ru` still serves
-the previous site, and two near-identical sites in the index would split it.
+The preview vhost sends `X-Robots-Tag: noindex, nofollow`. The production apex
+has served the same release from its canonical hostname since 2026-07-31, while
+the preview remains available for operational checks; indexing both hostnames
+would create duplicate search results.
 
 The deployed artifact is nevertheless production-ready: `robots.txt` allows
 crawling and points at `https://orthobio.ru/sitemap.xml`; that sitemap is built

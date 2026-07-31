@@ -438,10 +438,11 @@ years:
           - https://cdn.congress-ph.online/261/orgs_hum/ochkurenko.jpg
           - https://cdn.congress-ph.online/261/orgs_hum/torgashin.jpg
         description: >-
-          11 portraits of the оргкомитет, rescued with Playwright from the LIVE
-          orthobio.ru/orgs (the apex still serves the operator's 2026 site; the
-          files themselves sit on the operator's CDN cdn.congress-ph.online,
-          which is exactly the dependency this rescue removes).
+          11 portraits of the оргкомитет, rescued with Playwright from
+          orthobio.ru/orgs before the 2026-07-31 cutover, while the apex still
+          served the operator's 2026 site. The source files sat on the operator's
+          CDN cdn.congress-ph.online, which is exactly the dependency this rescue
+          removes.
 
           Originals are 512×512 JPEG, each a circular photo mask of diameter 400
           painted dead centre on a white canvas. Derivatives are 288×288 webp

@@ -101,13 +101,17 @@ Deploy завершается ошибкой, если одна из них от
 **не** доставляются — после их правки нужен `sh infra/host/provision.sh <ssh-target>`
 с машины, у ключа которой есть sudo на хосте.
 
-**Live preview:** [`https://new.orthobio.ru/`](https://new.orthobio.ru/) работает
-с 2026-07-27: A-запись в Beget добавлена, сертификат выпущен, HTTP перенаправляет
-на HTTPS, HSTS включён. Preview намеренно отдаёт `X-Robots-Tag: noindex,
-nofollow`; apex `orthobio.ru` остаётся на старой площадке до отдельного
-переключения по Issue #6. Production-vhost и безопасная DNS-01 активация
-описаны в `docs/infrastructure-decisions.md`; DNS меняется только после
-обязательного owner-gate.
+**Live domains (cutover completed 2026-07-31):**
+
+- [`https://orthobio.ru/`](https://orthobio.ru/) — индексируемый production
+  canonical; apex A указывает на Timeweb, а `www` перенаправляется на apex.
+- [`https://new.orthobio.ru/`](https://new.orthobio.ru/) — отдельный preview на
+  тех же байтах, намеренно отдающий `X-Robots-Tag: noindex, nofollow`.
+
+Оба имени работают по HTTPS с HSTS. Production-сертификат покрывает apex и
+`www`; автоматическое продление через certbot проверено после переключения.
+Фактические DNS/TLS значения, runbook и rollback-процедура зафиксированы в
+[`docs/infrastructure-decisions.md`](docs/infrastructure-decisions.md).
 
 ## Вне scope
 

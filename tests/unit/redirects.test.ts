@@ -418,6 +418,7 @@ describe('infra/redirects.yaml — the live company map', () => {
   it('ends the /company group with the unconditional fallthrough', () => {
     const group = entries.filter((e) => e.from === '/company');
     expect(group.at(-1)?.query).toBeNull();
+    expect(group.at(-1)?.to).toBe('/partners/');
   });
 });
 

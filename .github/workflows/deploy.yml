@@ -137,7 +137,7 @@ jobs:
           TARGET="${DEPLOY_USER}@${DEPLOY_HOST}"
 
           # The key's forced command hands every rsync to rrsync, which maps
-          # "/" to /var/www/new.orthobio.ru and cannot address anything else on
+          # "/" to /var/www/orthobio-site and cannot address anything else on
           # the host.
           #
           # --delete mirrors the build: a page deleted from the repo disappears

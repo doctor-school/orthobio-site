@@ -146,4 +146,4 @@ redirects:
   # the /company group: it renders as the block's final `return`, after every
   # `if`, and an entry placed after it would be unreachable.
   - from: /company
-    to: /partners
+    to: /partners/

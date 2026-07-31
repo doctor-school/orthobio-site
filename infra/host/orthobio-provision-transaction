@@ -1,0 +1,22 @@
+#!/bin/sh
+# Shared transaction finalizer for provision.sh and its executable failure tests.
+#
+# The caller provides these functions:
+#   restore_state, validate_restored_state, reload_restored_state, remove_backup
+#
+# BACKUP is intentionally part of the contract: recovery material must remain
+# discoverable when any rollback step fails.
+
+rollback_transaction() {
+    if restore_state &&
+       validate_restored_state &&
+       reload_restored_state
+    then
+        if remove_backup; then
+            return 0
+        fi
+    fi
+
+    echo "provision: rollback failed; recovery files retained at $BACKUP" >&2
+    return 1
+}

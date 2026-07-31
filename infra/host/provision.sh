@@ -38,6 +38,8 @@ esac
 echo "==> staging files on $TARGET"
 scp infra/host/orthobio-deploy \
     infra/host/orthobio-apply-redirects \
+    infra/host/orthobio-provision-transaction \
+    infra/host/orthobio-seed-release \
     infra/nginx/orthobio-cache-map.conf \
     infra/nginx/new.orthobio.ru.conf \
     infra/nginx/orthobio.ru.conf \
@@ -62,6 +64,9 @@ CERT_KEY=/etc/letsencrypt/live/$PRODUCTION_SITE/privkey.pem
 FORCED_COMMAND=/usr/local/bin/orthobio-deploy
 REDIRECT_INSTALLER=/usr/local/sbin/orthobio-apply-redirects
 REDIRECT_SNIPPET=/etc/nginx/snippets/orthobio-redirects.conf
+
+# shellcheck source=infra/host/orthobio-provision-transaction
+. /tmp/orthobio-provision-transaction
 
 PRODUCTION_ACTIVE=0
 if sudo -n test -L "$PRODUCTION_LINK"; then PRODUCTION_ACTIVE=1; fi
@@ -163,24 +168,38 @@ restore_link() {
 }
 
 restore_state() {
-    restore_file "$HAD_CACHE" cache-map.conf "$CACHE_MAP" 0644
-    restore_file "$HAD_PREVIEW" preview.conf "$PREVIEW_VHOST" 0644
-    restore_file "$HAD_PRODUCTION" production.conf "$PRODUCTION_VHOST" 0644
-    restore_file "$HAD_FORCED_COMMAND" orthobio-deploy "$FORCED_COMMAND" 0755
+    restore_file "$HAD_CACHE" cache-map.conf "$CACHE_MAP" 0644 &&
+    restore_file "$HAD_PREVIEW" preview.conf "$PREVIEW_VHOST" 0644 &&
+    restore_file "$HAD_PRODUCTION" production.conf "$PRODUCTION_VHOST" 0644 &&
+    restore_file "$HAD_FORCED_COMMAND" orthobio-deploy "$FORCED_COMMAND" 0755 &&
     restore_file \
         "$HAD_REDIRECT_INSTALLER" \
         orthobio-apply-redirects \
         "$REDIRECT_INSTALLER" \
-        0755
-    restore_file "$HAD_REDIRECT_SNIPPET" redirects.conf "$REDIRECT_SNIPPET" 0644
-    restore_link "$HAD_PREVIEW_LINK" "$PREVIEW_LINK_TARGET" "$PREVIEW_LINK"
+        0755 &&
+    restore_file \
+        "$HAD_REDIRECT_SNIPPET" \
+        redirects.conf \
+        "$REDIRECT_SNIPPET" \
+        0644 &&
+    restore_link "$HAD_PREVIEW_LINK" "$PREVIEW_LINK_TARGET" "$PREVIEW_LINK" &&
     restore_link "$HAD_PRODUCTION_LINK" "$PRODUCTION_LINK_TARGET" "$PRODUCTION_LINK"
+}
+
+validate_restored_state() {
+    sudo -n nginx -t
+}
+
+reload_restored_state() {
+    sudo -n systemctl reload nginx
 }
 
 remove_staged_files() {
     rm -f \
         /tmp/orthobio-deploy \
         /tmp/orthobio-apply-redirects \
+        /tmp/orthobio-provision-transaction \
+        /tmp/orthobio-seed-release \
         /tmp/orthobio-cache-map.conf \
         /tmp/new.orthobio.ru.conf \
         /tmp/orthobio.ru.conf \
@@ -203,43 +222,41 @@ remove_backup() {
 
 on_exit() {
     status=$?
+    final_status=$status
     trap - EXIT INT TERM
     set +e
 
     if [ "$CHANGES_STARTED" = 1 ] && [ "$COMMITTED" = 0 ]; then
         echo "provision: applying changes failed — restoring previous host state" >&2
-        restore_state
-        sudo -n nginx -t
-        sudo -n systemctl reload nginx
+        if ! rollback_transaction; then
+            final_status=1
+        fi
+    else
+        if ! remove_backup; then
+            echo "provision: could not remove completed transaction backup: $BACKUP" >&2
+            final_status=1
+        fi
     fi
 
     remove_staged_files
-    remove_backup
-    exit "$status"
+    exit "$final_status"
 }
 
 trap 'exit 130' INT
 trap 'exit 143' TERM
 trap on_exit EXIT
 
+# Seed the full release tree and its completion marker in a sibling directory,
+# then expose it with one same-filesystem rename. An interrupted copy can never
+# become the live document root or satisfy a retry.
+sudo -n env \
+    ROOT="$ROOT" \
+    LEGACY_ROOT="$LEGACY_ROOT" \
+    SEED_OWNER=deploy:deploy \
+    sh /tmp/orthobio-seed-release
+
 CHANGES_STARTED=1
 sudo -n install -d -o deploy -g deploy -m 0755 "$ROOT" "$ROOT/public"
-
-# Seed the hostname-neutral root before changing the live preview vhost. The
-# next CI deploy replaces these bytes, but the copy prevents even a momentary
-# empty document root during the one-time migration.
-if [ ! -f "$ROOT/public/index.html" ] && [ -d "$LEGACY_ROOT/public" ]; then
-    sudo -n cp -a "$LEGACY_ROOT/public/." "$ROOT/public/"
-    sudo -n chown -R deploy:deploy "$ROOT/public"
-fi
-if [ ! -f "$ROOT/redirects.conf" ] && [ -f "$LEGACY_ROOT/redirects.conf" ]; then
-    sudo -n cp -p "$LEGACY_ROOT/redirects.conf" "$ROOT/redirects.conf"
-    sudo -n chown deploy:deploy "$ROOT/redirects.conf"
-fi
-if [ ! -f "$ROOT/public/index.html" ]; then
-    echo "provision: the shared release root has no index.html after seeding" >&2
-    exit 1
-fi
 
 sudo -n install -o root -g root -m 0755 /tmp/orthobio-deploy "$FORCED_COMMAND"
 sudo -n install -o root -g root -m 0755 /tmp/orthobio-apply-redirects "$REDIRECT_INSTALLER"

@@ -28,8 +28,14 @@
 #         that share a `from` path but differ in `query` are rendered as ONE
 #         location block, one `if` per condition, in list order.
 #
-# ── What is in the list today (Issue #24) ───────────────────────────────────
-# The 22 company profile pages of the OLD site. They lived at `/company?i=<id>`
+# ── What is in the list today (Issues #24 and #6) ────────────────────────────
+# Six indexed pages of the old 2026 site were renamed or consolidated. They
+# move to the closest preserved destination below. `/doc_dash` is deliberately
+# absent: the owner retired registration and the personal account in Issue #54,
+# so a missing authenticated route should be an honest branded 404 rather than
+# pretend the feature still exists.
+#
+# The 22 company profile pages of the OLD site lived at `/company?i=<id>`
 # — ONE path, 22 URLs told apart by a query argument — and they now live at
 # `/partners/<slug>/`. Those URLs are published, indexed and linked from the
 # 2026 catalogue, so they must keep resolving after the domain switchover.
@@ -55,6 +61,21 @@
 # list instead of a 404 — the closest honest answer.
 
 redirects:
+  # Renamed/consolidated pages from the indexed 2026 site.
+  - from: /event
+    to: /participants/
+  - from: /hotel
+    to: /archive/2026/
+  - from: /exhibition
+    to: /partners/
+  - from: /posters
+    to: /archive/2026/
+  - from: /timeline
+    to: /archive/2026/
+  - from: /org
+    to: /orgs/
+
+  # Query-addressed company profiles.
   - from: /company
     query: { i: "dr.reddys" }
     to: /partners/dr-reddys/
@@ -125,4 +146,4 @@ redirects:
   # the /company group: it renders as the block's final `return`, after every
   # `if`, and an entry placed after it would be unreachable.
   - from: /company
-    to: /partners
+    to: /partners/

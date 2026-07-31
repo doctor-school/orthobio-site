@@ -1,0 +1,42 @@
+#!/bin/sh
+# Shared transaction finalizer for provision.sh and its executable failure tests.
+#
+# The caller provides these functions:
+#   backup_source_exists, copy_backup_source,
+#   restore_state, validate_restored_state, reload_restored_state, remove_backup
+#
+# BACKUP is intentionally part of the contract: recovery material must remain
+# discoverable when any rollback step fails.
+
+backup_file() {
+    path=$1
+    name=$2
+
+    if ! backup_source_exists "$path"; then
+        return 1
+    fi
+
+    # This function is called from `if backup_file ...`, which suppresses
+    # `set -e` inside a POSIX function. An explicit exit is therefore required:
+    # returning here would let the caller set HAD_*=1 without a real snapshot.
+    if ! copy_backup_source "$path" "$BACKUP/$name"; then
+        echo "provision: failed to snapshot $path into $BACKUP/$name" >&2
+        exit 1
+    fi
+
+    return 0
+}
+
+rollback_transaction() {
+    if restore_state &&
+       validate_restored_state &&
+       reload_restored_state
+    then
+        if remove_backup; then
+            return 0
+        fi
+    fi
+
+    echo "provision: rollback failed; recovery files retained at $BACKUP" >&2
+    return 1
+}

@@ -1,0 +1,78 @@
+#!/bin/sh
+# Atomically seed the hostname-neutral release root from the live preview.
+#
+# Run as root. The completed tree, including its marker, appears at ROOT in one
+# same-filesystem rename. A killed copy can leave only an ignored `.seed.*`
+# sibling; it can never satisfy the readiness check or become a live root.
+set -eu
+
+ROOT=${ROOT:-/var/www/orthobio-site}
+LEGACY_ROOT=${LEGACY_ROOT:-/var/www/new.orthobio.ru}
+# `-` rather than `:-` lets the executable test explicitly request no chown
+# with `SEED_OWNER=` while production keeps the deploy-account default.
+SEED_OWNER=${SEED_OWNER-deploy:deploy}
+MARKER=$ROOT/.orthobio-seed-complete
+STAGE=
+
+cleanup() {
+    status=$?
+    trap - EXIT INT TERM
+
+    if [ -n "$STAGE" ] && [ -d "$STAGE" ]; then
+        case "$STAGE" in
+            "$ROOT".seed.*)
+                rm -rf "$STAGE"
+                ;;
+            *)
+                echo "seed: refusing to remove unexpected stage path: $STAGE" >&2
+                status=1
+                ;;
+        esac
+    fi
+
+    exit "$status"
+}
+
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap cleanup EXIT
+
+if [ -f "$MARKER" ]; then
+    if [ ! -f "$ROOT/public/index.html" ]; then
+        echo "seed: completion marker exists but index.html is missing" >&2
+        exit 1
+    fi
+    exit 0
+fi
+
+if [ -e "$ROOT" ]; then
+    echo "seed: refusing unmarked release root at $ROOT" >&2
+    echo "Inspect and remove or recover it before retrying." >&2
+    exit 1
+fi
+if [ ! -d "$LEGACY_ROOT/public" ]; then
+    echo "seed: legacy public root is missing: $LEGACY_ROOT/public" >&2
+    exit 1
+fi
+
+STAGE=$(mktemp -d "$ROOT.seed.XXXXXX")
+mkdir "$STAGE/public"
+cp -a "$LEGACY_ROOT/public/." "$STAGE/public/"
+
+if [ ! -f "$STAGE/public/index.html" ]; then
+    echo "seed: staged release has no index.html" >&2
+    exit 1
+fi
+
+if [ -f "$LEGACY_ROOT/redirects.conf" ]; then
+    cp -p "$LEGACY_ROOT/redirects.conf" "$STAGE/redirects.conf"
+fi
+
+: > "$STAGE/.orthobio-seed-complete"
+chmod 0755 "$STAGE"
+if [ -n "$SEED_OWNER" ]; then
+    chown -R "$SEED_OWNER" "$STAGE"
+fi
+
+mv -T "$STAGE" "$ROOT"
+STAGE=

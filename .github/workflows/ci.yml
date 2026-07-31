@@ -42,6 +42,12 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      # Executable failure tests for the host-only transaction code. These
+      # prove an interrupted seed cannot become live and a failed rollback
+      # retains its recovery files.
+      - name: Host production-cutover tests
+        run: sh tests/host/production-cutover.sh
+
       # The committed nginx snippet is what a reviewer reads; regenerate it and
       # fail on any diff so it can never drift from infra/redirects.yaml.
       - name: Redirect snippet is up to date

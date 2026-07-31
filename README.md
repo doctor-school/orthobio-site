@@ -66,7 +66,10 @@ Terraform: [`infra/terraform/`](infra/terraform/) (runbook в его README);
 ## Хостинг и деплой
 
 Сайт раздаёт **host-nginx на существующем VPS `tools-prod-tw`** (Timeweb, ru-3,
-зона РФ) из `/var/www/new.orthobio.ru/public`; HTTPS — Let's Encrypt (certbot).
+зона РФ) из hostname-neutral release-root `/var/www/orthobio-site/public`;
+HTTPS — Let's Encrypt (certbot). Preview и production используют одни и те же
+проверенные байты, но разные vhost: preview всегда `noindex`, production —
+индексируемый canonical apex с `www` → apex.
 Новых платных ресурсов под сайт не заводилось: переиспользованы VPS, nginx +
 certbot и тот же приём «ключ, запертый forced-command», что у `kb.bbm.academy`.
 Решения и чеклист владельца: [`docs/infrastructure-decisions.md`](docs/infrastructure-decisions.md).
@@ -88,9 +91,11 @@ workflow `Deploy` собирает, синхронизирует `dist/` на х
 
 Имена GitHub Secrets (значения — только в секрет-хранилище; заданы на окружении
 `production`, а не на репозитории, и окружение пускает только `main`):
-`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`. Необязательные Variables с
-рабочими значениями по умолчанию: `DEPLOY_USER` (`deploy`), `SITE_HOST`
-(`new.orthobio.ru`), `SITE_INDEXABLE` (`false`).
+`DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`. Variable с рабочим
+значением по умолчанию: `DEPLOY_USER` (`deploy`). Variables `SITE_HOST`
+и `SITE_INDEXABLE` обязательны и принимаются только согласованной парой:
+`new.orthobio.ru` + `false` до cutover либо `orthobio.ru` + `true` после него.
+Deploy завершается ошибкой, если одна из них отсутствует или изменена отдельно.
 
 Конфиги хоста (vhost, forced-command-обёртка, установщик редиректов) деплоем
 **не** доставляются — после их правки нужен `sh infra/host/provision.sh <ssh-target>`
@@ -100,7 +105,9 @@ workflow `Deploy` собирает, синхронизирует `dist/` на х
 с 2026-07-27: A-запись в Beget добавлена, сертификат выпущен, HTTP перенаправляет
 на HTTPS, HSTS включён. Preview намеренно отдаёт `X-Robots-Tag: noindex,
 nofollow`; apex `orthobio.ru` остаётся на старой площадке до отдельного
-переключения по Issue #6. Подробности — в `docs/infrastructure-decisions.md`.
+переключения по Issue #6. Production-vhost и безопасная DNS-01 активация
+описаны в `docs/infrastructure-decisions.md`; DNS меняется только после
+обязательного owner-gate.
 
 ## Вне scope
 

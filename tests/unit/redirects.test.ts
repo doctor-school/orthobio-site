@@ -418,5 +418,27 @@ describe('infra/redirects.yaml — the live company map', () => {
   it('ends the /company group with the unconditional fallthrough', () => {
     const group = entries.filter((e) => e.from === '/company');
     expect(group.at(-1)?.query).toBeNull();
+    expect(group.at(-1)?.to).toBe('/partners/');
+  });
+});
+
+describe('infra/redirects.yaml — renamed legacy pages', () => {
+  const entries = parseRedirects(readFileSync('infra/redirects.yaml', 'utf8'));
+  const exactTarget = (from: string) =>
+    entries.find((entry) => entry.from === from && entry.query === null)?.to;
+
+  it.each([
+    ['/event', '/participants/'],
+    ['/hotel', '/archive/2026/'],
+    ['/exhibition', '/partners/'],
+    ['/posters', '/archive/2026/'],
+    ['/timeline', '/archive/2026/'],
+    ['/org', '/orgs/'],
+  ])('maps %s to the closest preserved destination', (from, to) => {
+    expect(exactTarget(from)).toBe(to);
+  });
+
+  it('does not preserve the retired registration dashboard', () => {
+    expect(exactTarget('/doc_dash')).toBeUndefined();
   });
 });

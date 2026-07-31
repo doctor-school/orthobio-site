@@ -52,7 +52,12 @@ jobs:
     # SECURITY note above — so the `if:` guards below carry that on their own.
     environment:
       name: production
-      url: https://${{ vars.SITE_HOST || 'new.orthobio.ru' }}/
+      url: https://${{ vars.SITE_HOST }}/
+    env:
+      SITE_HOST: ${{ vars.SITE_HOST }}
+      # The hard gate for preview noindex. Issue #6 switches this Variable and
+      # SITE_HOST together only after the separate production vhost is ready.
+      SITE_INDEXABLE: ${{ vars.SITE_INDEXABLE }}
     # Four guards, all required (see the SECURITY note above):
     #   event == 'push'                     — a pull_request CI run never qualifies
     #   head_repository == this repository  — a fork's run never qualifies
@@ -69,6 +74,19 @@ jobs:
        github.event.workflow_run.head_branch == 'main')
 
     steps:
+      - name: Validate release target
+        run: |
+          set -euo pipefail
+          # Fail before checkout/build/publish when Variables are absent or
+          # changed independently. Preview and production are the only pairs.
+          case "${SITE_HOST}:${SITE_INDEXABLE}" in
+            new.orthobio.ru:false|orthobio.ru:true) ;;
+            *)
+              echo "::error::Invalid SITE_HOST/SITE_INDEXABLE pair: '${SITE_HOST}:${SITE_INDEXABLE}'."
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           # Deploy the exact commit CI verified, not whatever main's tip is by
@@ -119,7 +137,7 @@ jobs:
           TARGET="${DEPLOY_USER}@${DEPLOY_HOST}"
 
           # The key's forced command hands every rsync to rrsync, which maps
-          # "/" to /var/www/new.orthobio.ru and cannot address anything else on
+          # "/" to /var/www/orthobio-site and cannot address anything else on
           # the host.
           #
           # --delete mirrors the build: a page deleted from the repo disappears
@@ -140,13 +158,6 @@ jobs:
       - name: Verify the deploy is live
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          SITE_HOST: ${{ vars.SITE_HOST || 'new.orthobio.ru' }}
-          # The hard gate for the preview noindex (PR #15 review). Keep this
-          # `false` while SITE_HOST names the preview: the deploy asserts that
-          # vhost IS marked noindex. Issue #6 switches SITE_HOST and this
-          # Variable together to a separate production vhost without the
-          # header, so the preview remains protected after launch.
-          SITE_INDEXABLE: ${{ vars.SITE_INDEXABLE || 'false' }}
         run: |
           set -euo pipefail
           # Resolve-pinned so this passes both before and after the DNS record

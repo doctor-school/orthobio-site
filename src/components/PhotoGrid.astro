@@ -227,7 +227,7 @@ const altOf = (
    * frame per photo, up to 80 of them by the design's own demo. Astro 6 inlines
    * this import-less script into every page that uses the component, which is
    * both why pages without a gallery ship zero JS and why a future
-   * `script-src 'self'` on `infra/nginx/new.orthobio.ru.conf` would need a hash
+   * `script-src 'self'` on either nginx vhost would need a hash
    * or a real file here — the e2e suite runs against `astro preview` with no
    * such headers and would stay green while this died in production.
    */

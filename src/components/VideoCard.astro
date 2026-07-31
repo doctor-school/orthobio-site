@@ -130,8 +130,8 @@ const embedSrc = videoEmbedSrc(url);
    * eight of these. Astro 6 renders this import-less component script INLINE
    * into every page that uses the component (~0.4 KB apiece, not a shared
    * bundle), which is why the eleven pages without a VideoCard ship zero JS —
-   * but an inline module cannot run under `script-src 'self'`. If a CSP is ever
-   * added to `infra/nginx/new.orthobio.ru.conf`, this island needs a hash or a
+   * but an inline module cannot run under `script-src 'self'`. If that directive
+   * is ever added to either nginx vhost, this island needs a hash or a
    * real file, and the e2e suite — which runs against `astro preview`, with no
    * such headers — will stay green while click-to-load dies in production. The
    * anchor underneath is what keeps that failure survivable.

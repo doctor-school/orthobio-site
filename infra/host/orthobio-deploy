@@ -7,11 +7,12 @@
 #
 # The `deploy` account has full sudo on this host — the security boundary for
 # the CI key is THIS script, not the account. It admits exactly two things: an
-# rsync confined to the site directory, and the redirect-apply step. Anything
-# else, including an interactive shell, is refused.
+# rsync confined to the hostname-neutral release directory, and the
+# redirect-apply step. Anything else, including an interactive shell, is
+# refused.
 set -eu
 
-DEPLOY_ROOT=/var/www/new.orthobio.ru
+DEPLOY_ROOT=/var/www/orthobio-site
 
 case "${SSH_ORIGINAL_COMMAND:-}" in
     "rsync --server "*)

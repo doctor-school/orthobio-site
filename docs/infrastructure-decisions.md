@@ -13,7 +13,10 @@ to these choices is a comment on that issue.
 ### 1. Hosting: `tools-prod-tw`, host nginx, pattern «rsync → nginx»
 
 The static build is served by the **host nginx on `tools-prod-tw`** (Timeweb
-Cloud, ru-3 Moscow, Zone RF) from `/var/www/new.orthobio.ru/public`.
+Cloud, ru-3 Moscow, Zone RF) from the hostname-neutral release root
+`/var/www/orthobio-site/public`. Preview and production vhosts serve the exact
+same bytes. Indexability is intentionally a response-header property of each
+vhost, not a second build that can drift.
 
 Reused, not provisioned: the VPS, its nginx + certbot installation, and the
 `deploy` account with the forced-command SSH-key idiom already used by
@@ -48,6 +51,15 @@ marker, so the repo and the host do not drift and a re-provision cannot silently
 downgrade the live site to HTTP. Renewals do not touch the vhost; only a re-run
 of `certbot --nginx` does, and that means reconciling the repo copy again.
 
+The production certificate is a separate lineage named `orthobio.ru`, covering
+both `orthobio.ru` and `www.orthobio.ru`. It is issued **before** A/CNAME
+cutover through a manual DNS-01 challenge: the owner only adds the two temporary
+TXT values that certbot generates in Beget. `provision.sh --enable-production`
+refuses to enable the vhost unless OpenSSL confirms both names in that
+certificate. After public DNS reaches our origin, the lineage is reconfigured
+to the nginx authenticator and `certbot renew --dry-run` must pass; this removes
+the manual DNS dependency from future renewals.
+
 ### 3. Media: Timeweb S3 `orthobio-media`
 
 Photos and PDFs stay in the bucket provisioned in #13
@@ -65,7 +77,9 @@ visitor's browser only hits the bucket for the linked PDFs.
 
 Three tiers, expressed as an nginx `map` on `$uri` rather than per-location
 headers (an `add_header` inside a `location` replaces every inherited header,
-which would silently drop the security headers):
+which would silently drop the security headers). The map is installed once at
+nginx `http` scope from `infra/nginx/orthobio-cache-map.conf`; both vhosts
+consume it without defining the same variable twice:
 
 | What | `Cache-Control` |
 | --- | --- |
@@ -82,6 +96,13 @@ generator validates every entry and refuses anything that could inject nginx
 syntax; the host-side installer re-checks the file line by line and rolls back
 if `nginx -t` fails, because that snippet is included by a vhost on a host that
 also fronts Mattermost and Zitadel.
+
+The launch map contains the six renamed/consolidated indexed paths from the
+operator site (`/event`, `/hotel`, `/exhibition`, `/posters`, `/timeline`,
+`/org`) plus all 22 query-addressed `/company?i=<id>` profiles and the bare
+`/company` fallthrough. `/doc_dash` is intentionally not redirected: Issue #54
+retired registration and the personal account, so that authenticated path
+lands on the honest branded 404.
 
 ### 6. CI/CD
 
@@ -108,9 +129,11 @@ means the bytes promoted at cutover are the bytes already verified on preview.
 
 This is **not** guarded by prose alone. While `SITE_HOST=new.orthobio.ru`, the
 deploy's live check requires `SITE_INDEXABLE=false` and reads the response
-header from the resolve-pinned preview vhost. Issue #6 must add a separate
-production vhost without that header, then switch `SITE_HOST=orthobio.ru` and
-`SITE_INDEXABLE=true` together. In that mode the same resolve-pinned check
+header from the resolve-pinned preview vhost. Issue #6 adds a separate
+production vhost without that header; activation then switches
+`SITE_HOST=orthobio.ru` and `SITE_INDEXABLE=true` together. The workflow
+accepts only these two hostname/indexability pairs and has no fallback values.
+In production mode the same resolve-pinned check
 requires the production response to be indexable and requires the live host,
 homepage canonical, robots sitemap URL, and sitemap root URL to agree. The
 production vhost must redirect `www` to the apex in one hop.
@@ -119,25 +142,37 @@ production vhost must redirect `www` to the apex in one hop.
 
 In this order:
 
-1. Prepare and validate the separate production vhost, document root and TLS
-   certificate for `orthobio.ru`/`www` without changing DNS. It omits the
-   preview-only `X-Robots-Tag` header and redirects `www` to the apex in one hop.
+1. Merge and provision the hostname-neutral release root, shared cache map and
+   preview vhost **without** `--enable-production`; verify preview remains 200,
+   HTTPS/HSTS and `noindex`.
 2. Do not delete the preview `X-Robots-Tag` header from
    `infra/nginx/new.orthobio.ru.conf`. Keep the preview independently reachable
    and non-indexable after launch.
-3. When the production vhost is ready, set `SITE_HOST=orthobio.ru` and
+3. Start certbot's DNS-01 issuance for `orthobio.ru` + `www.orthobio.ru`.
+   Owner adds the generated `_acme-challenge` TXT records in Beget; public A and
+   `www` remain unchanged. Remove the TXT records only after issuance succeeds.
+4. Run `provision.sh <target> --enable-production`. It validates certificate
+   files and both SANs before enabling the separate production vhost. Verify
+   apex and `www` with `curl --resolve` against the Timeweb origin; production
+   must omit `noindex`, and all HTTP/HTTPS `www` requests must reach apex in one
+   redirect.
+5. Set `SITE_HOST=orthobio.ru` and
    `SITE_INDEXABLE=true` together, then run the deploy. Its `--resolve`-pinned
    smoke reaches our production vhost before DNS changes and refuses a response
    whose indexability, canonical, robots or sitemap names anything else.
-4. Re-check `new.orthobio.ru` separately: it must still return
+6. Re-check `new.orthobio.ru` separately: it must still return
    `X-Robots-Tag: noindex, nofollow`. Check that an unknown production path
    returns the branded document with status `404`.
-5. Fill `infra/redirects.yaml` with the map from the old URLs and deploy. For a
-   wholesale move, one entry does it: `from: /`, `match: prefix`, `to:` the new
-   home. That case renders as a regex location rather than `location ^~ /`,
-   which would collide with the vhost's own catch-all, and it spares `/.well-known/`
-   so certbot renewals keep working.
-6. Review the HSTS `max-age` (below) against whatever the new host serves, so a
+7. Owner changes Beget records in one window: apex A
+   `45.67.58.226` → `5.42.108.242` with TTL 300 and adds `www` CNAME →
+   `orthobio.ru` with TTL 300. Record the timestamp and keep the old A value as
+   rollback evidence.
+8. Observe authoritative and public resolvers, run the full production smoke
+   from the workstation and the RF-hosted monitoring contour, then inspect
+   nginx 4xx/5xx logs for the agreed window.
+9. Reconfigure the `orthobio.ru` certificate lineage to the nginx authenticator
+   and require `certbot renew --dry-run` to succeed.
+10. Review the HSTS `max-age` (below) against whatever the new host serves, so a
    pin set here cannot outlive this hostname.
 
 ### 8. Branded 404 and focused CSP
@@ -192,10 +227,27 @@ If a different temporary hostname is ever wanted, it is `server_name` in
 `provision.sh`, and a fresh `certbot --nginx` (after which reconcile the vhost
 copy in this repo again).
 
-### B. Domain switchover — Issue #6, deliberately out of scope here
+### B. Domain switchover — Issue #6, owner gate
 
-Repointing `orthobio.ru` itself (and the redirects from the old site) is its own
-issue and its own owner decision.
+Current authoritative snapshot (2026-07-31, Beget NS, TTL 300):
+
+| Name | Before | After |
+| --- | --- | --- |
+| `@` | A `45.67.58.226` | A `5.42.108.242` |
+| `www` | absent | CNAME `orthobio.ru` |
+| `_acme-challenge` | absent | temporary TXT generated by certbot, then removed |
+| `_acme-challenge.www` | absent | temporary TXT generated by certbot, then removed |
+
+The owner receives one Beget-only instruction at the gate: first the two
+temporary TXT validations, then — only after the agent confirms valid
+resolve-pinned TLS and a green production deploy — the A/CNAME changes above.
+No SSH or GitHub action is delegated to the owner.
+
+Rollback is the inverse DNS operation: restore apex A `45.67.58.226` and remove
+the new `www` CNAME. TTL 300 means new resolver lookups should recover within
+five minutes, while already cached answers may take their remaining TTL. The
+old operator origin must be rechecked immediately before cutover and is not
+decommissioned during the observation window.
 
 ## GitHub configuration consumed by the deploy
 
@@ -240,13 +292,14 @@ disabled under the current GitHub organization capabilities. The compensating
 controls are push protection, the no-secrets policy in `AGENTS.md`, environment-
 scoped deploy secrets, and `pnpm audit` in release-readiness checks.
 
-**Variables** — non-secret, optional, all have working defaults:
+**Variables** — non-secret. `SITE_HOST` and `SITE_INDEXABLE` are mandatory and
+must change together:
 
-| Variable | Default | What it is |
-| --- | --- | --- |
-| `DEPLOY_USER` | `deploy` | Host account the key belongs to. |
-| `SITE_HOST` | `new.orthobio.ru` | Hostname the post-deploy live check requests. |
-| `SITE_INDEXABLE` | `false` | Whether the site is supposed to be indexable. The deploy compares it against the live `X-Robots-Tag` and fails on a mismatch — see the switchover checklist. |
+| Variable | Pre-cutover | Production | What it is |
+| --- | --- | --- | --- |
+| `DEPLOY_USER` | `deploy` (default) | `deploy` (default) | Host account the key belongs to. |
+| `SITE_HOST` | `new.orthobio.ru` | `orthobio.ru` | Hostname the resolve-pinned post-deploy check requests. |
+| `SITE_INDEXABLE` | `false` | `true` | Expected live indexing state. Any other host/value pair fails before network access. |
 
 ## Host-side objects
 
@@ -260,10 +313,12 @@ check the host still matches the repo.
 | --- | --- | --- |
 | `/usr/local/bin/orthobio-deploy` | `infra/host/orthobio-deploy` | `provision.sh` — forced command for the CI key: routes to `rrsync` or to the redirect-apply step, refuses everything else. |
 | `/usr/local/sbin/orthobio-apply-redirects` | `infra/host/orthobio-apply-redirects` | `provision.sh` — validates the deployed snippet, installs it, reloads nginx, rolls back on `nginx -t` failure. |
-| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh`. The repo copy includes certbot's TLS lines verbatim, so overwriting is safe; `provision.sh` refuses only the drift case — host has TLS lines the repo copy lacks — and rolls back the vhost and the `sites-enabled` symlink if `nginx -t` rejects the result. |
+| `/etc/nginx/conf.d/orthobio-cache-map.conf` | `infra/nginx/orthobio-cache-map.conf` | `provision.sh` — one `http`-scope map shared by both vhosts. |
+| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh`; always enabled, TLS/noindex retained. |
+| `/etc/nginx/sites-available/orthobio.ru` | `infra/nginx/orthobio.ru.conf` | `provision.sh`; installed disabled, symlinked only by `--enable-production` after certificate/SAN checks. |
 | `deploy@…:~/.ssh/authorized_keys` | public half of `DEPLOY_SSH_KEY` | **by hand, once** — one line: `command="/usr/local/bin/orthobio-deploy",restrict ssh-ed25519 … orthobio-ci-deploy`. |
 | `/etc/nginx/snippets/orthobio-redirects.conf` | generated from `infra/redirects.yaml` | the deploy, every run. |
-| `/var/www/new.orthobio.ru/public` | `dist/` | the deploy, every run. |
+| `/var/www/orthobio-site/public` | `dist/` | the deploy, every run; shared release root for preview and production. |
 
 **Sudo posture.** `orthobio-apply-redirects` runs via `sudo -n` from the forced
 command. No sudoers entry of ours makes that work: the `deploy` account on this
@@ -279,7 +334,9 @@ here.
 - **Analytics** — none. Yandex Metrica is the ecosystem default if the owner
   wants numbers before November.
 - **CDN** — none. A temporary static site on an RF VPS, with media already on S3.
-- **Uptime monitoring** — the ecosystem's `mon-prod-tw` blackbox prober could
-  take this URL once the DNS record exists; worth doing only if the site is
-  expected to matter for longer than the migration.
+- **Permanent uptime monitoring** — not added cross-repo for a site scheduled
+  to move again in November. Issue #6 uses an explicit temporary manual
+  observation window from the workstation plus RF-hosted `mon-prod-tw`; the
+  decision and results are recorded in the issue. If the static phase is
+  extended, add the apex to the central blackbox target list.
 - **Error monitoring** — no client-side JS to speak of.

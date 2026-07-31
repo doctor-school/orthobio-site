@@ -11,7 +11,7 @@
 # unrelated reload (certbot renews on a timer).
 set -eu
 
-SRC=/var/www/new.orthobio.ru/redirects.conf
+SRC=/var/www/orthobio-site/redirects.conf
 DST=/etc/nginx/snippets/orthobio-redirects.conf
 BACKUP=/etc/nginx/snippets/.orthobio-redirects.conf.prev
 

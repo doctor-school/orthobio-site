@@ -17,6 +17,7 @@ import {
   SUBSCRIBE_LABEL,
   SUBSCRIBE_URL,
   UPCOMING_CONGRESS_DATES,
+  UPCOMING_CONGRESS_VENUE,
 } from '@/config/site';
 import { getCongressYears, getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
@@ -31,7 +32,12 @@ const recentYears = (await getCongressYears()).slice(0, 3);
 ---
 
 <BaseLayout title={page.title} description={page.description}>
-  <Hero overline={page.overline} title={page.title} dates={UPCOMING_CONGRESS_DATES.display}>
+  <Hero
+    overline={page.overline}
+    title={page.title}
+    dates={UPCOMING_CONGRESS_DATES.display}
+    venue={UPCOMING_CONGRESS_VENUE.display}
+  >
     {page.lead.map((p) => <p>{p}</p>)}
 
     <div slot="cta">
@@ -44,7 +50,7 @@ const recentYears = (await getCongressYears()).slice(0, 3);
           <>
             {/* Issue #54: no subscription CTA before registration opens. */}
             <p class="ob-hero__cta-pending">
-              Регистрация откроется в {REGISTRATION_OPENS.prepositional} года
+              Регистрация откроется {REGISTRATION_OPENS.display} года
             </p>
           </>
         )

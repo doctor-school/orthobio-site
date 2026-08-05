@@ -916,6 +916,24 @@
   margin: 0 0 var(--sp-5);
 }
 
+/* Dates and venue are one answer to «когда и где», so they sit as a pair: the
+   gap below the dates collapses when a venue follows, and the full gap moves
+   to the bottom of the pair. Guarded by `:has()` because the venue is optional
+   — with no venue the dates keep the spacing they had. */
+.ob-hero__dates:has(+ .ob-hero__venue) {
+  margin-bottom: var(--sp-2);
+}
+
+.ob-hero__venue {
+  font-size: var(--fs-body);
+  color: var(--text-muted);
+  /* The address is a single unbreakable-looking string on a 360px viewport;
+     without this a long venue name would push the hero past the viewport. */
+  overflow-wrap: break-word;
+  max-width: var(--measure-medium);
+  margin: 0 0 var(--sp-5);
+}
+
 .ob-hero__lead {
   font-size: var(--fs-body);
   line-height: var(--lh-body);

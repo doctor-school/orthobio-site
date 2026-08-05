@@ -930,7 +930,9 @@
   /* The address is a single unbreakable-looking string on a 360px viewport;
      without this a long venue name would push the hero past the viewport. */
   overflow-wrap: break-word;
-  max-width: var(--measure-medium);
+  /* No measure cap on purpose: the dates line above has none either, and the
+     two lines are one visual pair — capping only the lower one would wrap them
+     on different measures once an address grows (audit of PR #72). */
   margin: 0 0 var(--sp-5);
 }
 

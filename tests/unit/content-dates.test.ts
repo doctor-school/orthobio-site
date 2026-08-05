@@ -142,7 +142,13 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
       // here would send the author to edit correct copy (PR #72 review). The
       // submission guard below still holds such a line to SUBMISSION_WINDOW, so
       // the exemption is a handoff between the two halves, not a hole.
-      .filter((line) => !line.includes(SUBMISSION_WINDOW.display))
+      //
+      // The WINDOW is cut out of the line, not the line out of the check: an
+      // exemption that drops the whole line swallows every other date on it,
+      // and «Регистрация откроется в ноябре 2026 года, материалы принимаются
+      // с 1 октября по 1 декабря 2026 года» would then be checked by nobody
+      // (PR #72 re-review).
+      .map((line) => line.replaceAll(SUBMISSION_WINDOW.display, ''))
       .flatMap((line) => [...line.matchAll(DATE_IN_PROSE)].map((m) => m[0].toLowerCase().trim()))
       .filter((m) => !allowed.has(m));
     expect(
@@ -244,5 +250,32 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
   it('is the venue the home meta description names', () => {
     const home = unbreak(readFileSync(`${PAGES_DIR}/home.yaml`, 'utf8'));
     expect(home).toContain(unbreak(UPCOMING_CONGRESS_VENUE.name));
+  });
+
+  /**
+   * Presence is only half a guard: it cannot notice a SECOND venue appearing
+   * elsewhere (PR #72 re-review probed this by putting «отель «Холидей Инн
+   * Сокольники»» into program.yaml — all green). The 2027 pages are the ones at
+   * risk, because every past congress had a hall of its own and archive copy
+   * migrating forward is the exact ТЗ §4 failure these pages exist to avoid.
+   *
+   * Scope: lines naming a VENUE KIND. Deliberately not a general address
+   * matcher — a page may mention a street for other reasons, and a filter wide
+   * enough to catch that would flag the archive's own year pages, which
+   * legitimately name their halls in `src/content/congress/*.yaml` (never
+   * checked here).
+   */
+  // «отел» + any letter, not an enumerated ending: «в отеле» is the form copy
+  // actually uses, and an ending list that misses one case is a guard that
+  // reads strict and tests nothing.
+  const NAMES_A_VENUE = /отел[а-яё]|гостиниц|конгресс-центр|ГК «/i;
+
+  it.each(pageFiles)('%s names no venue other than the congress hall', (file) => {
+    const strays = unbreak(readFileSync(`${PAGES_DIR}/${file}`, 'utf8'))
+      .split('\n')
+      .filter((line) => NAMES_A_VENUE.test(line))
+      .map((line) => line.trim())
+      .filter((line) => !line.includes(unbreak(UPCOMING_CONGRESS_VENUE.name)));
+    expect(strays, `${file} names a venue other than UPCOMING_CONGRESS_VENUE`).toEqual([]);
   });
 });

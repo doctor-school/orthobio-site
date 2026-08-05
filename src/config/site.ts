@@ -45,8 +45,9 @@ export const UPCOMING_CONGRESS_DATES = {
  * Like the dates above, this string bypasses the Content Layer's `prose()`
  * transform, so RU typography is authored by hand: ` ` after the
  * abbreviated «ул.»/«д.» keeps «ул. Шипиловская» and «д. 28А» from breaking
- * across lines on a 360px viewport, which is exactly what Typograf would do to
- * the same text in YAML.
+ * across lines on a 360px viewport. Typograf, which typesets the same address
+ * where it appears in YAML, binds more joins than these two — what is written
+ * here is the load-bearing subset, not a reproduction of its output.
  */
 export const UPCOMING_CONGRESS_VENUE = {
   /** Full address as printed in the hero and the FAQ answer. */
@@ -125,8 +126,14 @@ export const SUBMISSION_WINDOW = {
  */
 export const SUBSCRIBE_URL: string | null = null;
 
-/** Label of the «узнать первым» CTA (constant regardless of the channel). */
-export const SUBSCRIBE_LABEL = `Регистрация откроется ${REGISTRATION_OPENS.display} — узнать первым`;
+/**
+ * Label of the «узнать первым» CTA (constant regardless of the channel).
+ *
+ * «года» is part of the sentence, not of the constant: after a bare day the
+ * phrase reads truncated («откроется 1 октября 2026 — узнать первым»), while
+ * the same constant after a dash needs no tail («к открытию — 1 октября 2026»).
+ */
+export const SUBSCRIBE_LABEL = `Регистрация откроется ${REGISTRATION_OPENS.display} года — узнать первым`;
 
 /**
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).

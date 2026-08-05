@@ -7,6 +7,7 @@ import {
   REGISTRATION_OPENS,
   SUBMISSION_WINDOW,
   SUBSCRIBE_LABEL,
+  UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 
 /**
@@ -135,6 +136,13 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
     const strays = body
       .split('\n')
       .filter((line) => ABOUT_REGISTRATION.test(line))
+      // A sentence may legitimately name both events («приём открывается вместе
+      // с регистрацией — с 1 октября по 1 декабря 2026 года»): the closing bound
+      // is then a submission date, not a second opening date, and reporting it
+      // here would send the author to edit correct copy (PR #72 review). The
+      // submission guard below still holds such a line to SUBMISSION_WINDOW, so
+      // the exemption is a handoff between the two halves, not a hole.
+      .filter((line) => !line.includes(SUBMISSION_WINDOW.display))
       .flatMap((line) => [...line.matchAll(DATE_IN_PROSE)].map((m) => m[0].toLowerCase().trim()))
       .filter((m) => !allowed.has(m));
     expect(
@@ -145,19 +153,20 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
 });
 
 /**
- * Lines that state WHEN materials are accepted. Narrow for the same reason as
- * `ABOUT_REGISTRATION`: «постерные доклады принимались от молодых специалистов»
- * is a 2026 fact and must stay outside this guard. Only lines that both talk
- * about submission AND carry a date are held to the constant.
+ * A «с <дата> по <дата> <год>» range, matched by SHAPE rather than by topic.
+ *
+ * Topic was the first attempt and it was wrong (PR #72 review): a filter on
+ * «приём/подача» cannot tell the future window from an archive fact, because
+ * unlike «регистрация» — which on this site is always the 2027 event — accepting
+ * materials is equally something the 2026 congress did. «На конгрессе 2026 года
+ * тезисы принимались до 25 февраля 2026 года» is legitimate copy that a topical
+ * filter flags. The range shape is what the published window actually looks
+ * like, and archive sentences do not wear it.
  */
-const ABOUT_SUBMISSION = /принима|приём|прием|подач/i;
-
-/**
- * Non-global twin of `DATE_IN_PROSE`. `.test()` on a `/g` regex advances its
- * `lastIndex` and the NEXT call starts from there, so the same pattern would
- * silently skip every other matching line.
- */
-const HAS_DATE = new RegExp(DATE_IN_PROSE.source, 'i');
+const RANGE_IN_PROSE = new RegExp(
+  String.raw`с \d{1,2} (?:${MONTH_STEMS})[а-яё]* по \d{1,2} (?:${MONTH_STEMS})[а-яё]*\s+20\d{2}`,
+  'gi',
+);
 
 describe('SUBMISSION_WINDOW is the only submission window on the site', () => {
   it('keeps the display range and the ISO twins in agreement', () => {
@@ -180,26 +189,60 @@ describe('SUBMISSION_WINDOW is the only submission window on the site', () => {
     expect(SUBMISSION_WINDOW.endDate > SUBMISSION_WINDOW.startDate).toBe(true);
   });
 
-  it.each(pageFiles)('%s states the window only as SUBMISSION_WINDOW', (file) => {
+  it.each(pageFiles)('%s states any date range as SUBMISSION_WINDOW', (file) => {
     const body = readFileSync(`${PAGES_DIR}/${file}`, 'utf8');
-    // A dated submission sentence must carry the canonical range VERBATIM.
-    // Checking the individual dates instead would miss a wrong opening bound:
-    // «с 1 сентября по 1 декабря 2026» yields only one full date («1 декабря
-    // 2026»), because the first bound is written without a year.
-    const offenders = body
-      .split('\n')
-      .filter((line) => ABOUT_SUBMISSION.test(line) && HAS_DATE.test(line))
-      .map((line) => line.trim())
-      .filter((line) => !line.includes(SUBMISSION_WINDOW.display));
-    expect(offenders, `${file} dates submission other than SUBMISSION_WINDOW`).toEqual([]);
+    // Whole ranges, not the dates inside them: «с 1 сентября по 1 декабря 2026»
+    // yields only ONE full date to a per-date check («1 декабря 2026», the
+    // opening bound carries no year of its own), so a wrong opening bound would
+    // pass. The window is the only range these pages publish.
+    const strays = [...body.matchAll(RANGE_IN_PROSE)]
+      .map((m) => m[0])
+      .filter((range) => range !== SUBMISSION_WINDOW.display);
+    expect(
+      [...new Set(strays)],
+      `${file} states a date range other than SUBMISSION_WINDOW`,
+    ).toEqual([]);
   });
 
   it('is actually published, so the guard above is not green on nothing', () => {
     // Without this the whole check passes trivially the day someone deletes the
-    // copy: no dated submission line, no offender.
+    // copy: no range in the file, no stray. Asserting WHICH files carry it would
+    // fail the day a third page legitimately states the window, so this only
+    // demands that the copy exists somewhere and on the page that owns the topic.
     const carriers = pageFiles.filter((file) =>
       readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(SUBMISSION_WINDOW.display),
     );
-    expect(carriers.sort()).toEqual(['faq.yaml', 'participants.yaml']);
+    expect(carriers).toContain('participants.yaml');
+  });
+});
+
+/**
+ * The venue is the third repeated fact of Issue #71 — config, the FAQ answer
+ * and the home meta description — and repetition without a guard is the same
+ * М2 argument that produced the date checks above (PR #72 review).
+ *
+ * Comparison is nbsp-insensitive: the constant carries hand-authored U+00A0
+ * because config strings bypass `prose()`, while the YAML stays plain text and
+ * gets its nbsp from Typograf at build. Both spell the same address.
+ */
+const unbreak = (s: string) => s.replace(/ /g, ' ');
+
+describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
+  it('names the venue inside the full address', () => {
+    expect(unbreak(UPCOMING_CONGRESS_VENUE.display)).toContain(
+      unbreak(UPCOMING_CONGRESS_VENUE.name),
+    );
+  });
+
+  it('is the address the FAQ answers with', () => {
+    const faq = unbreak(readFileSync(`${PAGES_DIR}/faq.yaml`, 'utf8'));
+    expect(faq).toContain(unbreak(UPCOMING_CONGRESS_VENUE.display));
+    // The retired placeholder must not come back alongside the fact.
+    expect(faq).not.toContain('Площадка будет объявлена');
+  });
+
+  it('is the venue the home meta description names', () => {
+    const home = unbreak(readFileSync(`${PAGES_DIR}/home.yaml`, 'utf8'));
+    expect(home).toContain(unbreak(UPCOMING_CONGRESS_VENUE.name));
   });
 });

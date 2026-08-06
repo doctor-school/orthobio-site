@@ -18,9 +18,10 @@ interface Props {
   overline?: string | null;
   title: string;
   dates?: string | null;
+  venue?: string | null;
 }
 
-const { overline = null, title, dates = null } = Astro.props;
+const { overline = null, title, dates = null, venue = null } = Astro.props;
 ---
 
 <header class="ob-hero">
@@ -30,6 +31,7 @@ const { overline = null, title, dates = null } = Astro.props;
     {overline && <p class="ob-hero__overline">{overline}</p>}
     <h1 class="ob-hero__title">{title}</h1>
     {dates && <p class="ob-hero__dates">{dates}</p>}
+    {venue && <p class="ob-hero__venue">{venue}</p>}
     <div class="ob-hero__lead"><slot /></div>
     <slot name="cta" />
     <div class="ob-hero__stats"><slot name="stats" /></div>

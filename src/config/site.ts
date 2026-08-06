@@ -38,6 +38,25 @@ export const UPCOMING_CONGRESS_DATES = {
 } as const;
 
 /**
+ * Venue of the upcoming congress, confirmed by the owner on 2026-08-05
+ * (Issue #71). Until then the site published an honest «площадка будет
+ * объявлена» placeholder — `null` was the state, not a guess.
+ *
+ * Like the dates above, this string bypasses the Content Layer's `prose()`
+ * transform, so RU typography is authored by hand: ` ` after the
+ * abbreviated «ул.»/«д.» keeps «ул. Шипиловская» and «д. 28А» from breaking
+ * across lines on a 360px viewport. Typograf, which typesets the same address
+ * where it appears in YAML, binds more joins than these two — what is written
+ * here is the load-bearing subset, not a reproduction of its output.
+ */
+export const UPCOMING_CONGRESS_VENUE = {
+  /** Full address as printed in the hero and the FAQ answer. */
+  display: 'ГК «Милан», Москва, ул. Шипиловская, д. 28А',
+  /** Venue name alone, for sentences that already name the city. */
+  name: 'ГК «Милан»',
+} as const;
+
+/**
  * Public base URL of our Timeweb S3 bucket (`orthobio-media`, provisioned in
  * Issue #2 — see infra/terraform/ and docs/assets-manifest.yaml
  * `meta.s3_public_base_url`).
@@ -63,31 +82,58 @@ export const mediaUrl = (path: string): string =>
   path.startsWith(MEDIA_PREFIX) ? MEDIA_BASE_URL + path.slice(MEDIA_PREFIX.length) : path;
 
 /**
- * Planned opening of registration (ТЗ §4: «трафик к открытию регистрации»).
+ * Opening of registration, confirmed by the owner on 2026-08-05 (Issue #71).
+ *
+ * An EXACT day, no longer a month: it supersedes the planned «ноябрь 2026»,
+ * which was carried in two grammatical cases because «откроется В ноябре» and
+ * «к открытию — ноябрь» need different forms. A day takes no preposition at
+ * all («откроется 1 октября 2026 года»), so one display form serves every
+ * sentence on the site and the case pair is gone.
  *
  * The date is repeated across a dozen strings — config, templates and page
- * copy — and it is a PLAN, not an announced date: when it moves, it must move
- * in one place. Templates read these constants directly; the page YAML cannot
- * interpolate TypeScript, so `tests/unit/registration-date.test.ts` fails the
- * build if any content file names a different month (content audit М2).
+ * copy — so it must move in one place. Templates read this constant directly;
+ * the page YAML cannot interpolate TypeScript, so
+ * `tests/unit/content-dates.test.ts` fails the build if any content file
+ * dates registration differently (content audit М2).
  */
 export const REGISTRATION_OPENS = {
-  /** Nominative — «…к открытию регистрации — ноябрь 2026». */
-  nominative: 'ноябрь 2026',
-  /** Prepositional — «регистрация откроется в ноябре 2026 года». */
-  prepositional: 'ноябре 2026',
+  /** «Регистрация откроется 1 октября 2026 года», «…к открытию — 1 октября 2026». */
+  display: '1 октября 2026',
+  /** Machine-readable twin, kept for regression checks. */
+  date: '2026-10-01',
+} as const;
+
+/**
+ * Submission window for talks, abstracts and posters — owner-confirmed
+ * 2026-08-05 (Issue #71). It opens together with registration and closes two
+ * months later; page copy states it in a sentence of its own, deliberately
+ * WITHOUT the word «регистрация», so the registration half of
+ * `tests/unit/content-dates.test.ts` does not read «1 декабря 2026» as a
+ * second, contradictory registration date. The submission half of that file
+ * holds the copy to THIS constant in return.
+ */
+export const SUBMISSION_WINDOW = {
+  display: 'с 1 октября по 1 декабря 2026',
+  startDate: '2026-10-01',
+  endDate: '2026-12-01',
 } as const;
 
 /**
  * Owner decision (Issue #54, 2026-07-30): launch without a subscription CTA
- * until registration opens in November. `null` is the approved production
- * state, not a pending account decision. The home page renders only the opening
- * date; setting a URL later turns the same block into the primary CTA.
+ * until registration opens. `null` is the approved production state, not a
+ * pending account decision. The home page renders only the opening date;
+ * setting a URL later turns the same block into the primary CTA.
  */
 export const SUBSCRIBE_URL: string | null = null;
 
-/** Label of the «узнать первым» CTA (constant regardless of the channel). */
-export const SUBSCRIBE_LABEL = `Регистрация откроется в ${REGISTRATION_OPENS.prepositional} — узнать первым`;
+/**
+ * Label of the «узнать первым» CTA (constant regardless of the channel).
+ *
+ * «года» is part of the sentence, not of the constant: after a bare day the
+ * phrase reads truncated («откроется 1 октября 2026 — узнать первым»), while
+ * the same constant after a dash needs no tail («к открытию — 1 октября 2026»).
+ */
+export const SUBSCRIBE_LABEL = `Регистрация откроется ${REGISTRATION_OPENS.display} года — узнать первым`;
 
 /**
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).
@@ -162,6 +208,6 @@ export const FOOTER = {
   about:
     'Конгресс по регенеративной травматологии и ортопедии. Организатор — МОО «Общество регенеративной травматологии и ортопедии» (ОРТО). Материалы конгрессов 2021–2026 — в архиве сайта.',
   /** Shown while CONTACT_EMAIL is null. */
-  contactsPending: `Контакты оргкомитета будут опубликованы к открытию регистрации — ${REGISTRATION_OPENS.nominative}.`,
+  contactsPending: `Контакты оргкомитета будут опубликованы к открытию регистрации — ${REGISTRATION_OPENS.display}.`,
   copyright: `© 2021–${SITE.upcomingYear} · Конгресс ОРТОБИОЛОГИЯ`,
 } as const;

@@ -28,6 +28,11 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('2027');
   // Exact values matter: geometry/a11y stay green if a plausible wrong date ships.
   await expect(page.getByText('23–24 апреля 2027', { exact: true })).toBeVisible();
+  // The venue is rendered, not still a placeholder (Issue #71). Matching the
+  // name alone keeps this test off the nbsp inside the street address, which is
+  // asserted where it is authored — tests/unit/launch-content.test.ts.
+  await expect(page.getByText(/ГК «Милан»/)).toBeVisible();
+  await expect(page.locator('body')).not.toContainText('Площадка будет объявлена');
   // Figures are labelled as past congresses…
   await expect(page.getByText(/прошедших конгрессов/i)).toBeVisible();
   // …and the caption dates only the range the archive can show. 2020 was an
@@ -37,7 +42,7 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
 
 test('the home page launches without a subscription CTA', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Регистрация откроется в ноябре 2026 года')).toBeVisible();
+  await expect(page.getByText('Регистрация откроется 1 октября 2026 года')).toBeVisible();
   await expect(page.getByRole('link', { name: /узнать первым/i })).toHaveCount(0);
   await expect(page.getByText(/канал.*будет объявлен/i)).toHaveCount(0);
 });

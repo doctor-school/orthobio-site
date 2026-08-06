@@ -26,6 +26,36 @@ test.describe('responsive', () => {
     }
   }
 
+  // The hero pairs the dates with the venue by COLLAPSING the gap between them
+  // and moving the full gap below the pair — a `:has(+ …)` rule that binds the
+  // two lines by adjacency. Rename the class, reorder the markup or drop the
+  // adjacency and the rule silently stops matching: the venue falls back to the
+  // full gap, the pairing that motivated the rule is gone, and every other test
+  // stays green because nothing overflows and nothing spills (audit of PR #72 —
+  // the same wrong-VALUE class as «фото 12» in PR #14). Ratios, not pixels: the
+  // tokens may be retuned, the relationship may not.
+  for (const width of [360, 1280]) {
+    test(`the hero reads dates and venue as one pair at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await page.goto('/');
+
+      const gaps = await page.evaluate(() => {
+        const box = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+        const dates = box('.ob-hero__dates');
+        const venue = box('.ob-hero__venue');
+        const lead = box('.ob-hero__lead');
+        if (!dates || !venue || !lead) return null;
+        return { inside: venue.top - dates.bottom, after: lead.top - venue.bottom };
+      });
+
+      expect(gaps, 'the hero must render dates, venue and lead').not.toBeNull();
+      expect(
+        gaps!.inside,
+        `gap inside the pair (${gaps!.inside}px) must be smaller than the gap after it (${gaps!.after}px)`,
+      ).toBeLessThan(gaps!.after);
+    });
+  }
+
   test('/program keeps the footer on the bottom edge of a tall viewport', async ({ page }) => {
     const viewport = { width: 1280, height: 1400 };
     await page.setViewportSize(viewport);

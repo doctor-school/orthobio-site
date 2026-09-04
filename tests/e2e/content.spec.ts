@@ -150,6 +150,25 @@ test('the footer claims no 2027 supporter', async ({ page }) => {
   expect(footer).toContain('© 2021–2027');
 });
 
+test('the congress slogan is published identically in both of its places', async ({
+  page,
+}) => {
+  // Authored twice — config for the footer, content YAML for the overline — and
+  // typographed by two different mechanisms, so the rendered forms are compared
+  // rather than each being asserted against its own source (Issue #74).
+  const slogan = 'Объединяем знания\u00A0— даём движение!';
+
+  await page.goto('/');
+  // textContent, not innerText: CSS uppercases both places, and the claim here
+  // is about the authored string, not the case it is displayed in.
+  expect(await page.locator('.ob-hero__overline').textContent()).toBe(slogan);
+  expect(await page.locator('.ob-foot__slogan').textContent()).toBe(slogan);
+
+  // The archive keeps the slogan the 2026 congress actually carried.
+  await page.goto('/archive/2026');
+  await expect(page.locator('main')).toContainText('Будущее начинается здесь');
+});
+
 test('the photo lightbox opens and closes without JavaScript', async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();

@@ -204,7 +204,18 @@ export const FOOTER_LINKS = [...NAV, { href: '/contacts', label: 'Контакт
  * the mark alone, opposite the copyright.
  */
 export const FOOTER = {
-  slogan: 'Будущее начинается здесь',
+  /**
+   * Slogan of the upcoming congress (owner request, Issue #74).
+   *
+   * Config strings bypass the Content Layer's `prose()` transform, so the RU
+   * typography is hand-authored: the space before the em dash is a NON-BREAKING
+   * one. It is invisible in this file but load-bearing — it is exactly what
+   * `typographize()` emits for the same slogan on the home page
+   * (`content/pages/home.yaml`, `overline`), which is stored as plain text.
+   * Two copies of one string cannot be kept in sync by eye, so
+   * `tests/unit/congress-slogan.test.ts` pins them to each other.
+   */
+  slogan: 'Объединяем знания — даём движение!',
   about:
     'Конгресс по регенеративной травматологии и ортопедии. Организатор — МОО «Общество регенеративной травматологии и ортопедии» (ОРТО). Материалы конгрессов 2021–2026 — в архиве сайта.',
   /** Shown while CONTACT_EMAIL is null. */

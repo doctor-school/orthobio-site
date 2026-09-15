@@ -29,7 +29,7 @@ describe('congress slogan', () => {
   it('publishes the owner-approved slogan with hand-authored RU typography', () => {
     //   spelled as an escape: the literal in site.ts is a real nbsp, and an
     // assertion that also hid it would pass against the wrong character.
-    expect(FOOTER.slogan).toBe('Объединяем знания\u00A0— даём движение!');
+    expect(FOOTER.slogan).toBe('Объединяем знания\u00A0— даём движение вперёд!');
   });
 
   it('renders the identical string in the footer and above the home heading', () => {

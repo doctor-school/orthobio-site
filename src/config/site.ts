@@ -215,7 +215,7 @@ export const FOOTER = {
    * Two copies of one string cannot be kept in sync by eye, so
    * `tests/unit/congress-slogan.test.ts` pins them to each other.
    */
-  slogan: 'Объединяем знания — даём движение!',
+  slogan: 'Объединяем знания — даём движение вперёд!',
   about:
     'Конгресс по регенеративной травматологии и ортопедии. Организатор — МОО «Общество регенеративной травматологии и ортопедии» (ОРТО). Материалы конгрессов 2021–2026 — в архиве сайта.',
   /** Shown while CONTACT_EMAIL is null. */

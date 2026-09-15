@@ -156,7 +156,7 @@ test('the congress slogan is published identically in both of its places', async
   // Authored twice — config for the footer, content YAML for the overline — and
   // typographed by two different mechanisms, so the rendered forms are compared
   // rather than each being asserted against its own source (Issue #74).
-  const slogan = 'Объединяем знания\u00A0— даём движение!';
+  const slogan = 'Объединяем знания\u00A0— даём движение вперёд!';
 
   await page.goto('/');
   // textContent, not innerText: CSS uppercases both places, and the claim here

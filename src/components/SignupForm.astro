@@ -39,7 +39,7 @@ import {
   SMARTCAPTCHA_SITEKEY_PREVIEW,
   UPCOMING_CONGRESS_DATES,
 } from '@/config/site';
-import { formatMoscowInstant } from '@/lib/registration';
+import { FORCE_OPEN_HOSTS, formatMoscowInstant } from '@/lib/registration';
 
 const opensLabel = formatMoscowInstant(REGISTRATION_WINDOW.opensAt);
 const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIEW !== '';
@@ -200,7 +200,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
               type="text"
               list="signup-specialties"
               autocomplete="off"
-              placeholder="Начните вводить название"
+              placeholder="Начните вводить"
               maxlength="200"
               required
               aria-required="true"
@@ -241,7 +241,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
               type="text"
               list="signup-settlements"
               autocomplete="off"
-              placeholder="Начните вводить название"
+              placeholder="Например, Химки"
               maxlength="200"
               required
               aria-required="true"
@@ -424,6 +424,42 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     }
   </div>
 </div>
+
+<!--
+  First-paint state (PR #87 audit: CLS 0.13–0.28). Every card ships `hidden`
+  and the module below runs only after the first paint, so the form column
+  used to open from zero height and push the venue card down. This parser-
+  blocking snippet reveals the card the device clock predicts before anything
+  is painted; the module then judges again (server clock included) and
+  switches only if the answer differs. The rule is `registrationState` of
+  lib/registration.ts restated in plain JS — an inline script cannot import —
+  and its inputs come from the same constants, so only the three comparisons
+  are duplicated; the e2e first-paint test holds the two to the same answer.
+  Without scripting nothing runs and only the <noscript> card shows, as before.
+-->
+<script
+  is:inline
+  define:vars={{
+    opensAt: REGISTRATION_WINDOW.opensAt,
+    closesAt: REGISTRATION_WINDOW.closesAt,
+    forceOpenHosts: FORCE_OPEN_HOSTS,
+  }}
+>
+  var signupRoot = document.querySelector('[data-signup]');
+  if (signupRoot) {
+    var now = Date.now();
+    var state =
+      forceOpenHosts.indexOf(location.hostname) !== -1
+        ? 'open'
+        : now < Date.parse(opensAt)
+          ? 'not-yet-open'
+          : closesAt && now >= Date.parse(closesAt)
+            ? 'closed'
+            : 'open';
+    var card = signupRoot.querySelector('[data-signup-state="' + state + '"]');
+    if (card) card.hidden = false;
+  }
+</script>
 
 <script>
   import { REGISTRATION_WINDOW } from '@/config/site';

@@ -57,23 +57,30 @@ export function registrationState(
  * prints it. Moscow time explicitly, because the API's instant carries its own
  * offset and a participant in another zone must read the same clock the
  * organiser set.
+ *
+ * Typeset with no-break spaces where Russian typography binds the words: the
+ * day to its month, «года» to the year and «(мск)» to the time — so a heading
+ * never breaks as «1 / октября» (PR #87 audit, at 1440px). Built from parts,
+ * not by patching Intl's string, whose own spacing differs between ICU builds.
  */
 export function formatMoscowInstant(iso: string): string {
   const date = new Date(instant(iso));
-  const day = new Intl.DateTimeFormat('ru-RU', {
+  const parts = new Intl.DateTimeFormat('ru-RU', {
     timeZone: 'Europe/Moscow',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(date);
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes): string =>
+    parts.find((p) => p.type === type)?.value ?? '';
   const time = new Intl.DateTimeFormat('ru-RU', {
     timeZone: 'Europe/Moscow',
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
   }).format(date);
-  // Intl prints «1 октября 2026 г.»; the site's own convention is «года».
-  return `${day.replace(/\s*г\.$/, ' года')}, ${time} (мск)`;
+  // Intl says «2026 г.»; the site's own convention is «года».
+  return `${part('day')}\u00a0${part('month')} ${part('year')}\u00a0года, ${time}\u00a0(мск)`;
 }
 
 /**

@@ -141,10 +141,13 @@
   /* Accent action (design: Button variant="accent") — the sign-up submit and
      the sign-up card's own focus ring / ticked checkbox. Built on the AA-safe
      green text derivative, so white on it measures 5.3:1 and the ring clears
-     the 3:1 of SC 1.4.11 on white; hover/active only darken from there. */
+     the 3:1 of SC 1.4.11 on white. Rest and hover are the design system's
+     own values (`--ob-green-text` → `--ink`). */
   --btn-accent-bg: var(--ob-green-text);
-  --btn-accent-bg-hover: oklch(0.46 0.12 138);
-  --btn-accent-bg-active: oklch(0.4 0.1 138);
+  --btn-accent-bg-hover: var(--ink);
+  /* Not a design-system token: the design defines rest and hover only. The
+     pressed state sits between them, so a press reads as a change from both. */
+  --btn-accent-bg-active: oklch(0.32 0.08 138);
   --btn-accent-fg: #ffffff;
   /* Play-button scrim on the video facade (over the dark ink plate). */
   --scrim-play: oklch(0.35 0.05 250 / 0.85);

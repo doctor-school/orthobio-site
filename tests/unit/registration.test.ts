@@ -68,12 +68,20 @@ describe('registrationState', () => {
 describe('formatMoscowInstant', () => {
   it('prints the opening instant in Moscow time with «года»', () => {
     expect(formatMoscowInstant('2026-10-01T00:00:00+03:00')).toBe(
-      '1 октября 2026 года, 00:00 (мск)',
+      '1\u00a0октября 2026\u00a0года, 00:00\u00a0(мск)',
     );
   });
 
   it('converts an instant given in another zone to Moscow time', () => {
-    expect(formatMoscowInstant('2026-10-01T09:30:00Z')).toBe('1 октября 2026 года, 12:30 (мск)');
+    expect(formatMoscowInstant('2026-10-01T09:30:00Z')).toBe('1\u00a0октября 2026\u00a0года, 12:30\u00a0(мск)');
+  });
+
+  it('binds the day to its month, «года» to the year and «(мск)» to the time', () => {
+    // A heading wrapping as «1 / октября» at 1440px (PR #87 audit).
+    const label = formatMoscowInstant('2027-01-01T00:00:00+03:00');
+    expect(label).toBe('1\u00a0января 2027\u00a0года, 00:00\u00a0(мск)');
+    // The only ordinary spaces left are the two the line may break at.
+    expect(label.match(/ /g)).toHaveLength(2);
   });
 
   it('throws on an unparseable instant', () => {

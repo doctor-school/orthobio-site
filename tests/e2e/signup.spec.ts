@@ -714,6 +714,96 @@ test.describe('registration page design', () => {
   });
 });
 
+// ── Audit of PR #87 ─────────────────────────────────────────────────────────
+test.describe('registration page after the PR #87 audit', () => {
+  test('draws a visible focus ring over the map, not under its image', async ({ page }) => {
+    await open(page);
+    const map = page.locator('.ob-reg__map');
+    await map.scrollIntoViewIfNeeded();
+    // Keyboard modality first, so the programmatic focus counts as :focus-visible.
+    await page.keyboard.press('Shift');
+    await map.focus();
+    expect(await map.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+    const overlay = await map.evaluate((el) => {
+      const cs = getComputedStyle(el, '::after');
+      return { shadow: cs.boxShadow, position: cs.position, events: cs.pointerEvents };
+    });
+    expect(overlay.position).toBe('absolute');
+    expect(overlay.events).toBe('none');
+    expect(overlay.shadow).toContain('inset');
+    // Painted above the image: 3px inside the bottom edge (past the 1px card
+    // border and the 2px halo) the pixel is the ring (--focus-ring), not the map.
+    const box = (await map.boundingBox())!;
+    const shot = await page.screenshot({
+      clip: { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height) - 4, width: 1, height: 1 },
+    });
+    const ring = await page.evaluate(async (png) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${png}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = c.height = 1;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      return Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3));
+    }, shot.toString('base64'));
+    const expected = await map.evaluate((el) => {
+      const probe = document.createElement('span');
+      probe.style.color = getComputedStyle(el).getPropertyValue('--focus-ring');
+      document.body.append(probe);
+      const rgb = getComputedStyle(probe).color.match(/\d+/g)!.slice(0, 3).map(Number);
+      probe.remove();
+      return rgb;
+    });
+    ring.forEach((v, i) => expect(Math.abs(v - expected[i])).toBeLessThanOrEqual(8));
+  });
+
+  // Every state card used to be revealed after the first paint, so the form
+  // column opened from zero height and shoved the venue card down (CLS up to
+  // 0.28). A non-force-open host is needed to see the dated states: the page is
+  // served as orthobio.test by proxying to the preview server, with the device
+  // clock and the HEAD `Date` header both set to the instant under test.
+  const CLS_STATES = [
+    { name: 'not-yet-open', at: '2026-09-25T12:00:00+03:00' },
+    { name: 'open', at: '2026-10-15T12:00:00+03:00' },
+    { name: 'closed', at: '2027-01-15T12:00:00+03:00' },
+  ] as const;
+  for (const state of CLS_STATES) {
+    for (const width of [360, 390, 768, 1024]) {
+      test(`the ${state.name} state lays out without a shift at ${width}px`, async ({ page, baseURL }) => {
+        const at = new Date(state.at);
+        await page.clock.setFixedTime(at);
+        await mockSpecialties(page);
+        await page.route('http://orthobio.test/**', async (route) => {
+          const url = new URL(route.request().url());
+          if (route.request().method() === 'HEAD') {
+            await route.fulfill({ status: 200, headers: { Date: at.toUTCString() }, body: '' });
+            return;
+          }
+          const response = await route.fetch({ url: `${baseURL}${url.pathname}${url.search}` });
+          await route.fulfill({ response });
+        });
+        await page.addInitScript(() => {
+          (window as unknown as { __cls: number }).__cls = 0;
+          new PerformanceObserver((list) => {
+            for (const entry of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) {
+              if (!entry.hadRecentInput) (window as unknown as { __cls: number }).__cls += entry.value;
+            }
+          }).observe({ type: 'layout-shift', buffered: true });
+        });
+        await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+        await page.goto('http://orthobio.test/registration', { waitUntil: 'networkidle' });
+        await expect(page.locator(`[data-signup-state="${state.name}"]`)).toBeVisible();
+        // The server-clock re-judge has answered (networkidle); give the
+        // observer a frame to report whatever it caused.
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+        const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+        expect(cls, `CLS of the ${state.name} state at ${width}px`).toBeLessThan(0.1);
+      });
+    }
+  }
+});
+
 test.describe('sign-up form on a touch screen', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
 

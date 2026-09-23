@@ -2568,10 +2568,23 @@ details[open] > .ob-faq__q::after {
   opacity: 0.85;
 }
 
-/* The card clips its corners, so an outer ring would be cut off at the top
-   and sides: the map draws the (unlayered, global) ring inside its box. */
-.ob-reg__map {
-  --focus-shadow: var(--focus-shadow-inset);
+/* Focus ring on an overlay ABOVE the image. The global ring is a box-shadow
+   on the link itself, which the map image — filling the link — paints over,
+   and the card clips any outer ring at its edges; so the link's own shadow is
+   switched off and the same two-colour ring is drawn inward on ::after. */
+.ob-reg__map:focus-visible {
+  --focus-shadow: var(--shadow-none);
+}
+
+.ob-reg__map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ob-reg__map:focus-visible::after {
+  box-shadow: var(--focus-shadow-inset);
 }
 
 .ob-reg__map-img {

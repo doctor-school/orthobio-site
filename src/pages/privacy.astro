@@ -1,0 +1,36 @@
+---
+/**
+ * /privacy — the personal-data policy the sign-up consent links to (Issue #78).
+ *
+ * The text is the owner's file, rendered VERBATIM: its sha256 is the platform
+ * consent version (044 EARS-9), so it never passes through `prose()` or the
+ * typographer — `parsePolicy` only infers headings for markup. It is read as a
+ * raw string at build time, not through the Content Layer, for the same reason.
+ */
+import policyText from '@/content/legal/privacy-policy.txt?raw';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { parsePolicy } from '@/lib/policy';
+
+const policy = parsePolicy(policyText);
+---
+
+<BaseLayout
+  title={policy.title}
+  description="Политика обработки персональных данных посетителей сайта конгресса ОРТОБИОЛОГИЯ."
+>
+  <div class="ob-container ob-section">
+    <article class="ob-policy">
+      <h1 class="ob-policy__title">{policy.title}</h1>
+      {
+        policy.sections.map((section) => (
+          <section class="ob-policy__section">
+            {section.heading && <h2 class="ob-policy__heading">{section.heading}</h2>}
+            {section.paragraphs.map((p) => (
+              <p>{p}</p>
+            ))}
+          </section>
+        ))
+      }
+    </article>
+  </div>
+</BaseLayout>

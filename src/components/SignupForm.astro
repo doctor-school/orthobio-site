@@ -1,0 +1,616 @@
+---
+/**
+ * SignupForm — the congress sign-up card of /registration (Issue #78; platform
+ * 044). The page is static; this is the one place on the site where client JS
+ * is genuinely required: the registration window is evaluated in the browser,
+ * the specialty list is fetched live, and the submission is a same-origin JSON
+ * POST that nginx proxies to the platform API (`/api/v1/…` → `/v1/…`).
+ *
+ * Every state block ships `hidden`; the script reveals exactly one. Without
+ * scripting the `<noscript>` card states the opening date — a form that could
+ * not submit (the site's CSP carries `form-action 'none'`) is never shown.
+ *
+ * Client checks are a courtesy, the platform is the truth: the ФИО
+ * normalisation on blur mirrors 044 EARS-33, the phone check mirrors EARS-29,
+ * and a refusal from the API is always rendered, whatever the form thought.
+ *
+ * SmartCaptcha is rendered only when `PUBLIC_SMARTCAPTCHA_SITEKEY` was set at
+ * build time (see `SMARTCAPTCHA_SITEKEY` in config/site.ts); without it there is
+ * no widget, no third-party script and no `captchaToken` in the request.
+ */
+import {
+  CONTACT_EMAIL,
+  REGISTRATION_WINDOW,
+  SMARTCAPTCHA_SITEKEY,
+  UPCOMING_CONGRESS_DATES,
+} from '@/config/site';
+import { formatMoscowInstant } from '@/lib/registration';
+
+const opensLabel = formatMoscowInstant(REGISTRATION_WINDOW.opensAt);
+const captchaSrc =
+  'https://smartcaptcha.cloud.yandex.ru/captcha.js?render=onload&onload=obSmartCaptchaReady';
+---
+
+<div class="ob-signup" data-signup data-sitekey={SMARTCAPTCHA_SITEKEY}>
+  <noscript>
+    <div class="ob-signup__card ob-signup__state">
+      <h2 class="ob-signup__title">Регистрация откроется {opensLabel}</h2>
+      <p class="ob-signup__text">Для отправки заявки включите JavaScript в браузере.</p>
+    </div>
+  </noscript>
+
+  <div class="ob-signup__card" data-signup-state="open" hidden>
+    <h2 class="ob-signup__title" id="signup-title">Регистрация на конгресс</h2>
+    <p class="ob-signup__dates">{UPCOMING_CONGRESS_DATES.display} года, Москва</p>
+
+    <form class="ob-signup__form" data-signup-form novalidate aria-labelledby="signup-title">
+      <div class="ob-signup__row ob-signup__row--3">
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-surname">Фамилия</label>
+          <input
+            class="ob-signup__input"
+            id="signup-surname"
+            name="surname"
+            type="text"
+            autocomplete="family-name"
+            placeholder="Иванов"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-surname-error"
+            data-name-field
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-surname-error" hidden></p>
+          </div>
+        </div>
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-first-name">Имя</label>
+          <input
+            class="ob-signup__input"
+            id="signup-first-name"
+            name="firstName"
+            type="text"
+            autocomplete="given-name"
+            placeholder="Иван"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-first-name-error"
+            data-name-field
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-first-name-error" hidden></p>
+          </div>
+        </div>
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-patronymic">
+            Отчество <span class="ob-signup__optional">(если есть)</span>
+          </label>
+          <input
+            class="ob-signup__input"
+            id="signup-patronymic"
+            name="patronymic"
+            type="text"
+            autocomplete="additional-name"
+            placeholder="Иванович"
+            maxlength="200"
+            aria-describedby="signup-patronymic-error"
+            data-name-field
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-patronymic-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-signup__row ob-signup__row--2">
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-email">E-mail</label>
+          <input
+            class="ob-signup__input"
+            id="signup-email"
+            name="email"
+            type="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="name@example.com"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-email-error"
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-email-error" hidden></p>
+          </div>
+        </div>
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-phone">Телефон</label>
+          <input
+            class="ob-signup__input"
+            id="signup-phone"
+            name="contactPhone"
+            type="tel"
+            autocomplete="tel"
+            inputmode="tel"
+            placeholder="+7 (999) 123-45-67"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-phone-error"
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-phone-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-signup__row">
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-specialty">Специальность</label>
+          <input
+            class="ob-signup__input"
+            id="signup-specialty"
+            type="text"
+            list="signup-specialties"
+            autocomplete="off"
+            placeholder="Начните вводить название"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-specialty-hint signup-specialty-error"
+          />
+          <datalist id="signup-specialties"></datalist>
+          <input type="hidden" name="specialtyId" data-specialty-id />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__hint" id="signup-specialty-hint">
+              Если вы не медицинский работник, выберите «Другое / не медицинский работник».
+            </p>
+            <p class="ob-signup__error" id="signup-specialty-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-signup__row">
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-workplace">Место работы</label>
+          <input
+            class="ob-signup__input"
+            id="signup-workplace"
+            name="workplace"
+            type="text"
+            autocomplete="organization"
+            placeholder="Название клиники или организации"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-workplace-error"
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-workplace-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-signup__row ob-signup__row--2">
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-city">Город</label>
+          <input
+            class="ob-signup__input"
+            id="signup-city"
+            name="city"
+            type="text"
+            autocomplete="address-level2"
+            placeholder="Москва"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-city-error"
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-city-error" hidden></p>
+          </div>
+        </div>
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-region">Область</label>
+          <input
+            class="ob-signup__input"
+            id="signup-region"
+            name="region"
+            type="text"
+            autocomplete="address-level1"
+            placeholder="Московская область"
+            maxlength="200"
+            required
+            aria-required="true"
+            aria-describedby="signup-region-error"
+          />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-region-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-signup__field">
+        <div class="ob-signup__consent">
+          <input
+            class="ob-signup__check"
+            id="signup-consent"
+            name="personalDataConsent"
+            type="checkbox"
+            required
+            aria-required="true"
+            aria-describedby="signup-consent-error"
+          />
+          <label class="ob-signup__consent-label" for="signup-consent">
+            Я согласен(а) на обработку персональных данных в соответствии с <a href="/privacy"
+              >политикой конфиденциальности</a
+            >
+          </label>
+        </div>
+        <div class="ob-signup__msgs">
+          <p class="ob-signup__error" id="signup-consent-error" hidden></p>
+        </div>
+      </div>
+
+      {
+        SMARTCAPTCHA_SITEKEY && (
+          <div class="ob-signup__field">
+            <div class="ob-signup__captcha" data-captcha tabindex="-1" />
+            <div class="ob-signup__msgs">
+              <p class="ob-signup__error" id="signup-captcha-error" hidden />
+            </div>
+          </div>
+        )
+      }
+
+      <p class="ob-signup__alert" data-signup-alert role="alert" hidden></p>
+
+      <button class="ob-btn ob-btn--primary ob-btn--lg ob-btn--block" type="submit" data-signup-submit>
+        Зарегистрироваться
+      </button>
+    </form>
+
+    <div class="ob-signup__success" data-signup-success role="status" hidden>
+      <p class="ob-signup__text" tabindex="-1" data-signup-success-text>
+        Заявка принята — письмо с подтверждением придёт на <strong data-signup-email></strong>.
+      </p>
+    </div>
+  </div>
+
+  <div class="ob-signup__card ob-signup__state" data-signup-state="not-yet-open" hidden>
+    <h2 class="ob-signup__title" tabindex="-1">
+      Регистрация откроется <span data-signup-opens-at>{opensLabel}</span>
+    </h2>
+    <p class="ob-signup__text">
+      Форма появится на этой странице в момент открытия регистрации. Конгресс пройдёт {
+        UPCOMING_CONGRESS_DATES.display
+      } года.
+    </p>
+  </div>
+
+  <div class="ob-signup__card ob-signup__state" data-signup-state="closed" hidden>
+    <h2 class="ob-signup__title" tabindex="-1">Регистрация на конгресс закрыта</h2>
+    {
+      CONTACT_EMAIL && (
+        <p class="ob-signup__text">
+          По вопросам участия пишите на <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        </p>
+      )
+    }
+  </div>
+</div>
+
+{SMARTCAPTCHA_SITEKEY && <script is:inline src={captchaSrc} defer></script>}
+
+<script>
+  import { REGISTRATION_WINDOW } from '@/config/site';
+  import { isValidContactPhone } from '@/lib/contact-phone';
+  import { normaliseNameAnswer } from '@/lib/name-answer';
+  import { formatMoscowInstant, registrationState, type RegistrationState } from '@/lib/registration';
+
+  interface Specialty {
+    id: string;
+    code: string;
+    name: string;
+    isOther: boolean;
+  }
+
+  interface SmartCaptcha {
+    render(container: HTMLElement, params: { sitekey: string; hl?: string; callback?: (token: string) => void }): number;
+    reset(widgetId?: number): void;
+  }
+
+  type CaptchaWindow = Window & { smartCaptcha?: SmartCaptcha; obSmartCaptchaReady?: () => void };
+
+  const SPECIALTIES_URL = '/api/v1/public/specialties';
+  const SIGN_UP_URL = '/api/v1/congress/sign-up';
+
+  const MESSAGES = {
+    required: 'Заполните это поле.',
+    email: 'Введите адрес электронной почты в формате name@example.com.',
+    phone: 'Введите номер телефона с кодом страны или города, например +7 (999) 123-45-67.',
+    specialty: 'Выберите специальность из списка.',
+    specialtiesUnavailable:
+      'Не удалось загрузить список специальностей. Обновите страницу, чтобы попробовать ещё раз.',
+    consent: 'Чтобы отправить заявку, подтвердите согласие на обработку персональных данных.',
+    captcha: 'Подтвердите, что вы не робот.',
+    captchaRefused: 'Не удалось пройти проверку «я не робот». Пройдите её ещё раз и отправьте заявку.',
+    invalid: 'Сервер не принял заявку. Проверьте введённые данные и отправьте её ещё раз.',
+    generic:
+      'Не удалось отправить заявку. Попробуйте ещё раз через несколько минут; если ошибка повторится — напишите организаторам.',
+  } as const;
+
+  const root = document.querySelector<HTMLElement>('[data-signup]');
+  if (root) init(root);
+
+  function init(root: HTMLElement): void {
+    const form = root.querySelector<HTMLFormElement>('[data-signup-form]')!;
+    const submit = root.querySelector<HTMLButtonElement>('[data-signup-submit]')!;
+    const alertBox = root.querySelector<HTMLElement>('[data-signup-alert]')!;
+    const success = root.querySelector<HTMLElement>('[data-signup-success]')!;
+    const specialtyInput = form.querySelector<HTMLInputElement>('#signup-specialty')!;
+    const specialtyId = form.querySelector<HTMLInputElement>('[data-specialty-id]')!;
+    const datalist = form.querySelector<HTMLDataListElement>('#signup-specialties')!;
+    const sitekey = root.dataset.sitekey ?? '';
+    const captchaBox = root.querySelector<HTMLElement>('[data-captcha]');
+
+    let specialties: Specialty[] | null = null;
+    let captchaToken = '';
+    let captchaWidget: number | undefined;
+
+    const showState = (state: RegistrationState, focus = false): void => {
+      for (const card of root.querySelectorAll<HTMLElement>('[data-signup-state]')) {
+        card.hidden = card.dataset.signupState !== state;
+      }
+      if (focus && state !== 'open') {
+        root.querySelector<HTMLElement>(`[data-signup-state="${state}"] .ob-signup__title`)?.focus();
+      }
+    };
+
+    const state = registrationState(REGISTRATION_WINDOW, new Date(), window.location.hostname);
+    showState(state);
+    if (state !== 'open') return;
+
+    // ── Field errors ──────────────────────────────────────────────────────
+    const errorFor = (field: HTMLInputElement): HTMLElement | null =>
+      document.getElementById(`${field.id}-error`);
+
+    const setError = (field: HTMLInputElement, message: string | null): void => {
+      const box = errorFor(field);
+      if (message === null) {
+        field.removeAttribute('aria-invalid');
+        if (box) {
+          box.hidden = true;
+          box.textContent = '';
+        }
+        return;
+      }
+      field.setAttribute('aria-invalid', 'true');
+      if (box) {
+        box.textContent = message;
+        box.hidden = false;
+      }
+    };
+
+    const setAlert = (message: string | null): void => {
+      alertBox.textContent = message ?? '';
+      alertBox.hidden = message === null;
+    };
+
+    // ── ФИО: the platform's normalisation, shown on blur ──────────────────
+    for (const field of form.querySelectorAll<HTMLInputElement>('[data-name-field]')) {
+      field.addEventListener('blur', () => {
+        field.value = normaliseNameAnswer(field.value);
+      });
+    }
+
+    // ── Specialties: live list, «Другое» first, no free text ───────────────
+    const matchSpecialty = (typed: string): Specialty | null => {
+      const needle = typed.trim().toLocaleLowerCase('ru');
+      if (needle === '' || specialties === null) return null;
+      return specialties.find((s) => s.name.toLocaleLowerCase('ru') === needle) ?? null;
+    };
+
+    const syncSpecialty = (): void => {
+      const match = matchSpecialty(specialtyInput.value);
+      specialtyId.value = match?.id ?? '';
+      if (match) {
+        specialtyInput.value = match.name;
+        setError(specialtyInput, null);
+      }
+    };
+    specialtyInput.addEventListener('change', syncSpecialty);
+    specialtyInput.addEventListener('blur', syncSpecialty);
+    specialtyInput.addEventListener('input', () => {
+      specialtyId.value = matchSpecialty(specialtyInput.value)?.id ?? '';
+    });
+
+    fetch(SPECIALTIES_URL, { headers: { Accept: 'application/json' } })
+      .then((res) => {
+        if (!res.ok) throw new Error(`specialties: HTTP ${res.status}`);
+        return res.json() as Promise<{ entries: Specialty[] }>;
+      })
+      .then(({ entries }) => {
+        const ordered = [...entries.filter((s) => s.isOther), ...entries.filter((s) => !s.isOther)];
+        specialties = ordered;
+        datalist.replaceChildren(
+          ...ordered.map((s) => {
+            const option = document.createElement('option');
+            option.value = s.name;
+            return option;
+          }),
+        );
+        syncSpecialty();
+      })
+      .catch(() => {
+        specialties = [];
+        setError(specialtyInput, MESSAGES.specialtiesUnavailable);
+      });
+
+    // ── Captcha (only when the build carried a sitekey) ────────────────────
+    const captchaWindow = window as CaptchaWindow;
+    const renderCaptcha = (): void => {
+      if (!captchaBox || !captchaWindow.smartCaptcha || captchaWidget !== undefined) return;
+      captchaWidget = captchaWindow.smartCaptcha.render(captchaBox, {
+        sitekey,
+        hl: 'ru',
+        callback: (token) => {
+          captchaToken = token;
+          const box = document.getElementById('signup-captcha-error');
+          if (box) box.hidden = true;
+        },
+      });
+    };
+    const resetCaptcha = (): void => {
+      captchaToken = '';
+      if (captchaWidget !== undefined) captchaWindow.smartCaptcha?.reset(captchaWidget);
+    };
+    if (sitekey && captchaBox) {
+      // The widget script may finish before or after this module runs.
+      if (captchaWindow.smartCaptcha) renderCaptcha();
+      else captchaWindow.obSmartCaptchaReady = renderCaptcha;
+    }
+
+    // ── Validation ────────────────────────────────────────────────────────
+    const field = (name: string): HTMLInputElement =>
+      form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+
+    const validate = (): HTMLElement | null => {
+      let first: HTMLElement | null = null;
+      const fail = (input: HTMLInputElement, message: string): void => {
+        setError(input, message);
+        first ??= input;
+      };
+
+      for (const name of ['surname', 'firstName', 'patronymic', 'email', 'contactPhone']) {
+        const input = field(name);
+        input.value = input.dataset.nameField !== undefined ? normaliseNameAnswer(input.value) : input.value.trim();
+        setError(input, null);
+        if (input.required && input.value === '') fail(input, MESSAGES.required);
+        else if (name === 'email' && !input.validity.valid) fail(input, MESSAGES.email);
+        else if (name === 'contactPhone' && !isValidContactPhone(input.value)) fail(input, MESSAGES.phone);
+      }
+
+      syncSpecialty();
+      setError(specialtyInput, null);
+      if (specialties !== null && specialties.length === 0) fail(specialtyInput, MESSAGES.specialtiesUnavailable);
+      else if (specialtyInput.value.trim() === '') fail(specialtyInput, MESSAGES.required);
+      else if (specialtyId.value === '') fail(specialtyInput, MESSAGES.specialty);
+
+      for (const name of ['workplace', 'city', 'region']) {
+        const input = field(name);
+        input.value = input.value.trim();
+        setError(input, null);
+        if (input.value === '') fail(input, MESSAGES.required);
+      }
+
+      const consent = field('personalDataConsent');
+      setError(consent, null);
+      if (!consent.checked) fail(consent, MESSAGES.consent);
+
+      if (sitekey && captchaBox && captchaToken === '') {
+        const box = document.getElementById('signup-captcha-error');
+        if (box) {
+          box.textContent = MESSAGES.captcha;
+          box.hidden = false;
+        }
+        first ??= captchaBox;
+      }
+      return first;
+    };
+
+    // ── Submission ────────────────────────────────────────────────────────
+    const setBusy = (busy: boolean): void => {
+      submit.disabled = busy;
+      form.setAttribute('aria-busy', String(busy));
+      submit.textContent = busy ? 'Отправляем заявку…' : 'Зарегистрироваться';
+    };
+
+    const payload = (): Record<string, string | boolean> => {
+      const body: Record<string, string | boolean> = {
+        surname: field('surname').value,
+        firstName: field('firstName').value,
+      };
+      const patronymic = field('patronymic').value;
+      if (patronymic !== '') body.patronymic = patronymic;
+      body.email = field('email').value;
+      body.contactPhone = field('contactPhone').value;
+      body.specialtyId = specialtyId.value;
+      body.workplace = field('workplace').value;
+      body.city = field('city').value;
+      body.region = field('region').value;
+      body.personalDataConsent = true;
+      if (captchaToken !== '') body.captchaToken = captchaToken;
+      return body;
+    };
+
+    const refusal = async (res: Response): Promise<{ code?: string; opensAt?: string }> => {
+      try {
+        return (await res.json()) as { code?: string; opensAt?: string };
+      } catch {
+        return {};
+      }
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (form.getAttribute('aria-busy') === 'true') return;
+      setAlert(null);
+      const invalid = validate();
+      if (invalid) {
+        invalid.focus();
+        return;
+      }
+
+      const body = payload();
+      setBusy(true);
+      let res: Response;
+      try {
+        res = await fetch(SIGN_UP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch {
+        setBusy(false);
+        resetCaptcha();
+        setAlert(MESSAGES.generic);
+        return;
+      }
+      setBusy(false);
+
+      if (res.ok) {
+        form.hidden = true;
+        root.querySelector<HTMLElement>('[data-signup-email]')!.textContent = String(body.email);
+        success.hidden = false;
+        root.querySelector<HTMLElement>('[data-signup-success-text]')!.focus();
+        return;
+      }
+
+      resetCaptcha();
+      if (res.status === 422) {
+        const { code, opensAt } = await refusal(res);
+        if (code === 'not-yet-open') {
+          if (opensAt) {
+            try {
+              root.querySelector<HTMLElement>('[data-signup-opens-at]')!.textContent =
+                formatMoscowInstant(opensAt);
+            } catch {
+              // An unparseable instant from the API keeps the configured one.
+            }
+          }
+          showState('not-yet-open', true);
+          return;
+        }
+        if (code === 'closed') {
+          showState('closed', true);
+          return;
+        }
+        setAlert(MESSAGES.invalid);
+        return;
+      }
+      setAlert(res.status === 403 && sitekey ? MESSAGES.captchaRefused : MESSAGES.generic);
+    });
+  }
+</script>

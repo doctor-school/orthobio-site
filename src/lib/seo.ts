@@ -15,6 +15,8 @@ export const STATIC_PUBLIC_ROUTES = [
   '/nmo/',
   '/partners/',
   '/contacts/',
+  '/registration/',
+  '/privacy/',
   '/faq/',
   '/archive/',
 ] as const;

@@ -1,0 +1,54 @@
+---
+/**
+ * /registration — congress sign-up (Issue #78; platform 044).
+ *
+ * Layout follows the owner's Stage-A reference as a PATTERN (styles are the
+ * site's own tokens): two columns from lg — the section heading, what the
+ * participant gets and the venue photo on the left, the form card on a
+ * contrasting surface on the right — stacked below lg with the intro first.
+ *
+ * The copy of the left column is page content (`pages/registration.yaml`); the
+ * form, its labels and its states are interface and live in `SignupForm`.
+ */
+import { Image } from 'astro:assets';
+
+import hotelMilan from '@/assets/hotel-milan.webp';
+import SectionHeading from '@/components/SectionHeading.astro';
+import SignupForm from '@/components/SignupForm.astro';
+import { UPCOMING_CONGRESS_VENUE } from '@/config/site';
+import { getPage } from '@/content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+
+const { data: page } = await getPage('registration');
+---
+
+<BaseLayout title={page.title} description={page.description}>
+  <div class="ob-container ob-section ob-reg">
+    <div class="ob-reg__intro">
+      <SectionHeading level="h1" overline={page.overline} title={page.title} />
+      {
+        page.lead.length > 0 && (
+          <div class="ob-prose">
+            {page.lead.map((p) => (
+              <p>{p}</p>
+            ))}
+          </div>
+        )
+      }
+      <figure class="ob-reg__venue">
+        <Image
+          class="ob-reg__photo"
+          src={hotelMilan}
+          alt={`Здание ${UPCOMING_CONGRESS_VENUE.name} — площадка конгресса`}
+          widths={[360, 560, 720]}
+          sizes="(min-width: 1024px) 560px, 100vw"
+          loading="lazy"
+        />
+        <figcaption class="ob-reg__caption">{UPCOMING_CONGRESS_VENUE.display}</figcaption>
+      </figure>
+    </div>
+    <div class="ob-reg__form">
+      <SignupForm />
+    </div>
+  </div>
+</BaseLayout>

@@ -28,6 +28,11 @@ describe('public SEO routes', () => {
     ]);
   });
 
+  it('publishes the sign-up form and the policy its consent links to (Issue #78)', () => {
+    expect(STATIC_PUBLIC_ROUTES).toContain('/registration/');
+    expect(STATIC_PUBLIC_ROUTES).toContain('/privacy/');
+  });
+
   it('refuses duplicate or technical URLs instead of silently publishing them', () => {
     expect(() =>
       buildPublicRoutes({ years: [2026, 2026], profileSlugs: [] }),

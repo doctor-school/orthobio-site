@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ROUTES, YEAR_ROUTES } from './_routes';
+import { PROFILE_ROUTES, ROUTES, YEAR_ROUTES } from './_routes';
 
 /**
  * Content-integrity guards for the ТЗ §4 principles: honest placeholders, no
@@ -59,7 +59,8 @@ test('the home page leads to registration without a subscription CTA', async ({ 
 // other target, or the link turning up on another page, fails here.
 const NOTIFY_CHANNEL_URL = 'https://t.me/DoctorSchool';
 test('«узнать первым» appears only on /registration, and only to the approved channel', async ({ page }) => {
-  for (const path of ROUTES) {
+  // The partner profiles too: one template, but on the site all the same.
+  for (const path of [...ROUTES, ...PROFILE_ROUTES]) {
     await page.goto(path);
     // Hidden state cards included: the markup, not the current date, decides.
     const hrefs = await page

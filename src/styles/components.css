@@ -867,9 +867,9 @@
      `components/hero/Hero` places instance A with no opacity and instance B at
      0.5. The former 0.22/0.12 override greyed the identity out of the page. */
   .ob-edge-pattern--a {
-  width: var(--edge-pattern-a-width);
-  top: var(--edge-pattern-a-top);
-  right: var(--edge-pattern-a-right);
+    width: var(--edge-pattern-a-width);
+    top: var(--edge-pattern-a-top);
+    right: var(--edge-pattern-a-right);
   }
 
   /* Instance B is rotated, so it paints a box 2.2× its CSS width — the bundle's
@@ -885,9 +885,9 @@
      whole band and returns to the bundle's own geometry at 1280 below, where
      the window can hold it. */
   .ob-edge-pattern--b {
-  width: var(--edge-pattern-b-width);
-  bottom: var(--edge-pattern-b-bottom);
-  right: var(--edge-pattern-b-right);
+    width: var(--edge-pattern-b-width);
+    bottom: var(--edge-pattern-b-bottom);
+    right: var(--edge-pattern-b-right);
     transform: rotate(150deg);
     opacity: 0.5;
   }
@@ -2405,12 +2405,21 @@ details[open] > .ob-faq__q::after {
    The band also absorbs the footer's top margin (pulled up, given back as
    padding): otherwise the clip would cut the lower shape flat across the white
    gap above the footer. This way the cut falls on the footer's hairline, the
-   way the home hero's falls on its own bottom border. */
+   way the home hero's falls on its own bottom border.
+   That only holds if the band also fills `main`: on a viewport taller than the
+   page, `body > main` grows (base.css) and the footer moves down with it, so
+   the band grows too. Scoped with `:has()` so no other page's main changes. */
 .ob-reg {
   position: relative;
   overflow: hidden;
+  flex: 1 0 auto;
   margin-bottom: calc(-1 * var(--sp-sec));
   padding-bottom: var(--sp-sec);
+}
+
+body > main:has(> .ob-reg) {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Stacked intro → form → venue below lg; from lg the form owns the right

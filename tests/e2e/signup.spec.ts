@@ -164,6 +164,13 @@ async function serveAsProduction(page: Page, baseURL: string, at: Date): Promise
   });
 }
 
+/** The three dated states, each at an instant inside it (`serveAsProduction`). */
+const DATED_STATES = [
+  { name: 'not-yet-open', at: '2026-09-25T12:00:00+03:00' },
+  { name: 'open', at: '2026-10-15T12:00:00+03:00' },
+  { name: 'closed', at: '2027-01-15T12:00:00+03:00' },
+] as const;
+
 /** Blocks the form's module, leaving only the markup and the pre-paint snippet. */
 const blockSignupModule = (page: Page) =>
   page.route('**/_astro/SignupForm*.js', (route) => route.abort());
@@ -1198,19 +1205,48 @@ test.describe('registration page design', () => {
   }
 
   // The band absorbs the footer's top margin so the clip cuts the lower shape
-  // on the footer's hairline, never flat across white space.
-  test('ends the pattern band on the footer line', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await open(page);
-    const [band, foot] = await Promise.all(
-      ['.ob-reg', '.ob-foot'].map((sel) =>
-        page.locator(sel).evaluate((el) => {
-          const r = el.getBoundingClientRect();
-          return { top: r.top + scrollY, bottom: r.bottom + scrollY };
-        }),
-      ),
-    );
-    expect(Math.abs(band.bottom - foot.top)).toBeLessThanOrEqual(0.5);
+  // on the footer's hairline, never flat across white space. 1440×900 is
+  // content taller than the window; 1440×2000 and 1920×1900 are windows taller
+  // than the page, where `main` grows and the band must grow with it.
+  for (const state of DATED_STATES) {
+    for (const [width, height] of [
+      [1440, 900],
+      [1440, 2000],
+      [1920, 1900],
+    ] as const) {
+      test(`ends the pattern band on the footer line (${state.name}, ${width}×${height})`, async ({
+        page,
+        baseURL,
+      }) => {
+        await mockSpecialties(page);
+        await serveAsProduction(page, baseURL!, new Date(state.at));
+        await page.setViewportSize({ width, height });
+        await page.goto(`${PROD_LIKE}/registration`, { waitUntil: 'networkidle' });
+        await expect(page.locator(`[data-signup-state="${state.name}"]`)).toBeVisible();
+        const edges = await page.evaluate(() => {
+          const bottom = (sel: string) => document.querySelector(sel)!.getBoundingClientRect().bottom + scrollY;
+          const foot = document.querySelector('.ob-foot')!.getBoundingClientRect().top + scrollY;
+          return { band: bottom('.ob-reg'), shape: bottom('.ob-reg > .ob-edge-pattern--b'), foot };
+        });
+        const where = `${state.name} @${width}×${height}`;
+        // The clip edge IS the footer's top border…
+        expect(Math.abs(edges.band - edges.foot), `${where}: band vs footer`).toBeLessThanOrEqual(0.5);
+        // …and the lower shape reaches past it, so what the clip cuts is the
+        // shape, on that border — not a straight line above a white gap.
+        expect(edges.shape, `${where}: lower shape vs footer`).toBeGreaterThanOrEqual(edges.foot);
+      });
+    }
+  }
+
+  // The fix is scoped to /registration: every other page keeps the footer's
+  // own top margin.
+  test('leaves the footer margin of other pages alone', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 2000 });
+    for (const path of ['/', '/archive/2026', '/partners', '/privacy']) {
+      await page.goto(path);
+      const margin = await page.locator('.ob-foot').evaluate((el) => getComputedStyle(el).marginTop);
+      expect(margin, path).toBe('72px');
+    }
   });
 
   test('draws the consent tick on the checkbox itself', async ({ page }) => {
@@ -1421,12 +1457,7 @@ test.describe('registration page after the PR #87 audit', () => {
   // column opened from zero height and shoved the venue card down (CLS up to
   // 0.28). A non-force-open host is needed to see the dated states
   // (`serveAsProduction`).
-  const CLS_STATES = [
-    { name: 'not-yet-open', at: '2026-09-25T12:00:00+03:00' },
-    { name: 'open', at: '2026-10-15T12:00:00+03:00' },
-    { name: 'closed', at: '2027-01-15T12:00:00+03:00' },
-  ] as const;
-  for (const state of CLS_STATES) {
+  for (const state of DATED_STATES) {
     // 1280 too: from lg the form sits beside the intro, so a late card cannot
     // push the venue down there — but the ladder is the ladder.
     for (const width of OVERFLOW_WIDTHS) {

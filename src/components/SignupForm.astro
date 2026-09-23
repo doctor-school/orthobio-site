@@ -762,6 +762,10 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         text: (entry) => entry.name,
         sub: (entry) => (entry.label !== entry.name ? entry.region : null),
         normalise: settlementNameQuery,
+        // A same-named place typed with its region («Кировск, Мурманская
+        // область») is a choice too; the whole text is compared, so a region
+        // that does not fit the name («Химки, Ленинградская») commits nothing.
+        exact: { keys: (entry) => [entry.name, entry.label], key: normalisePlace },
         prefixOnly: true,
         limit: 50,
         isSelected: (entry) => entry === settlement,

@@ -18,7 +18,7 @@ export function foldCase(value: string): string {
 }
 
 /** The query as it is compared: folded, trimmed, inner spacing collapsed. */
-function foldQuery(query: string): string {
+export function foldQuery(query: string): string {
   return foldCase(query).trim().replace(/\s+/g, ' ');
 }
 
@@ -67,9 +67,23 @@ export function filterOptions<T>(
   return [...exact, ...starts, ...contains].slice(0, limit);
 }
 
+export interface ExactMatchOptions<T> {
+  /**
+   * Every text an option counts as typed in full by: a specialty its name, a
+   * place its name AND its label («Кировск — Мурманская область»), so a
+   * same-named place typed with its region is as much a choice as a unique one.
+   */
+  keys: (option: T) => readonly string[];
+  /**
+   * Comparison key, applied to the query and to every option key alike.
+   * Default: case, ё and spacing folded.
+   */
+  key?: (value: string) => string;
+}
+
 /**
- * The one option whose whole text is what was typed (case, ё and spacing
- * aside), or null when none or several are. Typing a full name is a choice
+ * The one option one of whose keys is what was typed (compared through
+ * `key`), or null when none or several are. Typing a full name is a choice
  * already made: the combobox commits it and closes, so no list is left
  * hanging over the next field for the following click to land on. Several
  * same-named places («Кировск» ×3) are no choice yet — the region is missing.
@@ -77,13 +91,13 @@ export function filterOptions<T>(
 export function soleExactMatch<T>(
   options: readonly T[],
   query: string,
-  { text, normalise = (q) => q }: Pick<FilterOptions<T>, 'text' | 'normalise'>,
+  { keys, key = foldQuery }: ExactMatchOptions<T>,
 ): T | null {
-  const needle = normalise(foldQuery(query));
+  const needle = key(query);
   if (needle === '') return null;
   let found: T | null = null;
   for (const option of options) {
-    if (foldQuery(text(option)) !== needle) continue;
+    if (!keys(option).some((k) => key(k) === needle)) continue;
     if (found !== null) return null;
     found = option;
   }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { filterOptions, foldCase, moveActive, soleExactMatch, splitHighlight } from '../../src/lib/combobox';
+import { normalisePlace, settlementLabel } from '../../src/lib/settlements';
 
 const SPECIALTIES = ['Травматология и ортопедия', 'Ортодонтия', 'Спортивная медицина', 'Детская хирургия'];
 const byName = { text: (s: string) => s };
+const exactName = { keys: (s: string) => [s] };
 
 describe('foldCase', () => {
   it('folds case and ё without changing the length, so indices carry over', () => {
@@ -76,36 +78,62 @@ const KIROVSK_LO: Place = { name: 'Кировск', region: 'Ленинград�
 const KIROVSK_MO: Place = { name: 'Кировск', region: 'Мурманская область' };
 const KIROVSKOE: Place = { name: 'Кировское', region: 'Донецкая Народная Республика' };
 const KHIMKI: Place = { name: 'Химки', region: 'Московская область' };
-const byPlaceName = { text: (p: Place) => p.name };
+const exactPlaceName = { keys: (p: Place) => [p.name] };
 
 describe('soleExactMatch', () => {
   it('returns the one option whose whole name is the query', () => {
-    expect(soleExactMatch(SPECIALTIES, 'Травматология и ортопедия', byName)).toBe('Травматология и ортопедия');
-    expect(soleExactMatch([KIROVSKOE, KHIMKI], 'Химки', byPlaceName)).toBe(KHIMKI);
+    expect(soleExactMatch(SPECIALTIES, 'Травматология и ортопедия', exactName)).toBe('Травматология и ортопедия');
+    expect(soleExactMatch([KIROVSKOE, KHIMKI], 'Химки', exactPlaceName)).toBe(KHIMKI);
   });
 
   it('returns null when several same-named options match: the region is still to choose', () => {
-    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE, KIROVSK_MO], 'Кировск', byPlaceName)).toBeNull();
+    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE, KIROVSK_MO], 'Кировск', exactPlaceName)).toBeNull();
   });
 
   it('does not take a prefix or a fragment for a match', () => {
-    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE], 'Кировс', byPlaceName)).toBeNull();
-    expect(soleExactMatch(SPECIALTIES, 'ортопедия', byName)).toBeNull();
-    expect(soleExactMatch(SPECIALTIES, '   ', byName)).toBeNull();
+    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE], 'Кировс', exactPlaceName)).toBeNull();
+    expect(soleExactMatch(SPECIALTIES, 'ортопедия', exactName)).toBeNull();
+    expect(soleExactMatch(SPECIALTIES, '   ', exactName)).toBeNull();
   });
 
   it('picks the exact name even where it also begins a longer one', () => {
-    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE], 'кировск', byPlaceName)).toBe(KIROVSK_LO);
+    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE], 'кировск', exactPlaceName)).toBe(KIROVSK_LO);
   });
 
   it('ignores case, ё and surrounding or doubled spaces', () => {
-    expect(soleExactMatch(SPECIALTIES, '  травматология   И ОРТОПЕДИЯ ', byName)).toBe('Травматология и ортопедия');
-    expect(soleExactMatch(['Щёлково'], 'щелково', byName)).toBe('Щёлково');
+    expect(soleExactMatch(SPECIALTIES, '  травматология   И ОРТОПЕДИЯ ', exactName)).toBe('Травматология и ортопедия');
+    expect(soleExactMatch(['Щёлково'], 'щелково', exactName)).toBe('Щёлково');
   });
 
-  it('matches through a caller-supplied normaliser', () => {
-    const normalise = (q: string) => q.replace(/^г\.\s*/, '');
-    expect(soleExactMatch([KHIMKI], 'г. Химки', { ...byPlaceName, normalise })).toBe(KHIMKI);
+  it('matches through a caller-supplied comparison key', () => {
+    expect(soleExactMatch([KHIMKI], 'г. Химки', { keys: (p) => [p.name], key: normalisePlace })).toBe(KHIMKI);
+  });
+
+  // PR #89 review, round 2: a same-named place typed with its region is a
+  // choice made, and must close the list like a unique name does.
+  describe('with a place label as a second key', () => {
+    const KIROVSK = [KIROVSK_LO, KIROVSKOE, KIROVSK_MO];
+    const byLabel = {
+      keys: (p: Place) => [p.name, settlementLabel(p.name, p.region)],
+      key: normalisePlace,
+    };
+
+    it('takes the full label of a name found in several regions for that one place', () => {
+      expect(soleExactMatch(KIROVSK, 'Кировск — Мурманская область', byLabel)).toBe(KIROVSK_MO);
+    });
+
+    it('still leaves the bare shared name undecided', () => {
+      expect(soleExactMatch(KIROVSK, 'Кировск', byLabel)).toBeNull();
+    });
+
+    it('ignores case, spacing and the separator typed between name and region', () => {
+      expect(soleExactMatch(KIROVSK, '  кировск,   МУРМАНСКАЯ область ', byLabel)).toBe(KIROVSK_MO);
+      expect(soleExactMatch(KIROVSK, 'Кировск - ленинградская область', byLabel)).toBe(KIROVSK_LO);
+    });
+
+    it('commits nothing for a region that does not go with the name', () => {
+      expect(soleExactMatch([...KIROVSK, KHIMKI], 'Химки, Ленинградская область', byLabel)).toBeNull();
+    });
   });
 });
 

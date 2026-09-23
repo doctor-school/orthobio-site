@@ -9,7 +9,8 @@
  * tabs away gets exactly the behaviour the form had before; picking an option
  * is a shortcut to the same result, reported through `onPick`.
  *
- * A typed text that is exactly one option's whole name commits that option
+ * A typed text that is exactly one option's whole name (for a place, also its
+ * full «Кировск — Мурманская область» label) commits that option
  * and closes the list at once (`soleExactMatch`): a list left open under a
  * finished entry covers the fields below it, and the next click aimed at one
  * of them would land on an option. Several same-named options («Кировск» ×3)
@@ -25,7 +26,14 @@
  * The filtering, highlight split and index maths are `lib/combobox.ts`, where
  * they are unit-tested.
  */
-import { filterOptions, moveActive, soleExactMatch, splitHighlight } from '@/lib/combobox';
+import {
+  type ExactMatchOptions,
+  filterOptions,
+  foldQuery,
+  moveActive,
+  soleExactMatch,
+  splitHighlight,
+} from '@/lib/combobox';
 
 export interface ComboboxConfig<T> {
   input: HTMLInputElement;
@@ -40,6 +48,11 @@ export interface ComboboxConfig<T> {
   /** Muted tail after the text («— Московская область»). */
   sub?: (option: T) => string | null;
   normalise?: (foldedQuery: string) => string;
+  /**
+   * What a typed text must equal to commit an option on its own
+   * (`soleExactMatch`). Default: the option's `text`, through `normalise`.
+   */
+  exact?: ExactMatchOptions<T>;
   limit?: number;
   prefixOnly?: boolean;
   /** Row shown when nothing matches; without one an empty list stays closed. */
@@ -56,6 +69,10 @@ export interface Combobox {
 
 export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
   const { input, list, toggle, text, sub, normalise, limit, prefixOnly, emptyText, isSelected, onPick } = config;
+  const exact: ExactMatchOptions<T> = config.exact ?? {
+    keys: (option) => [text(option)],
+    key: (value) => (normalise ?? ((q: string) => q))(foldQuery(value)),
+  };
   const shell = input.parentElement!;
   let items: T[] = [];
   let active = -1;
@@ -197,20 +214,20 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
     if (!typed) return null;
     const pinned = config.pinned?.() ?? null;
     const all = pinned ? [...config.options(), pinned] : config.options();
-    return soleExactMatch(all, input.value, { text, normalise });
+    return soleExactMatch(all, input.value, exact);
   };
 
   /** Typed text: commits an exact single match, otherwise lists what fits. */
   const settleOrOpen = (): void => {
-    const exact = exactOption();
-    if (exact !== null) commit(exact);
+    const option = exactOption();
+    if (option !== null) commit(option);
     else open(0);
   };
 
   /** Closing without a pick still takes a full, unambiguous name as one. */
   const leave = (): void => {
-    const exact = exactOption();
-    if (exact !== null) commit(exact);
+    const option = exactOption();
+    if (option !== null) commit(option);
     else dismiss();
   };
 

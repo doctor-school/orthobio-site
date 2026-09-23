@@ -83,6 +83,14 @@ describe.each(VHOSTS)('$file', ({ file, api }) => {
   });
 });
 
+describe('cache map', () => {
+  it('marks the proxied API paths no-store', () => {
+    expect(directives('infra/nginx/orthobio-cache-map.conf')).toMatch(
+      /^\s*~\^\/api\/v1\/\s+"no-store";\s*$/m,
+    );
+  });
+});
+
 describe('redirect map', () => {
   // A redirect source on a proxied path would be a duplicate `location =`,
   // which nginx refuses — failing the deploy's reload for the whole host.

@@ -569,6 +569,21 @@
   background: var(--btn-primary-bg-active);
 }
 
+/* Accent: the one action of the sign-up card (design: Button variant="accent"). */
+.ob-btn--accent {
+  background: var(--btn-accent-bg);
+  color: var(--btn-accent-fg);
+}
+
+.ob-btn--accent:hover {
+  background: var(--btn-accent-bg-hover);
+  color: var(--btn-accent-fg);
+}
+
+.ob-btn--accent:active {
+  background: var(--btn-accent-bg-active);
+}
+
 .ob-btn--secondary {
   background: var(--surface-card);
   color: var(--ds-blue-dark);
@@ -2374,56 +2389,283 @@ details[open] > .ob-faq__q::after {
 
 /* Submitting: the button is disabled so a double press cannot post twice; the
    pressed colour tells the reader the press registered. */
-.ob-btn--primary:disabled {
-  background: var(--btn-primary-bg-active);
+.ob-btn--accent:disabled {
+  background: var(--btn-accent-bg-active);
   cursor: progress;
 }
 
 /* ── Registration page (/registration) ───────────────────────────────────── */
 
-/* Intro + venue photo beside the form card from lg; stacked, intro first,
-   below it. Tracks are minmax(0, …) so a long word can never widen a column. */
+/* Design: SignupSection (Issue #82), approved aside = venue card with a map.
+   The wrapper clips the three edge metaballs, so they can never widen the page;
+   `isolation` gives their negative z-index a floor above the page background. */
 .ob-reg {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Decorative only, in the margins beside the container — which exist from xl
+   (the design says 1300px; xl is the ladder's step). Inlined through the import
+   so `currentColor` resolves to a token, as in the home hero. */
+.ob-reg__edge {
+  display: none;
+  position: absolute;
+  z-index: -1;
+  height: auto;
+  color: var(--ob-green);
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (min-width: 1280px) {
+  .ob-reg__edge {
+    display: block;
+  }
+
+  .ob-reg__edge--a {
+    width: var(--reg-edge-a-width);
+    right: calc(50% - var(--reg-edge-a-offset));
+    top: var(--reg-edge-a-top);
+  }
+
+  .ob-reg__edge--b {
+    z-index: -2;
+    width: var(--reg-edge-b-width);
+    right: calc(50% - var(--reg-edge-b-offset));
+    top: var(--reg-edge-b-top);
+    transform: rotate(180deg);
+    opacity: 0.5;
+  }
+
+  .ob-reg__edge--c {
+    width: var(--reg-edge-c-width);
+    left: calc(50% - var(--reg-edge-c-offset));
+    bottom: var(--reg-edge-c-bottom);
+    opacity: 0.5;
+  }
+}
+
+/* Stacked intro → form → venue below lg; from lg the form owns the right
+   column and the venue card follows the intro on the left. Tracks are
+   minmax(0, …) so a long word can never widen a column. */
+.ob-reg__grid {
   display: grid;
-  gap: var(--sp-7);
+  gap: var(--sp-6);
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'intro' 'form' 'venue';
   padding-bottom: var(--sp-sec);
 }
 
 @media (min-width: 1024px) {
-  .ob-reg {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    align-items: start;
+  .ob-reg__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, var(--reg-form-col));
+    grid-template-areas: 'intro form' 'venue form';
+    grid-template-rows: auto 1fr;
+    column-gap: var(--sp-7);
   }
 }
 
 .ob-reg__intro {
+  grid-area: intro;
   min-width: 0;
 }
 
-.ob-reg__venue {
-  margin: var(--sp-6) 0 0;
-  max-width: var(--reg-photo-width);
+.ob-reg__intro .ob-sh__overline {
+  color: var(--ob-green-text);
+  font-size: var(--fs-small);
 }
 
-.ob-reg__photo {
+.ob-reg__form {
+  grid-area: form;
+  min-width: 0;
+}
+
+.ob-reg__aside {
+  grid-area: venue;
+  min-width: 0;
+  max-width: var(--reg-aside-width);
+}
+
+@media (min-width: 1024px) {
+  .ob-reg__aside {
+    max-width: none;
+  }
+}
+
+/* Registration window: two dated facts between hairlines. */
+.ob-reg__dates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--reg-dates-floor), 100%), 1fr));
+  gap: var(--sp-4);
+  margin: var(--sp-5) 0 0;
+  padding: var(--sp-4) 0;
+  border-block: var(--border-thin) solid var(--hairline);
+  max-width: var(--measure);
+}
+
+/* A <dl> admits only dt/dd inside its item groups, so the calendar icon lives
+   in the <dt> and is hung into the item's left gutter from there. */
+.ob-reg__date {
+  position: relative;
+  min-width: 0;
+  padding-left: calc(var(--reg-dates-icon) + var(--sp-3));
+}
+
+.ob-reg__date-icon {
+  position: absolute;
+  left: 0;
+  top: var(--gap-micro);
+  width: var(--reg-dates-icon);
+  height: var(--reg-dates-icon);
+  color: var(--ob-green-text);
+}
+
+.ob-reg__date dt {
+  margin: 0 0 var(--gap-micro);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ob-reg__date dd {
+  margin: 0;
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  color: var(--ob-sky-text);
+  overflow-wrap: break-word;
+}
+
+/* Venue card: a 2:1 static map on top (the whole map links to Yandex Maps),
+   the venue facts below. */
+.ob-reg__venue {
+  display: grid;
+  background: var(--bg);
+  border: var(--border-thin) solid var(--hairline);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.ob-reg__map {
+  position: relative;
+  display: block;
+  aspect-ratio: 2 / 1;
+  border-bottom: var(--border-thin) solid var(--hairline);
+  overflow: hidden;
+  background: var(--ob-green-tint);
+  transition: opacity var(--t-state);
+}
+
+.ob-reg__map:hover {
+  opacity: 0.92;
+}
+
+.ob-reg__map:active {
+  opacity: 0.85;
+}
+
+/* The card clips its corners, so an outer ring would be cut off at the top
+   and sides: the map draws the (unlayered, global) ring inside its box. */
+.ob-reg__map {
+  --focus-shadow: var(--focus-shadow-inset);
+}
+
+.ob-reg__map-img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
 }
 
-.ob-reg__caption {
-  margin-top: var(--sp-3);
+.ob-reg__pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--reg-map-pin);
+  height: var(--reg-map-pin);
+  translate: -50% -50%;
+  border-radius: var(--r-pill);
+  background: var(--btn-accent-bg);
+  box-shadow: 0 0 0 var(--reg-map-pin-ring) color-mix(in oklab, var(--ob-green) 35%, var(--color-transparent));
+}
+
+.ob-reg__vbody {
+  display: grid;
+  justify-items: start;
+  padding: var(--sp-5);
+  min-width: 0;
+}
+
+.ob-reg__vover {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-overline);
+  text-transform: uppercase;
+  color: var(--ob-green-text);
+}
+
+.ob-reg__vname {
+  margin: 0;
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+  overflow-wrap: break-word;
+}
+
+.ob-reg__vaddr {
+  margin: var(--gap-micro) 0 0;
+  overflow-wrap: break-word;
+}
+
+.ob-reg__vnote {
+  margin: 0 0 var(--sp-3);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   color: var(--text-muted);
-  overflow-wrap: break-word;
+}
+
+.ob-reg__vlink {
+  font-size: var(--fs-small);
+  color: var(--ob-green-text);
+}
+
+.ob-reg__vlink:hover {
+  color: var(--ink);
+}
+
+.ob-reg__vlink:active {
+  color: var(--ob-sky-text);
 }
 
 /* ── Sign-up form card (SignupForm) ──────────────────────────────────────── */
 
+/* The green panel behind whichever card is shown. Inside it the action colour
+   is the congress green, so the focus ring follows it (design: the ring is the
+   accent). `--focus-shadow` is swapped too, because a custom property resolves
+   where it is declared: the :root copy would keep the site's blue ring. */
 .ob-signup {
+  --focus-ring: var(--btn-accent-bg);
+  --focus-shadow: var(--focus-shadow-accent);
+
+  width: 100%;
+  max-width: var(--ob-signup-width);
   min-width: 0;
+  padding: var(--sp-3);
+  border-radius: var(--r-lg);
+  background: var(--ob-green);
+}
+
+@media (min-width: 640px) {
+  .ob-signup {
+    padding: var(--sp-4);
+  }
 }
 
 /* The script switches states with the `hidden` attribute. The UA's
@@ -2434,65 +2676,120 @@ details[open] > .ob-faq__q::after {
   display: none;
 }
 
+/* White card; `isolation` keeps the corner metaballs (z-index -1) above the
+   card's own background and below its content. */
 .ob-signup__card {
-  background: var(--surface-section);
-  border: var(--border-thin) solid var(--hairline);
-  border-radius: var(--r-lg);
-  padding: var(--sp-5) var(--sp-4);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: var(--sp-5) var(--ob-signup-card-pad-inline);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text-body);
 }
 
 @media (min-width: 640px) {
   .ob-signup__card {
-    padding: var(--sp-6);
+    padding: var(--sp-6) var(--ob-signup-card-pad-inline-wide) var(--ob-signup-card-pad-inline-wide);
   }
 }
 
+.ob-signup__pat {
+  position: absolute;
+  z-index: -1;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ob-signup__pat--a {
+  width: var(--ob-signup-pat-a-width);
+  right: var(--ob-signup-pat-a-right);
+  top: var(--ob-signup-pat-a-top);
+  rotate: -40deg;
+  color: color-mix(in oklab, var(--ob-green) 16%, var(--bg));
+}
+
+.ob-signup__pat--b {
+  width: var(--ob-signup-pat-b-width);
+  right: var(--ob-signup-pat-b-right);
+  top: var(--ob-signup-pat-b-top);
+  rotate: -40deg;
+  color: color-mix(in oklab, var(--ob-lime) 20%, var(--bg));
+}
+
+.ob-signup__pat--c {
+  width: var(--ob-signup-pat-c-width);
+  left: var(--ob-signup-pat-c-left);
+  bottom: var(--ob-signup-pat-c-bottom);
+  rotate: 34deg;
+  color: color-mix(in oklab, var(--ob-sky) 12%, var(--bg));
+}
+
+@media (min-width: 768px) {
+  .ob-signup__pat--a {
+    width: var(--ob-signup-pat-a-width-wide);
+    right: var(--ob-signup-pat-a-right-wide);
+    top: var(--ob-signup-pat-a-top-wide);
+  }
+
+  .ob-signup__pat--b {
+    width: var(--ob-signup-pat-b-width-wide);
+    right: var(--ob-signup-pat-b-right-wide);
+    top: var(--ob-signup-pat-b-top-wide);
+  }
+}
+
+/* The head keeps clear of the top-right metaballs. */
+.ob-signup__head {
+  margin: 0 0 var(--sp-5);
+  padding-right: var(--ob-signup-head-pad-end);
+}
+
 .ob-signup__title {
+  margin: 0 0 var(--gap-tight);
   font-size: var(--fs-h2);
   line-height: var(--lh-h2);
   font-weight: var(--fw-bold);
   color: var(--text-body);
-}
-
-.ob-signup__dates {
-  margin-top: var(--sp-2);
-  color: var(--ob-sky-text);
-  font-weight: var(--fw-medium);
-}
-
-.ob-signup__text {
-  margin-top: var(--sp-3);
-  color: var(--text-muted);
   overflow-wrap: break-word;
 }
 
-/* The success line takes programmatic focus so it is announced; it is not an
-   interactive control, so it gets no ring when focused from script. */
-.ob-signup__text:focus {
-  outline: none;
+.ob-signup__sub {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-medium);
+  color: var(--ob-green-text);
 }
 
 .ob-signup__form {
   display: grid;
-  gap: var(--sp-4);
-  margin-top: var(--sp-5);
+  gap: var(--ob-signup-row-gap);
 }
 
 /* One rhythm: every row is the same grid with the same gaps, so fields share
    one height and rows share one vertical step. */
 .ob-signup__row {
   display: grid;
-  gap: var(--sp-4);
+  gap: var(--ob-signup-row-gap);
   grid-template-columns: minmax(0, 1fr);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .ob-signup__row--2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--sp-3);
   }
 
   .ob-signup__row--3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: var(--sp-3);
+  }
+
+  /* «Населённый пункт» spans the row until the directory asks for «Регион». */
+  .ob-signup__row--place:has(> .ob-signup__field[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -2525,8 +2822,8 @@ details[open] > .ob-faq__q::after {
   align-self: end;
   padding-bottom: var(--gap-tight);
   font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  font-weight: var(--fw-semibold);
+  line-height: var(--ob-signup-label-lh);
+  font-weight: var(--fw-medium);
   color: var(--text-body);
 }
 
@@ -2538,70 +2835,175 @@ details[open] > .ob-faq__q::after {
 .ob-signup__input {
   width: 100%;
   min-width: 0;
-  min-height: var(--control-square);
-  padding: var(--field-pad);
+  height: var(--ob-input-height);
+  padding: 0 var(--ob-input-pad-inline);
   font: inherit;
-  color: var(--text-body);
-  background: var(--surface-card);
-  border: var(--border-thin) solid var(--field-border);
+  font-size: var(--fs-body);
+  color: var(--ink);
+  background: var(--bg);
+  border: var(--border-thin) solid var(--ob-input-border);
   border-radius: var(--r-md);
-  transition: border-color var(--t-state);
+  appearance: none;
+  transition:
+    border-color var(--t-state),
+    background var(--t-state);
   /* A value or placeholder wider than the field (a picked «Комсомольск-на-Амуре
      — Хабаровский край» at 360px) ends in «…» instead of a hard cut; focused,
      the input scrolls as usual. */
   text-overflow: ellipsis;
 }
 
+/* Placeholder stays at --text-muted (AA), not the design's lighter grey: it is
+   text, and SC 1.4.3 applies to it. */
 .ob-signup__input::placeholder {
   color: var(--text-muted);
   opacity: 1;
 }
 
 .ob-signup__input:hover {
-  border-color: var(--ink);
+  border-color: var(--ob-green-deep);
 }
 
 .ob-signup__input:active {
-  border-color: var(--focus-ring);
+  border-color: var(--btn-accent-bg);
+  background: var(--ob-green-tint);
+}
+
+.ob-signup__input:focus-visible {
+  border-color: var(--btn-accent-bg);
+  background: var(--bg);
 }
 
 .ob-signup__input[aria-invalid='true'] {
   border-color: var(--error);
 }
 
+/* Datalist fields: a chevron says «there is a list». Chrome's own datalist
+   indicator is hidden so the field does not show two. */
+.ob-signup__combo {
+  position: relative;
+  min-width: 0;
+}
+
+.ob-signup__combo .ob-signup__input {
+  padding-right: var(--ob-input-pad-combo);
+}
+
+.ob-signup__combo .ob-signup__input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.ob-signup__chev {
+  position: absolute;
+  right: var(--ob-input-chevron-inset);
+  top: 50%;
+  translate: 0 -50%;
+  width: var(--ob-input-chevron);
+  height: var(--ob-input-chevron);
+  color: var(--ob-green-text);
+  pointer-events: none;
+}
+
+/* Quiet hint line with a green dot (design `.ob-sf__hint`). */
 .ob-signup__hint {
-  overflow-wrap: break-word;
+  display: flex;
+  gap: var(--gap-tight);
+  align-items: baseline;
+  margin: 0;
   font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  line-height: var(--ob-signup-label-lh);
   color: var(--text-muted);
-}
-
-.ob-signup__error {
   overflow-wrap: break-word;
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  font-weight: var(--fw-medium);
-  color: var(--error);
 }
 
+.ob-signup__hint::before {
+  content: '';
+  flex: none;
+  width: var(--ob-signup-hint-dot);
+  height: var(--ob-signup-hint-dot);
+  border-radius: var(--r-pill);
+  background: var(--ob-green);
+}
+
+/* Field error with a leading icon. The script writes the message as the
+   element's text, so the icon is a masked pseudo-element, not a child. */
+.ob-signup__error {
+  display: flex;
+  gap: var(--gap-tight);
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--ob-signup-label-lh);
+  color: var(--error);
+  overflow-wrap: break-word;
+}
+
+.ob-signup__error::before,
+.ob-signup__alert:not(:empty)::before {
+  content: '';
+  flex: none;
+  background: var(--error);
+  mask: var(--icon-error) center / contain no-repeat;
+}
+
+.ob-signup__error::before {
+  width: var(--ob-signup-msg-icon);
+  height: var(--ob-signup-msg-icon);
+  margin-top: var(--gap-micro);
+}
+
+/* Consent: the custom box is drawn on the native checkbox itself, so the
+   input, its label and every script selector stay what they were. */
 .ob-signup__consent {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
+  min-height: var(--control-square);
+  padding-top: var(--gap-micro);
 }
 
 .ob-signup__check {
   flex: none;
-  width: var(--field-check-size);
-  height: var(--field-check-size);
+  width: var(--ob-check-size);
+  height: var(--ob-check-size);
   margin: var(--gap-micro) 0 0;
-  accent-color: var(--btn-primary-bg);
+  appearance: none;
+  border: var(--ob-check-border) solid var(--ob-input-border);
+  border-radius: var(--ob-check-radius);
+  background: var(--bg) no-repeat center / var(--ob-check-icon);
   cursor: pointer;
+  transition:
+    background-color var(--t-state),
+    border-color var(--t-state);
 }
 
 .ob-signup__check:hover,
+.ob-signup__consent:hover .ob-signup__check {
+  border-color: var(--btn-accent-bg);
+}
+
 .ob-signup__check:active {
-  accent-color: var(--btn-primary-bg-hover);
+  background-color: var(--ob-green-tint);
+  border-color: var(--btn-accent-bg);
+}
+
+.ob-signup__check:checked {
+  background-color: var(--btn-accent-bg);
+  background-image: var(--icon-check);
+  border-color: var(--btn-accent-bg);
+}
+
+.ob-signup__check[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+/* Forced colours throw the drawn box away (backgrounds are dropped); the
+   native checkbox comes back there. */
+@media (forced-colors: active) {
+  .ob-signup__check {
+    appearance: auto;
+  }
 }
 
 .ob-signup__consent-label {
@@ -2612,53 +3014,149 @@ details[open] > .ob-faq__q::after {
   cursor: pointer;
 }
 
+.ob-signup__consent-label a {
+  color: var(--ob-green-text);
+}
+
+.ob-signup__consent-label a:hover {
+  color: var(--ink);
+}
+
 .ob-signup__consent-label a:active {
   color: var(--ob-sky-text);
 }
 
-/* Mount point of the invisible SmartCaptcha widget. It sits in the gap-less
-   actions grid, not the form grid, so while empty it adds no row gap. The
-   data-processing shield is placed by the widget itself (`shieldPosition`,
-   bottom-right by default), not in this box. */
-.ob-signup__captcha {
-  min-width: 0;
-  max-width: 100%;
-}
-
-/* The alert shares a grid cell with the button, so while it is empty it adds
-   neither a box nor a form-grid gap — yet it is never `hidden`/`display:none`:
-   the live region has to exist before its text arrives to be announced. */
+/* Alert above the button, then the button, then the captcha caption. The
+   alert shares the gap-less stack, so while it is empty it adds neither a box
+   nor a gap — yet it is never `hidden`/`display:none`: the live region has to
+   exist before its text arrives to be announced. */
 .ob-signup__actions {
   display: grid;
   min-width: 0;
 }
 
-/* Form-level refusal (network, captcha, server): one announced line above the
-   button, on the error colour's family. */
+.ob-signup__actions .ob-btn {
+  min-height: var(--ob-input-height);
+  padding-block: 0;
+}
+
+/* Form-level refusal (network, captcha, server): one announced block with an
+   icon, on a faint wash of the error colour. */
 .ob-signup__alert {
   margin: 0;
-  color: var(--error);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
-  font-weight: var(--fw-medium);
+  color: var(--ink);
 }
 
 .ob-signup__alert:not(:empty) {
-  margin-bottom: var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  border: var(--border-thin) solid var(--error);
+  display: flex;
+  gap: var(--gap-control);
+  align-items: flex-start;
+  margin-bottom: var(--gap-control);
+  padding: var(--ob-signup-alert-pad);
+  border: var(--border-thin) solid color-mix(in oklab, var(--error) 30%, var(--bg));
   border-radius: var(--r-md);
-  background: var(--surface-card);
+  background: color-mix(in oklab, var(--error) 6%, var(--bg));
 }
 
-.ob-signup__success {
-  margin-top: var(--sp-5);
+.ob-signup__alert:not(:empty)::before {
+  width: var(--ob-signup-alert-icon);
+  height: var(--ob-signup-alert-icon);
 }
 
-/* The state cards («откроется …», «закрыта») are statements, not forms: the
-   title takes programmatic focus when the API switches the page to them. */
-.ob-signup__state .ob-signup__title:focus {
+/* Mount point of the invisible SmartCaptcha widget. It sits in the gap-less
+   actions grid, so while empty it adds no row gap. The data-processing shield
+   is placed by the widget itself (bottom-right by default), not in this box. */
+.ob-signup__captcha {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ob-signup__captcha-note {
+  margin: var(--gap-control) 0 0;
+  text-align: center;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: var(--text-muted);
+}
+
+/* Status cards («откроется …», «закрыта», «заявка принята»): a badge, a
+   title that takes programmatic focus when the state arrives, one line. */
+.ob-signup__status {
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: start;
+}
+
+.ob-signup__card--status {
+  padding-block: var(--sp-6);
+}
+
+.ob-signup__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--stub-badge-size);
+  height: var(--stub-badge-size);
+  border-radius: var(--r-pill);
+  background: var(--ob-sky-tint);
+  color: var(--ob-sky-text);
+}
+
+.ob-signup__badge svg {
+  width: var(--stub-badge-icon-size);
+  height: var(--stub-badge-icon-size);
+}
+
+.ob-signup__badge--ok {
+  background: var(--ob-green-tint);
+  color: var(--ob-green-text);
+}
+
+.ob-signup__badge--neutral {
+  background: var(--ob-lime-tint);
+  color: var(--ob-lime-text);
+}
+
+.ob-signup__stitle {
+  margin: 0;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  font-weight: var(--fw-bold);
+  color: var(--text-body);
+  overflow-wrap: break-word;
+}
+
+/* A statement, not a control: it takes focus from script so it is announced,
+   and gets no outline for it. */
+.ob-signup__stitle:focus {
   outline: none;
+}
+
+.ob-signup__stext {
+  margin: 0;
+  max-width: var(--measure-copy);
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
+
+.ob-signup__stext b {
+  color: var(--ink);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
+.ob-signup__stext a {
+  color: var(--ob-green-text);
+}
+
+.ob-signup__stext a:hover {
+  color: var(--ink);
+}
+
+.ob-signup__stext a:active {
+  color: var(--ob-sky-text);
 }
 
 /* ── Privacy policy (/privacy) ───────────────────────────────────────────── */

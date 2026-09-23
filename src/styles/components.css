@@ -2475,8 +2475,12 @@ details[open] > .ob-faq__q::after {
   font-size: var(--fs-small);
 }
 
+/* `align-self: start` keeps the column exactly as tall as the panel, so the
+   edge metaballs anchored to it follow the panel's corners — the short status
+   cards included — instead of the row the venue card stretches. */
 .ob-reg__form {
   position: relative;
+  align-self: start;
   grid-area: form;
   min-width: 0;
 }

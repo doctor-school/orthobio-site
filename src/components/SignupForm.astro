@@ -25,14 +25,12 @@
  * requires users to be told SmartCaptcha processes their data, and the shield
  * is that notice.
  *
- * Look (Issue #82, design SignupForm): a white card on a green panel with
- * tonal metaballs in its corners; the status cards are the same card with a
- * badge. Glyphs that script-written text would wipe (field errors, the alert)
+ * Look (Issue #82, design SignupForm): a white card on a green panel; the
+ * status cards are the same card with a badge. Glyphs that script-written text would wipe (field errors, the alert)
  * are CSS masks, and the consent tick is drawn on the native checkbox, so the
  * selectors the script and the e2e suite rely on stay as they were.
  */
 import Button from '@/components/Button.astro';
-import SignupPattern from '@/components/SignupPattern.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
   CONTACT_EMAIL,
@@ -58,14 +56,12 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
 >
   <noscript>
     <div class="ob-signup__card ob-signup__card--status ob-signup__status">
-      <SignupPattern />
       <h2 class="ob-signup__stitle">Регистрация на конгресс</h2>
       <p class="ob-signup__stext">Для регистрации включите JavaScript в браузере.</p>
     </div>
   </noscript>
 
   <div class="ob-signup__card" data-signup-state="open" hidden>
-    <SignupPattern />
     <div class="ob-signup__head" data-signup-head>
       <h2 class="ob-signup__title" id="signup-title">Регистрация на конгресс</h2>
       <p class="ob-signup__sub">{UPCOMING_CONGRESS_DATES.display} года, Москва</p>
@@ -379,7 +375,6 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     data-signup-state="not-yet-open"
     hidden
   >
-    <SignupPattern />
     <span class="ob-signup__badge" aria-hidden="true">
       <StrokeIcon name="calendar" />
     </span>
@@ -395,7 +390,6 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
   </div>
 
   <div class="ob-signup__card ob-signup__card--status ob-signup__status" data-signup-state="closed" hidden>
-    <SignupPattern />
     <span class="ob-signup__badge ob-signup__badge--neutral" aria-hidden="true">
       <StrokeIcon name="lock" />
     </span>

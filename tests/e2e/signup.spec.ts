@@ -1140,93 +1140,77 @@ test.describe('registration page design', () => {
     expect(venue!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height);
   });
 
-  // Issue #88: two tonal metaballs emerging from behind the green panel,
-  // from lg up like the home hero's pattern — never over a field, never over
-  // the intro or the venue card, never widening the page.
-  test('shows the edge pattern from lg, behind the form panel and clear of the text', async ({ page }) => {
-    const edges = page.locator('.ob-reg__edge');
+  // Issue #90: the page carries the home hero's own `EdgePattern` (its identity
+  // with the hero is pinned in identity.spec.ts). Here: the lg threshold, the
+  // stacking under the panel, the intro column left bare, no page overflow.
+  test('shows the hero edge pattern from lg, under the form panel and clear of the intro', async ({ page }) => {
+    const shapes = page.locator('.ob-reg > .ob-edge-pattern');
     await page.setViewportSize({ width: 1023, height: 900 });
     await open(page);
-    await expect(edges).toHaveCount(2);
-    for (const edge of await edges.all()) {
-      await expect(edge).toBeHidden();
-      await expect(edge).toHaveAttribute('aria-hidden', 'true');
-    }
+    await expect(shapes).toHaveCount(2);
+    for (const shape of await shapes.all()) await expect(shape).toBeHidden();
 
     for (const width of [1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 900 });
-      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
-      const [intro, venue, reg] = await Promise.all(
-        ['.ob-reg__intro', '.ob-reg__venue', '.ob-reg'].map((sel) => page.locator(sel).boundingBox()),
+      expect(await measureOverflow(page), `overflow @${width}`).toBeLessThanOrEqual(0);
+      const [intro, venue] = await Promise.all(
+        ['.ob-reg__intro', '.ob-reg__venue'].map((sel) => page.locator(sel).boundingBox()),
       );
-      // `.ob-reg` clips its overflow: a shape starting above it is cut flat by
-      // the header line (PR #89 audit), so the top one starts inside it.
-      const top = (await page.locator('.ob-reg__edge--a').boundingBox())!;
-      expect(top.y, `edge --a vs the header line @${width}`).toBeGreaterThanOrEqual(reg!.y);
-      for (const edge of await edges.all()) {
-        await expect(edge).toBeVisible();
-        const box = (await edge.boundingBox())!;
+      for (const shape of await shapes.all()) {
+        await expect(shape).toBeVisible();
+        const box = (await shape.boundingBox())!;
         for (const [name, other] of [['intro', intro!], ['venue', venue!]] as const) {
-          const apart =
-            box.x + box.width <= other.x ||
-            other.x + other.width <= box.x ||
-            box.y + box.height <= other.y ||
-            other.y + other.height <= box.y;
-          expect(apart, `edge vs ${name} @${width}`).toBe(true);
+          expect(box.x, `pattern vs ${name} @${width}`).toBeGreaterThanOrEqual(other.x + other.width);
         }
       }
-      // Where a shape meets the panel, the panel is on top: the shapes sit at
-      // z-index -1, and no element between them and `.ob-reg` (the isolated
-      // floor) starts a stacking context of its own, so they paint under the
-      // in-flow panel, whose green is opaque. A pixel sample cannot prove this:
-      // the shapes are `pointer-events: none`, so `elementFromPoint` skips them.
-      const stacking = await page.evaluate(() => {
+      // Paint order, as on the hero: the shapes are positioned with no z-index
+      // and come FIRST; the grid is a positioned sibling after them, so it and
+      // the panel's opaque green paint on top. A pixel sample cannot prove this
+      // (`pointer-events: none` hides the shapes from `elementFromPoint`).
+      const order = await page.evaluate(() => {
+        const band = document.querySelector('.ob-reg')!;
+        const kids = [...band.children];
+        const grid = band.querySelector(':scope > .ob-reg__grid')!;
         const panel = getComputedStyle(document.querySelector('.ob-signup')!);
-        const edge = document.querySelector('.ob-reg__edge')!;
-        const contexts: string[] = [];
-        for (let el = edge.parentElement; el && !el.classList.contains('ob-reg'); el = el.parentElement) {
-          const cs = getComputedStyle(el);
-          const starts =
-            (cs.position !== 'static' && cs.zIndex !== 'auto') ||
-            cs.transform !== 'none' ||
-            cs.translate !== 'none' ||
-            cs.rotate !== 'none' ||
-            cs.scale !== 'none' ||
-            cs.opacity !== '1' ||
-            cs.isolation === 'isolate' ||
-            cs.filter !== 'none' ||
-            cs.backdropFilter !== 'none' ||
-            cs.mixBlendMode !== 'normal' ||
-            /paint|layout|strict|content/.test(cs.contain) ||
-            cs.willChange !== 'auto';
-          if (starts) contexts.push(el.className);
-        }
         return {
-          z: [...document.querySelectorAll('.ob-reg__edge')].map((el) => getComputedStyle(el).zIndex),
-          contexts,
-          panelPosition: panel.position,
+          shapesFirst: kids.slice(0, 2).every((el) => el.classList.contains('ob-edge-pattern')),
+          gridAfter: kids.indexOf(grid) > 1,
+          gridPosition: getComputedStyle(grid).position,
+          shapeZ: [...band.querySelectorAll(':scope > .ob-edge-pattern')].map((el) => getComputedStyle(el).zIndex),
+          bandOverflowX: getComputedStyle(band).overflowX,
           panelBg: panel.backgroundColor,
         };
       });
-      expect(stacking.z).toEqual(['-1', '-1']);
-      expect(stacking.contexts).toEqual([]);
-      expect(stacking.panelPosition).toBe('static');
-      expect(stacking.panelBg).toMatch(/^(rgb\(|oklch\((?!.*\/))/);
-      // Tints, not the brand's full green, and painted through `currentColor`
-      // (an <img> of the same SVG would paint black).
-      const green = await page.evaluate(() => {
-        const probe = document.createElement('span');
-        probe.style.color = 'var(--ob-green)';
-        document.body.append(probe);
-        const value = getComputedStyle(probe).color;
-        probe.remove();
-        return value;
-      });
-      for (const color of await edges.evaluateAll((els) => els.map((el) => getComputedStyle(el).color))) {
-        expect(color).not.toBe('rgb(0, 0, 0)');
-        expect(color).not.toBe(green);
-      }
+      expect(order.shapesFirst && order.gridAfter).toBe(true);
+      expect(order.gridPosition).toBe('relative');
+      expect(order.shapeZ).toEqual(['auto', 'auto']);
+      expect(order.bandOverflowX).toBe('hidden');
+      expect(order.panelBg).toMatch(/^(rgb\(|oklch\((?!.*\/))/);
     }
+  });
+
+  for (const width of [...OVERFLOW_WIDTHS, 1440]) {
+    test(`the page with its edge pattern does not overflow at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await open(page);
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
+  // The band absorbs the footer's top margin so the clip cuts the lower shape
+  // on the footer's hairline, never flat across white space.
+  test('ends the pattern band on the footer line', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await open(page);
+    const [band, foot] = await Promise.all(
+      ['.ob-reg', '.ob-foot'].map((sel) =>
+        page.locator(sel).evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          return { top: r.top + scrollY, bottom: r.bottom + scrollY };
+        }),
+      ),
+    );
+    expect(Math.abs(band.bottom - foot.top)).toBeLessThanOrEqual(0.5);
   });
 
   test('draws the consent tick on the checkbox itself', async ({ page }) => {

@@ -2,7 +2,8 @@
 /**
  * /registration — congress sign-up (Issue #78; platform 044), styled to the
  * approved design (Issue #82: SignupSection, aside = venue card with a map,
- * edge pattern on).
+ * edge pattern on). The edge pattern is the home hero's own `EdgePattern`
+ * (Issue #90), so the two pages carry the same element.
  *
  * Two columns from lg — the heading, the lead, the registration window and the
  * venue card on the left, the form card on its green panel on the right —
@@ -24,8 +25,8 @@
  */
 import { Image } from 'astro:assets';
 
-import Metaball from '@/assets/metaball-element.svg';
 import venueMap from '@/assets/venue-map.png';
+import EdgePattern from '@/components/EdgePattern.astro';
 import NewTabHint from '@/components/NewTabHint.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import SignupForm from '@/components/SignupForm.astro';
@@ -45,7 +46,7 @@ const dates = [
 
 <BaseLayout title={page.title} description={page.description}>
   <div class="ob-reg">
-
+    <EdgePattern />
     <div class="ob-container ob-section ob-reg__grid">
       <div class="ob-reg__intro">
         <SectionHeading level="h1" overline={page.overline} title={page.title} />
@@ -74,8 +75,6 @@ const dates = [
       </div>
 
       <div class="ob-reg__form">
-        <Metaball class="ob-reg__edge ob-reg__edge--a" aria-hidden="true" />
-        <Metaball class="ob-reg__edge ob-reg__edge--b" aria-hidden="true" />
         <SignupForm />
       </div>
 

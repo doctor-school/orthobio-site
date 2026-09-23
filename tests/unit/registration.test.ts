@@ -86,8 +86,18 @@ describe('REGISTRATION_WINDOW', () => {
     expect(REGISTRATION_WINDOW.opensAt).toBe('2026-10-01T00:00:00+03:00');
   });
 
-  it('has no closing instant until the owner supplies one (ds-platform#2292)', () => {
-    expect(REGISTRATION_WINDOW.closesAt).toBeNull();
+  it('closes at the owner-confirmed instant, equal to the API env (ds-platform#2292)', () => {
+    expect(REGISTRATION_WINDOW.closesAt).toBe('2027-01-01T00:00:00+03:00');
+  });
+
+  it('is closed from midnight Moscow on 1 January 2027 on a non-forced host', () => {
+    const now = at('2027-01-01T00:00:00+03:00');
+    expect(registrationState(REGISTRATION_WINDOW, now, 'orthobio.ru')).toBe('closed');
+  });
+
+  it('is still open one second before the closing instant on a non-forced host', () => {
+    const now = at('2026-12-31T23:59:59+03:00');
+    expect(registrationState(REGISTRATION_WINDOW, now, 'orthobio.ru')).toBe('open');
   });
 });
 

@@ -128,15 +128,21 @@ export const SUBMISSION_WINDOW = {
  * (`src/lib/registration.ts` explains why not at build time).
  *
  * `opensAt` is the same day as `REGISTRATION_OPENS` above, as an instant with an
- * explicit Moscow offset. `closesAt` is `null` because the owner has not set a
- * closing instant yet (ds-platform#2292): `null` means «never closes» to the
- * page, which is the honest reading of «no date decided», and the API still
- * refuses once its own closing instant passes.
+ * explicit Moscow offset. `closesAt` was confirmed by the owner on
+ * ds-platform#2292 (2026-09-22): the API runs with
+ * `CONGRESS_SIGNUP_WINDOW_CLOSES_AT=2027-01-01T00:00:00.000+03:00`, and this is
+ * the same instant. The owner called it a placeholder they may still replace —
+ * so a change here must be mirrored in the API env (and vice versa), or the
+ * page and the API disagree about whether registration is closed.
+ *
+ * Typed `string`, not `string | null`: nothing on the site depends on the
+ * «never closes» reading any more. `RegistrationWindow` in
+ * `src/lib/registration.ts` still accepts `null`, so the pure rule stays general.
  */
 export const REGISTRATION_WINDOW = {
   opensAt: '2026-10-01T00:00:00+03:00',
-  closesAt: null,
-} as const satisfies { opensAt: string; closesAt: string | null };
+  closesAt: '2027-01-01T00:00:00+03:00',
+} as const satisfies { opensAt: string; closesAt: string };
 
 /**
  * Yandex SmartCaptcha client key, read at BUILD time from the env var

@@ -31,10 +31,13 @@
  * are CSS masks, and the consent tick is drawn on the native checkbox, so the
  * selectors the script and the e2e suite rely on stay as they were.
  */
+import Button from '@/components/Button.astro';
 import SignupPattern from '@/components/SignupPattern.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
   CONTACT_EMAIL,
+  NOTIFY_CHANNEL_URL,
+  NOTIFY_CTA_LABEL,
   REGISTRATION_WINDOW,
   SMARTCAPTCHA_SITEKEY,
   SMARTCAPTCHA_SITEKEY_PREVIEW,
@@ -348,11 +351,6 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     </div>
   </div>
 
-  <!--
-    TODO(Антон): the design adds an «Узнать первым» accent button to this card,
-    linking to a Doctor.School channel. Issue #78 retired the «узнать первым»
-    channel and there is no approved URL, so the card keeps the page-bound line.
-  -->
   <div
     class="ob-signup__card ob-signup__card--status ob-signup__status"
     data-signup-state="not-yet-open"
@@ -370,6 +368,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         UPCOMING_CONGRESS_DATES.display
       } года.
     </p>
+    <Button variant="accent" size="lg" arrow href={NOTIFY_CHANNEL_URL} external>{NOTIFY_CTA_LABEL}</Button>
   </div>
 
   <div class="ob-signup__card ob-signup__card--status ob-signup__status" data-signup-state="closed" hidden>

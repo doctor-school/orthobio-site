@@ -2,19 +2,25 @@ import { describe, it, expect } from 'vitest';
 import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 
 import Button from '../../src/components/Button.astro';
-import { REGISTRATION_CTA_LABEL, REGISTRATION_URL } from '../../src/config/site';
+import {
+  NOTIFY_CHANNEL_URL,
+  NOTIFY_CTA_LABEL,
+  REGISTRATION_CTA_LABEL,
+  REGISTRATION_URL,
+} from '../../src/config/site';
 
 /**
  * `Button`'s `external` branch — the new-tab announcement of Issue #37.
  *
  * DELIBERATE EXCEPTION to «unit tests are pure logic, rendering is the e2e
  * suite's job» (vitest.config.ts), for the same reason as
- * `video-card.test.ts`: the branch is not reachable from any built page. Its
- * only caller was the «узнать первым» CTA on `/`, which Issue #54 kept unset
- * and Issue #78 replaced with the INTERNAL link to `/registration` — so the e2e
- * sweep walks zero external Buttons and would stay green if this branch never
- * announced anything at all. It is the one component whose fix nothing else
- * can see.
+ * `video-card.test.ts`. Its first caller, the «узнать первым» CTA on `/`, was
+ * replaced by the INTERNAL link to `/registration` (Issue #78), and for a
+ * while no built page reached the branch at all. Since Issue #88 the one
+ * external Button is the «Узнать первым» Telegram CTA on the /registration
+ * «откроется» card — a card the e2e suite sees only through a mocked refusal —
+ * so the branch is still pinned here, at the component, with that CTA's own
+ * props.
  *
  * The mirror assertions matter as much: a Button that stays on the site, and a
  * `<button>` with no href, must not carry a promise of a tab.
@@ -26,9 +32,10 @@ const HINT = 'открывается в новой вкладке';
 
 describe('Button under `external`', () => {
   it('announces the new tab beside the target it opens', async () => {
-    const html = await render({ href: 'https://t.me/orthobio', external: true }, {
-      default: 'Узнать первым',
+    const html = await render({ href: NOTIFY_CHANNEL_URL, external: true, variant: 'accent' }, {
+      default: NOTIFY_CTA_LABEL,
     });
+    expect(html).toContain(`href="${NOTIFY_CHANNEL_URL}"`);
     expect(html).toContain('target="_blank"');
     expect(html).toContain('ob-sr-only');
     expect(html).toContain(HINT);

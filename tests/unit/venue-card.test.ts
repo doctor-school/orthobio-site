@@ -49,9 +49,9 @@ const manifest = () =>
 describe('venue card', () => {
   it('prints the approved venue facts, typeset by hand', () => {
     expect(UPCOMING_CONGRESS_VENUE.card).toEqual({
-      name: 'Отель «Милан»',
+      name: 'ГК «Милан»',
       address: `Москва, ул.${NBSP}Шипиловская, 28А`,
-      note: `м.${NBSP}«Домодедовская»${NBSP}— 15${NBSP}минут пешком`,
+      note: `м.${NBSP}«Домодедовская»${NBSP}— 11${NBSP}минут пешком`,
     });
   });
 

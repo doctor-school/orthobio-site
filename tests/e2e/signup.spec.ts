@@ -309,6 +309,22 @@ test.describe('sign-up form', () => {
     await expect(page.locator('[data-signup-form]')).toBeHidden();
   });
 
+  test('offers the Doctor.School channel on the «откроется» card, in a new tab', async ({ page }) => {
+    await mockSignUp(page, 422, { code: 'not-yet-open' });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    const card = page.locator('[data-signup-state="not-yet-open"]');
+    const cta = card.getByRole('link', { name: /^Узнать первым/ });
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute('href', 'https://t.me/DoctorSchool');
+    await expect(cta).toHaveAttribute('target', '_blank');
+    await expect(cta).toHaveAttribute('rel', 'noopener');
+    await expect(cta).toHaveAccessibleName(/открывается в новой вкладке/);
+    await expect(cta).toHaveClass(/ob-btn--accent/);
+  });
+
   test('switches to the «закрыта» card on a closed refusal', async ({ page }) => {
     await mockSignUp(page, 422, { code: 'closed' });
     await open(page);
@@ -629,12 +645,12 @@ test.describe('registration page design', () => {
     ]);
 
     const venue = page.locator('.ob-reg__venue');
-    await expect(venue.locator('.ob-reg__vname')).toHaveText('Отель «Милан»');
+    await expect(venue.locator('.ob-reg__vname')).toHaveText('ГК «Милан»');
     await expect(venue.locator('.ob-reg__vaddr')).toHaveText('Москва, ул. Шипиловская, 28А');
-    await expect(venue.locator('.ob-reg__vnote')).toHaveText('м. «Домодедовская» — 15 минут пешком');
+    await expect(venue.locator('.ob-reg__vnote')).toHaveText('м. «Домодедовская» — 11 минут пешком');
     const mapUrl = 'https://yandex.ru/maps/org/milan/1088776161/';
     await expect(
-      page.getByRole('link', { name: 'Отель «Милан» на карте (открывается в новой вкладке)' }),
+      page.getByRole('link', { name: 'ГК «Милан» на карте (открывается в новой вкладке)' }),
     ).toHaveAttribute('href', mapUrl);
     await expect(page.getByRole('link', { name: /Открыть в Яндекс Картах/ })).toHaveAttribute('href', mapUrl);
   });

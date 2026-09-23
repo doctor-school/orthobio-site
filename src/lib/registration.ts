@@ -19,7 +19,7 @@
 export interface RegistrationWindow {
   /** ISO-8601 instant with an explicit offset — never a bare date. */
   opensAt: string;
-  /** `null` until the owner supplies the closing instant (ds-platform#2292). */
+  /** `null` means no closing instant is configured: the window never closes. */
   closesAt: string | null;
 }
 

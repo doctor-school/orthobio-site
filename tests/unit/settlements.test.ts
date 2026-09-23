@@ -8,6 +8,7 @@ import {
   expandDirectory,
   normalisePlace,
   settlementLabel,
+  settlementNameQuery,
   type SettlementDirectory,
 } from '../../src/lib/settlements';
 
@@ -57,6 +58,22 @@ describe('normalisePlace', () => {
     expect(normalisePlace('Химки, Московская область')).toBe(normalisePlace('Химки — Московская область'));
     expect(normalisePlace('Химки - Московская область')).toBe(normalisePlace('Химки — Московская область'));
     expect(normalisePlace('Ростов-на-Дону')).toBe('ростов-на-дону');
+  });
+});
+
+describe('settlementNameQuery', () => {
+  it('drops a typed type prefix and folds the name', () => {
+    expect(settlementNameQuery('г. Химки')).toBe('химки');
+    expect(settlementNameQuery('  пгт  Ёлкино')).toBe('елкино');
+  });
+
+  it('keeps only the name part of a typed «name — region»', () => {
+    expect(settlementNameQuery('Кировск — Мур')).toBe('кировск');
+    expect(settlementNameQuery('Кировск, Ленинградская')).toBe('кировск');
+  });
+
+  it('leaves a hyphenated name whole', () => {
+    expect(settlementNameQuery('Ростов-на-Дону')).toBe('ростов-на-дону');
   });
 });
 

@@ -115,3 +115,12 @@ export function createSettlementIndex(entries: readonly Settlement[]): Settlemen
     },
   };
 }
+
+/**
+ * What the combobox filters the directory's NAMES on: the comparison key up to
+ * a typed separator, so «г. Кировск — Мур…» still lists every Кировск and the
+ * region part picks among them by eye.
+ */
+export function settlementNameQuery(typed: string): string {
+  return normalisePlace(typed).split(' - ')[0] ?? '';
+}

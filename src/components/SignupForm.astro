@@ -206,41 +206,49 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
 
       <div class="ob-signup__row ob-signup__row--2">
         <div class="ob-signup__field">
-          <label class="ob-signup__label" for="signup-city">Город</label>
+          <label class="ob-signup__label" for="signup-city">Населённый пункт</label>
           <input
             class="ob-signup__input"
             id="signup-city"
             name="city"
             type="text"
-            autocomplete="address-level2"
-            placeholder="Москва"
+            list="signup-settlements"
+            autocomplete="off"
+            placeholder="Начните вводить название"
             maxlength="200"
             required
             aria-required="true"
             aria-describedby="signup-city-error"
+            data-settlement
           />
+          <datalist id="signup-settlements"></datalist>
           <div class="ob-signup__msgs">
             <p class="ob-signup__error" id="signup-city-error" hidden></p>
           </div>
         </div>
-        <div class="ob-signup__field">
-          <label class="ob-signup__label" for="signup-region">Область</label>
+        <div class="ob-signup__field" data-region-field hidden>
+          <label class="ob-signup__label" for="signup-region">Регион</label>
           <input
             class="ob-signup__input"
             id="signup-region"
             name="region"
             type="text"
             autocomplete="address-level1"
-            placeholder="Московская область"
+            placeholder="Область, край или страна"
             maxlength="200"
             required
             aria-required="true"
-            aria-describedby="signup-region-error"
+            aria-describedby="signup-region-hint signup-region-error"
           />
           <div class="ob-signup__msgs">
+            <p class="ob-signup__hint" id="signup-region-hint" data-region-hint>
+              Этого населённого пункта нет в&nbsp;списке&nbsp;— укажите регион или страну.
+            </p>
             <p class="ob-signup__error" id="signup-region-error" hidden></p>
           </div>
         </div>
+        <!-- Never hidden: a live region must exist before its text arrives. -->
+        <p class="ob-sr-only" role="status" data-region-status></p>
       </div>
 
       <div class="ob-signup__field">
@@ -317,7 +325,17 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
     serverNow,
     type RegistrationState,
   } from '@/lib/registration';
+  import {
+    createSettlementIndex,
+    expandDirectory,
+    type Settlement,
+    type SettlementDirectory,
+    type SettlementIndex,
+  } from '@/lib/settlements';
   import { matchSpecialty as findSpecialty } from '@/lib/specialty';
+  // `?url`: emitted as a content-hashed `/_astro/` file (immutable cache) and
+  // fetched only once the field is focused or holds a value, so the page stays light.
+  import SETTLEMENTS_URL from '@/data/settlements.json?url';
 
   interface Specialty {
     id: string;
@@ -480,6 +498,126 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
           setError(specialtyInput, MESSAGES.specialtiesUnavailable);
         });
 
+      // ── Settlement: directory pick, free text as the fallback ─────────────
+      // A pick carries its region; anything else — a foreign or unlisted place,
+      // a name found in several regions, or a directory that failed to load —
+      // reveals the «Регион» field, which the platform requires separately.
+      const cityInput = form.querySelector<HTMLInputElement>('[data-settlement]')!;
+      const regionField = form.querySelector<HTMLElement>('[data-region-field]')!;
+      const regionInput = form.querySelector<HTMLInputElement>('#signup-region')!;
+      const regionHint = form.querySelector<HTMLElement>('[data-region-hint]')!;
+      const regionStatus = form.querySelector<HTMLElement>('[data-region-status]')!;
+      const settlementList = form.querySelector<HTMLDataListElement>('#signup-settlements')!;
+      let settlementIndex: SettlementIndex | null = null;
+      // Pending while the directory is in flight; submit waits for it, so a fast
+      // «type the city, press Enter» is not judged against a missing directory.
+      let settlementsLoading: Promise<void> | null = null;
+      let settlement: Settlement | null = null;
+
+      const REGION_HINTS = {
+        unknown: 'Этого населённого пункта нет в\u00a0списке\u00a0— укажите регион или страну.',
+        ambiguous:
+          'Такой населённый пункт есть в\u00a0нескольких регионах\u00a0— выберите его из\u00a0списка или укажите регион.',
+      } as const;
+
+      // Visibility changes only while the participant types in «Населённый
+      // пункт» (and at submit), never on blur: a reveal on blur lands after the
+      // browser has already chosen the Tab target, and between the press and
+      // the release of a tap or click below the row — so that tap is lost.
+      const showRegion = (reason: keyof typeof REGION_HINTS): void => {
+        const hint = REGION_HINTS[reason];
+        const changed = regionField.hidden || regionHint.textContent?.trim() !== hint;
+        regionHint.textContent = hint;
+        regionField.hidden = false;
+        // The field appears silently for a screen reader; this line is announced.
+        if (changed) regionStatus.textContent = `Добавлено поле «Регион». ${hint}`;
+      };
+      const hideRegion = (): void => {
+        // Never pull the field out from under the focus — it would drop to <body>.
+        if (regionField.hidden || regionField.contains(document.activeElement)) return;
+        regionField.hidden = true;
+        setError(regionInput, null);
+        regionStatus.textContent = '';
+      };
+
+      // Once shown, the field stays until a directory entry resolves: someone
+      // correcting «Минск» back through «Мин…» should not watch it flicker.
+      const decideRegion = (): void => {
+        if (settlementIndex === null) return;
+        const status = settlementIndex.status(cityInput.value);
+        if (status.kind === 'match') hideRegion();
+        else if (status.kind === 'ambiguous' || status.kind === 'unknown') showRegion(status.kind);
+      };
+
+      // Rewrites a resolved entry to its full label. It runs on blur too, so it
+      // must never change the layout — `decideRegion` already settled it.
+      const resolveSettlement = (): void => {
+        settlement = settlementIndex?.match(cityInput.value) ?? null;
+        if (settlement) {
+          cityInput.value = settlement.label;
+          setError(cityInput, null);
+        }
+      };
+      cityInput.addEventListener('change', resolveSettlement);
+      cityInput.addEventListener('blur', resolveSettlement);
+      cityInput.addEventListener('input', () => {
+        // Full labels and exact names only while typing; a prefix resolves on
+        // change/blur, where the input is rewritten to the label.
+        settlement = settlementIndex?.match(cityInput.value, { allowPrefix: false }) ?? null;
+        decideRegion();
+      });
+
+      // `AbortSignal.timeout` is Safari 16+ / Chrome 103+; an older engine gets
+      // the same deadline from a plain controller instead of a thrown TypeError.
+      const deadline = (ms: number): AbortSignal | undefined => {
+        if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+          return AbortSignal.timeout(ms);
+        }
+        if (typeof AbortController === 'undefined') return undefined;
+        const controller = new AbortController();
+        window.setTimeout(() => controller.abort(), ms);
+        return controller.signal;
+      };
+
+      const loadSettlements = (): void => {
+        if (settlementIndex !== null || settlementsLoading !== null) return;
+        settlementsLoading = fetch(SETTLEMENTS_URL, {
+          headers: { Accept: 'application/json' },
+          signal: deadline(10_000),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`settlements: HTTP ${res.status}`);
+            return res.json() as Promise<SettlementDirectory>;
+          })
+          .then((directory) => {
+            settlementIndex = createSettlementIndex(expandDirectory(directory));
+            settlementList.replaceChildren(
+              ...settlementIndex.entries.map((s) => {
+                const option = document.createElement('option');
+                option.value = s.label;
+                return option;
+              }),
+            );
+          })
+          .catch(() => {
+            settlementIndex = createSettlementIndex([]);
+          })
+          .finally(() => {
+            settlementsLoading = null;
+            // Decide only while the participant is still in the field: once they
+            // have moved on, a reveal could land mid-press on whatever they went
+            // to next. Submit decides for a field left before the answer came.
+            if (document.activeElement === cityInput) decideRegion();
+            else resolveSettlement();
+          });
+      };
+      cityInput.addEventListener('focus', loadSettlements);
+      // A value the browser restores on back navigation arrives without a focus.
+      if (cityInput.value.trim() !== '') loadSettlements();
+      window.addEventListener('pageshow', () => {
+        if (cityInput.value.trim() !== '') loadSettlements();
+      });
+
       // ── Captcha state (only when this host has a sitekey) ─────────────────
       const captchaWindow = window as CaptchaWindow;
       const captchaOn = sitekey !== '' && captchaBox !== null;
@@ -514,11 +652,20 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         else if (specialtyInput.value.trim() === '') fail(specialtyInput, MESSAGES.required);
         else if (specialtyId.value === '') fail(specialtyInput, MESSAGES.specialty);
 
-        for (const name of ['workplace', 'city', 'region']) {
-          const input = field(name);
-          input.value = input.value.trim();
-          setError(input, null);
-          if (input.value === '') fail(input, MESSAGES.required);
+        const workplace = field('workplace');
+        workplace.value = workplace.value.trim();
+        setError(workplace, null);
+        if (workplace.value === '') fail(workplace, MESSAGES.required);
+
+        resolveSettlement();
+        setError(cityInput, null);
+        setError(regionInput, null);
+        if (cityInput.value.trim() === '') fail(cityInput, MESSAGES.required);
+        else if (settlement === null) {
+          // The press is over by now, so the layout may change.
+          showRegion(settlementIndex?.status(cityInput.value).kind === 'ambiguous' ? 'ambiguous' : 'unknown');
+          regionInput.value = regionInput.value.trim();
+          if (regionInput.value === '') fail(regionInput, MESSAGES.required);
         }
 
         const consent = field('personalDataConsent');
@@ -545,8 +692,8 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         body.contactPhone = field('contactPhone').value;
         body.specialtyId = specialtyId.value;
         body.workplace = field('workplace').value;
-        body.city = field('city').value;
-        body.region = field('region').value;
+        body.city = settlement?.name ?? cityInput.value.trim();
+        body.region = settlement?.region ?? regionInput.value;
         body.personalDataConsent = true;
         if (captchaToken !== '') body.captchaToken = captchaToken;
         return body;
@@ -684,9 +831,17 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         void send();
       };
 
-      form.addEventListener('submit', (event) => {
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (form.getAttribute('aria-busy') === 'true') return;
+        // A city typed (or restored without a focus) before the directory has
+        // answered is judged against it, not against a missing one. attempt()
+        // keeps or drops the busy state from here.
+        if (cityInput.value.trim() !== '') loadSettlements();
+        if (settlementsLoading) {
+          setBusy(true);
+          await settlementsLoading;
+        }
         attempt();
       });
 

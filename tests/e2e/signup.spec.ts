@@ -65,7 +65,7 @@ async function open(page: Page): Promise<void> {
   await expect(page.locator('#signup-specialties option')).toHaveCount(3);
 }
 
-async function fillValid(page: Page, { patronymic = '' } = {}): Promise<void> {
+async function fillValid(page: Page, { patronymic = '', city = true } = {}): Promise<void> {
   await page.getByLabel('Фамилия').fill('Иванов');
   await page.getByLabel('Имя', { exact: true }).fill('Иван');
   if (patronymic) await page.getByLabel(/Отчество/).fill(patronymic);
@@ -73,8 +73,14 @@ async function fillValid(page: Page, { patronymic = '' } = {}): Promise<void> {
   await page.getByLabel('Телефон').fill('+7 (999) 123-45-67');
   await page.getByLabel('Специальность').fill(ORTHOPEDICS.name);
   await page.getByLabel('Место работы').fill('ГКБ № 1');
-  await page.getByLabel('Населённый пункт').fill('Москва');
+  if (city) await page.getByLabel('Населённый пункт').fill('Москва');
   await page.getByLabel(/согласен/).check();
+}
+
+/** Focuses «Населённый пункт» and waits for the directory it loads. */
+async function focusCity(page: Page): Promise<void> {
+  await page.getByLabel('Населённый пункт').focus();
+  await expect(page.locator('#signup-settlements option')).not.toHaveCount(0);
 }
 
 const submit = (page: Page) => page.getByRole('button', { name: 'Зарегистрироваться' }).click();
@@ -403,6 +409,7 @@ test.describe('sign-up form', () => {
     const requests = await mockSignUp(page, 200);
     await open(page);
     await fillValid(page);
+    await focusCity(page);
     await page.getByLabel('Населённый пункт').fill('г. химки');
     await page.getByLabel('Место работы').focus();
     await expect(page.getByLabel('Населённый пункт')).toHaveValue('Химки — Московская область');
@@ -419,11 +426,16 @@ test.describe('sign-up form', () => {
     const requests = await mockSignUp(page, 200);
     await open(page);
     await fillValid(page);
+    await focusCity(page);
     await page.getByLabel('Населённый пункт').fill('Минск');
-    await page.getByLabel('Место работы').focus();
+    // Revealed while typing, before the participant leaves the field.
     const region = page.getByLabel('Регион');
     await expect(region).toBeVisible();
     await expect(region).toHaveAttribute('aria-required', 'true');
+    await expect(page.locator('#signup-region-hint')).toHaveText(
+      'Этого населённого пункта нет в\u00a0списке\u00a0— укажите регион или страну.',
+    );
+    await expect(page.locator('[data-region-status]')).toContainText('Добавлено поле «Регион».');
 
     await submit(page);
     await expect(page.locator('#signup-region-error')).toHaveText('Заполните это поле.');
@@ -438,24 +450,82 @@ test.describe('sign-up form', () => {
     expect(body.region).toBe('Беларусь');
   });
 
+  test('asks to pick the region for a name found in several regions', async ({ page }) => {
+    await open(page);
+    await focusCity(page);
+    await page.getByLabel('Населённый пункт').fill('Кировск');
+    await expect(page.getByLabel('Регион')).toBeVisible();
+    await expect(page.locator('#signup-region-hint')).toContainText('в\u00a0нескольких регионах');
+
+    await page.getByLabel('Населённый пункт').fill('Кировск — Мурманская область');
+    await expect(page.getByLabel('Регион')).toBeHidden();
+    await expect(page.locator('[data-region-status]')).toBeEmpty();
+  });
+
   test('asks for the region when the directory cannot be loaded', async ({ page }) => {
     await page.route('**/_astro/settlements.*.json', (route) => route.fulfill({ status: 503, body: '' }));
     const requests = await mockSignUp(page, 200);
     await open(page);
-    // Reveal the field before fillValid ticks the consent box: it shifts the layout.
-    await page.getByLabel('Населённый пункт').fill('Москва');
-    await page.getByLabel('Место работы').focus();
-    await expect(page.getByLabel('Регион')).toBeVisible();
     await fillValid(page);
-    await expect(page.getByLabel('Регион')).toBeVisible();
     await expect(page.getByLabel(/согласен/)).toBeChecked();
+    await submit(page);
+    await expect(page.getByLabel('Регион')).toBeFocused();
+    expect(requests).toHaveLength(0);
+
     await page.getByLabel('Регион').fill('г. Москва');
     await submit(page);
-
     await expect(page.locator('[data-signup-success]')).toBeVisible();
     const body = requests[0].postDataJSON() as Record<string, unknown>;
     expect(body.city).toBe('Москва');
     expect(body.region).toBe('г. Москва');
+  });
+
+  // The «Регион» reveal once ran on blur, and the layout shift swallowed the
+  // very press that caused the blur. These pin the press and the Tab down.
+  for (const width of [390, 1280]) {
+    test(`a click on the consent box right after an unlisted place ticks it at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await open(page);
+      await focusCity(page);
+      await page.getByLabel('Населённый пункт').fill('Минск');
+      await page.getByLabel(/согласен/).click();
+      await expect(page.getByLabel(/согласен/)).toBeChecked();
+    });
+  }
+
+  test('Tab from an unlisted place lands on the revealed «Регион»', async ({ page }) => {
+    await open(page);
+    await focusCity(page);
+    await page.keyboard.type('Минск');
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Регион')).toBeFocused();
+  });
+
+  test('Tab after a directory match hides «Регион» without losing focus', async ({ page }) => {
+    await open(page);
+    await focusCity(page);
+    await page.keyboard.type('Минск');
+    await expect(page.getByLabel('Регион')).toBeVisible();
+    await page.getByLabel('Населённый пункт').fill('');
+    await page.keyboard.type('Комсомольск-на-А');
+    await expect(page.getByLabel('Регион')).toBeHidden();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel(/согласен/)).toBeFocused();
+    await expect(page.getByLabel('Населённый пункт')).toHaveValue('Комсомольск-на-Амуре — Хабаровский край');
+  });
+
+  test('judges a city value that arrived without a focus against the directory', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page, { city: false });
+    // As a form restore on back navigation does: a value, no focus, no input event.
+    await page.getByLabel('Населённый пункт').evaluate((el: HTMLInputElement) => {
+      el.value = 'Химки';
+    });
+    await submit(page);
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    const body = requests[0].postDataJSON() as Record<string, unknown>;
+    expect(body.region).toBe('Московская область');
   });
 
   // The error and success states are what the ladder in responsive.spec.ts
@@ -491,6 +561,26 @@ test.describe('sign-up form', () => {
       ),
     );
     expect(new Set(tops).size, `input tops ${tops.join(', ')}`).toBe(1);
+  });
+});
+
+test.describe('sign-up form on a touch screen', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+
+  test('a tap on «Зарегистрироваться» right after an unlisted place reaches validation', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page);
+    await focusCity(page);
+    await page.getByLabel('Населённый пункт').fill('Минск');
+    await page.getByRole('button', { name: 'Зарегистрироваться' }).tap();
+    await expect(page.locator('#signup-region-error')).toHaveText('Заполните это поле.');
+    await expect(page.getByLabel('Регион')).toBeFocused();
+
+    await page.getByLabel('Регион').fill('Беларусь');
+    await page.getByRole('button', { name: 'Зарегистрироваться' }).tap();
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    expect(requests).toHaveLength(1);
   });
 });
 

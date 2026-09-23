@@ -2546,6 +2546,10 @@ details[open] > .ob-faq__q::after {
   border: var(--border-thin) solid var(--field-border);
   border-radius: var(--r-md);
   transition: border-color var(--t-state);
+  /* A value or placeholder wider than the field (a picked «Комсомольск-на-Амуре
+     — Хабаровский край» at 360px) ends in «…» instead of a hard cut; focused,
+     the input scrolls as usual. */
+  text-overflow: ellipsis;
 }
 
 .ob-signup__input::placeholder {
@@ -2566,12 +2570,14 @@ details[open] > .ob-faq__q::after {
 }
 
 .ob-signup__hint {
+  overflow-wrap: break-word;
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   color: var(--text-muted);
 }
 
 .ob-signup__error {
+  overflow-wrap: break-word;
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   font-weight: var(--fw-medium);

@@ -9,6 +9,10 @@
  * participant in the wrong region, which is worse than asking for the region:
  * the full option label, a bare name found in exactly one region, or (on
  * change/blur only) a prefix of four letters or more shared by no other name.
+ *
+ * `status` is what the form decides the «Регион» field on, WHILE the
+ * participant types: the layout must settle before focus or a press leaves the
+ * field, so the decision cannot wait for blur.
  */
 
 /** The shipped shape: region names once, places as [name, region index]. */
@@ -57,9 +61,27 @@ export function normalisePlace(value: string): string {
     .replace(TYPE_PREFIX, '');
 }
 
+/**
+ * Where typed text stands against the directory:
+ * - `empty` — nothing typed;
+ * - `match` — resolves to one entry (a prefix included);
+ * - `ambiguous` — exactly a name found in several regions, so the region must
+ *   be picked from the list or given separately;
+ * - `unknown` — no entry's name or label begins with it: a place outside the
+ *   directory;
+ * - `pending` — still a beginning of more than one entry; typing decides.
+ */
+export type SettlementStatus =
+  | { kind: 'empty' }
+  | { kind: 'match'; settlement: Settlement }
+  | { kind: 'ambiguous' }
+  | { kind: 'unknown' }
+  | { kind: 'pending' };
+
 export interface SettlementIndex {
   entries: readonly Settlement[];
   match(typed: string, options?: { allowPrefix?: boolean }): Settlement | null;
+  status(typed: string): SettlementStatus;
 }
 
 export function createSettlementIndex(entries: readonly Settlement[]): SettlementIndex {
@@ -81,6 +103,15 @@ export function createSettlementIndex(entries: readonly Settlement[]): Settlemen
       if (byName.length > 0) return only(byName)?.entry ?? null;
       if (!allowPrefix || needle.length < MIN_PREFIX) return null;
       return only(keyed.filter((k) => k.name.startsWith(needle)))?.entry ?? null;
+    },
+    status(typed) {
+      const needle = normalisePlace(typed);
+      if (needle === '') return { kind: 'empty' };
+      const settlement = this.match(typed);
+      if (settlement) return { kind: 'match', settlement };
+      if (keyed.filter((k) => k.name === needle).length > 1) return { kind: 'ambiguous' };
+      const open = keyed.some((k) => k.name.startsWith(needle) || k.label.startsWith(needle));
+      return { kind: open ? 'pending' : 'unknown' };
     },
   };
 }

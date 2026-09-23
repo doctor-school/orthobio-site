@@ -98,6 +98,37 @@ describe('createSettlementIndex().match', () => {
   });
 });
 
+describe('createSettlementIndex().status', () => {
+  const kind = (typed: string) => index.status(typed).kind;
+
+  it('is empty for blank text', () => {
+    expect(kind('  ')).toBe('empty');
+  });
+
+  it('carries the entry for anything match() resolves, a prefix included', () => {
+    expect(index.status('Нахаб')).toEqual({ kind: 'match', settlement: match('Нахабино') });
+    expect(kind('Кировск — Мурманская область')).toBe('match');
+  });
+
+  it('flags a name shared by several regions as ambiguous', () => {
+    expect(kind('Кировск')).toBe('ambiguous');
+    expect(kind('г. кировск')).toBe('ambiguous');
+  });
+
+  it('stays pending while the text still begins several names or a label', () => {
+    // One name begins with «Хим», but three letters are below MIN_PREFIX.
+    expect(kind('Хим')).toBe('pending');
+    expect(kind('Ки')).toBe('pending');
+    expect(kind('Киров')).toBe('pending');
+    expect(kind('Кировск — Мур')).toBe('pending');
+  });
+
+  it('is unknown once nothing in the directory begins with the text', () => {
+    expect(kind('Минск')).toBe('unknown');
+    expect(kind('Химки, Тверская область')).toBe('unknown');
+  });
+});
+
 describe('src/data/settlements.json', () => {
   const all = expandDirectory(directory as SettlementDirectory);
   const bundled = createSettlementIndex(all);
@@ -108,13 +139,17 @@ describe('src/data/settlements.json', () => {
   });
 
   it('holds cities and urban-type settlements, with official region names', () => {
-    expect(all.length).toBeGreaterThan(2500);
+    expect(all).toHaveLength(2618);
     expect(bundled.match('Химки')?.region).toBe('Московская область');
     expect(bundled.match('Казань')?.region).toBe('Республика Татарстан');
     expect(bundled.match('Москва')?.region).toBe('г. Москва');
     expect(bundled.match('Санкт-Петербург')?.region).toBe('г. Санкт-Петербург');
     expect(bundled.match('Сургут')?.region).toBe('Ханты-Мансийский автономный округ — Югра');
     expect(bundled.match('Нахабино')?.region).toBe('Московская область'); // рп
+    // Hand-added in the generator: towns inside the federal cities.
+    expect(bundled.match('Зеленоград')?.region).toBe('г. Москва');
+    expect(bundled.match('Московский')?.region).toBe('г. Москва');
+    expect(bundled.match('Кронштадт')?.region).toBe('г. Санкт-Петербург');
   });
 
   it('has no duplicate label', () => {

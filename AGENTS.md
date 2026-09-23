@@ -16,9 +16,9 @@ This repo follows the conventions of its ecosystem siblings `bbm-public-website`
 
 ## Where to look first
 
-1. `docs/content-map-and-tz.md` — approved ТЗ: page map, content model, principles (honest placeholders, no external archive links)
+1. `docs/content-map-and-tz.md` — approved ТЗ: page map, content model, principles (honest placeholders, no external archive links). It predates the registration form (#78) and still says «Без регистрации»; where it differs, the «Live state» paragraph above takes precedence.
 2. `docs/recon/*.md` — source-of-truth reports for all archive content (2021–2026); every fact in content YAML must trace to these
-3. GitHub Issues #1–#6 — execution chain; design & decomposition live in Issues, not in docs/specs files
+3. GitHub Issues — execution chain; `gh issue list` for current state; design & decomposition live in Issues, not in docs/specs files
 
 ## Architectural decisions (do not re-litigate)
 

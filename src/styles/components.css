@@ -2616,17 +2616,30 @@ details[open] > .ob-faq__q::after {
   overflow: hidden;
 }
 
+/* The alert shares a grid cell with the button, so while it is empty it adds
+   neither a box nor a form-grid gap — yet it is never `hidden`/`display:none`:
+   the live region has to exist before its text arrives to be announced. */
+.ob-signup__actions {
+  display: grid;
+  min-width: 0;
+}
+
 /* Form-level refusal (network, captcha, server): one announced line above the
    button, on the error colour's family. */
 .ob-signup__alert {
-  padding: var(--sp-3) var(--sp-4);
-  border: var(--border-thin) solid var(--error);
-  border-radius: var(--r-md);
-  background: var(--surface-card);
+  margin: 0;
   color: var(--error);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   font-weight: var(--fw-medium);
+}
+
+.ob-signup__alert:not(:empty) {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--border-thin) solid var(--error);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
 }
 
 .ob-signup__success {

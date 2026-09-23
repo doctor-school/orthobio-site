@@ -18,10 +18,11 @@ import { measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow'
 const SPECIALTIES_URL = '**/api/v1/public/specialties';
 const SIGN_UP_URL = '**/api/v1/congress/sign-up';
 
+// Shape and name of the live platform row (`GET /v1/public/specialties`).
 const OTHER = {
   id: '00000000-0000-4000-8000-000000000099',
-  code: 'other',
-  name: 'Другое / не медицинский работник',
+  code: 'drugoe',
+  name: 'Другое',
   isOther: true,
 };
 const ORTHOPEDICS = {
@@ -91,6 +92,8 @@ test.describe('sign-up form', () => {
       els.map((el) => (el as HTMLOptionElement).value),
     );
     expect(options).toEqual([OTHER.name, ORTHOPEDICS.name, SPORTS.name]);
+    // The hint names the option exactly as the list shows it.
+    await expect(page.locator('#signup-specialty-hint')).toContainText(`«${OTHER.name}»`);
   });
 
   test('labels every field and marks required ones', async ({ page }) => {
@@ -137,6 +140,32 @@ test.describe('sign-up form', () => {
     // The message is part of the field's description, so it is read with it.
     await expect(phone).toHaveAccessibleDescription(/номер телефона/);
     expect(requests).toHaveLength(0);
+  });
+
+  test('blocks an address the platform would refuse, next to the field', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page);
+    await page.getByLabel('E-mail').fill('ivanov@clinic');
+    await submit(page);
+
+    await expect(page.getByLabel('E-mail')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByLabel('E-mail')).toBeFocused();
+    await expect(page.locator('#signup-email-error')).toContainText('name@example.com');
+    expect(requests).toHaveLength(0);
+  });
+
+  test('resolves a fragment that names exactly one specialty', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page);
+    await page.getByLabel('Специальность').fill('ортопед');
+    await page.getByLabel('Место работы').focus();
+    await expect(page.getByLabel('Специальность')).toHaveValue(ORTHOPEDICS.name);
+    await submit(page);
+
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    expect((requests[0].postDataJSON() as Record<string, unknown>).specialtyId).toBe(ORTHOPEDICS.id);
   });
 
   test('refuses a specialty typed outside the list', async ({ page }) => {
@@ -236,15 +265,26 @@ test.describe('sign-up form', () => {
     await expect(page.locator('[data-signup-form]')).toBeHidden();
   });
 
-  for (const status of [403, 500]) {
-    test(`announces a generic error on HTTP ${status} and keeps the form usable`, async ({ page }) => {
-      const requests = await mockSignUp(page, status);
+  // Not the participant's to fix: a gated upstream (401), a captcha refusal
+  // on a build without a widget (403), a platform-side configuration refusal
+  // (422 sign-up-unavailable) and a server error all get the same line.
+  const GENERIC: { status: number; json?: unknown }[] = [
+    { status: 401 },
+    { status: 403 },
+    { status: 422, json: { code: 'sign-up-unavailable' } },
+    { status: 500 },
+  ];
+  for (const { status, json } of GENERIC) {
+    const label = json ? `${status} ${JSON.stringify(json)}` : String(status);
+    test(`announces a generic error on HTTP ${label} and keeps the form usable`, async ({ page }) => {
+      const requests = await mockSignUp(page, status, json);
       await open(page);
       await fillValid(page);
       await submit(page);
 
       const alert = page.getByRole('alert');
-      await expect(alert).toContainText('Не удалось отправить заявку');
+      await expect(alert).toHaveText(/^Регистрация временно недоступна, попробуйте через несколько минут/);
+      await expect(alert).not.toContainText('Проверьте введённые данные');
       const button = page.getByRole('button', { name: 'Зарегистрироваться' });
       await expect(button).toBeEnabled();
       await expect(page.locator('[data-signup-form]')).toHaveAttribute('aria-busy', 'false');
@@ -254,12 +294,30 @@ test.describe('sign-up form', () => {
     });
   }
 
-  test('a validation refusal from the server is announced, not swallowed', async ({ page }) => {
-    await mockSignUp(page, 422, { message: 'Bad Request' });
+  test('a validation refusal from the server (400) is announced, not swallowed', async ({ page }) => {
+    // The platform's ZodValidationPipe answers invalid bodies with 400.
+    await mockSignUp(page, 400, { message: 'Validation failed' });
     await open(page);
     await fillValid(page);
     await submit(page);
     await expect(page.getByRole('alert')).toContainText('Проверьте введённые данные');
+  });
+
+  test('a rate-limit refusal (429) asks the participant to wait', async ({ page }) => {
+    await mockSignUp(page, 429);
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+    await expect(page.getByRole('alert')).toContainText('Подождите несколько минут');
+  });
+
+  test('keeps the alert live region in the tree, empty, before any refusal', async ({ page }) => {
+    await open(page);
+    const region = page.locator('[data-signup-alert]');
+    await expect(region).toHaveAttribute('role', 'alert');
+    await expect(region).not.toHaveAttribute('hidden', /.*/);
+    await expect(region).toHaveText('');
+    expect(await region.evaluate((el) => getComputedStyle(el).display)).not.toBe('none');
   });
 
   test('disables the button while the request is in flight', async ({ page }) => {
@@ -362,9 +420,14 @@ test.describe('sign-up form', () => {
 test.describe('sign-up form without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 
-  test('states the opening date and shows no form', async ({ page }) => {
+  test('asks for JavaScript in a date-neutral line and shows no form', async ({ page }) => {
     await page.goto('/registration');
-    await expect(page.getByRole('heading', { name: /Регистрация откроется 1 октября 2026 года/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Регистрация на конгресс', exact: true })).toBeVisible();
+    // Playwright's text engine skips <noscript>, so the line is read by selector.
+    const line = page.locator('noscript .ob-signup__text');
+    await expect(line).toBeVisible();
+    await expect(line).toHaveText('Для регистрации включите JavaScript в браузере.');
+    await expect(page.getByRole('heading', { name: /Регистрация откроется/ })).toBeHidden();
     await expect(page.locator('[data-signup-form]')).toBeHidden();
   });
 });

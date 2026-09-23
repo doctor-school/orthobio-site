@@ -7,8 +7,9 @@
  * POST that nginx proxies to the platform API (`/api/v1/…` → `/v1/…`).
  *
  * Every state block ships `hidden`; the script reveals exactly one. Without
- * scripting the `<noscript>` card states the opening date — a form that could
- * not submit (the site's CSP carries `form-action 'none'`) is never shown.
+ * scripting the `<noscript>` card asks for JavaScript in a date-neutral line —
+ * it must stay true before, during and after the window — and no form is
+ * shown, because this one only submits through the script.
  *
  * Client checks are a courtesy, the platform is the truth: the ФИО
  * normalisation on blur mirrors 044 EARS-33, the phone check mirrors EARS-29,
@@ -34,8 +35,8 @@ const captchaSrc =
 <div class="ob-signup" data-signup data-sitekey={SMARTCAPTCHA_SITEKEY}>
   <noscript>
     <div class="ob-signup__card ob-signup__state">
-      <h2 class="ob-signup__title">Регистрация откроется {opensLabel}</h2>
-      <p class="ob-signup__text">Для отправки заявки включите JavaScript в браузере.</p>
+      <h2 class="ob-signup__title">Регистрация на конгресс</h2>
+      <p class="ob-signup__text">Для регистрации включите JavaScript в браузере.</p>
     </div>
   </noscript>
 
@@ -164,7 +165,7 @@ const captchaSrc =
           <input type="hidden" name="specialtyId" data-specialty-id />
           <div class="ob-signup__msgs">
             <p class="ob-signup__hint" id="signup-specialty-hint">
-              Если вы не медицинский работник, выберите «Другое / не медицинский работник».
+              Если вы не медицинский работник, выберите «Другое».
             </p>
             <p class="ob-signup__error" id="signup-specialty-error" hidden></p>
           </div>
@@ -180,7 +181,7 @@ const captchaSrc =
             name="workplace"
             type="text"
             autocomplete="organization"
-            placeholder="Название клиники или организации"
+            placeholder="Клиника или организация"
             maxlength="200"
             required
             aria-required="true"
@@ -256,7 +257,14 @@ const captchaSrc =
       {
         SMARTCAPTCHA_SITEKEY && (
           <div class="ob-signup__field">
-            <div class="ob-signup__captcha" data-captcha tabindex="-1" />
+            <div
+              class="ob-signup__captcha"
+              data-captcha
+              tabindex="-1"
+              role="group"
+              aria-label="Проверка «я не робот»"
+              aria-describedby="signup-captcha-error"
+            />
             <div class="ob-signup__msgs">
               <p class="ob-signup__error" id="signup-captcha-error" hidden />
             </div>
@@ -264,11 +272,12 @@ const captchaSrc =
         )
       }
 
-      <p class="ob-signup__alert" data-signup-alert role="alert" hidden></p>
-
-      <button class="ob-btn ob-btn--primary ob-btn--lg ob-btn--block" type="submit" data-signup-submit>
-        Зарегистрироваться
-      </button>
+      <div class="ob-signup__actions">
+        <p class="ob-signup__alert" data-signup-alert role="alert"></p>
+        <button class="ob-btn ob-btn--primary ob-btn--lg ob-btn--block" type="submit" data-signup-submit>
+          Зарегистрироваться
+        </button>
+      </div>
     </form>
 
     <div class="ob-signup__success" data-signup-success role="status" hidden>
@@ -306,8 +315,16 @@ const captchaSrc =
 <script>
   import { REGISTRATION_WINDOW } from '@/config/site';
   import { isValidContactPhone } from '@/lib/contact-phone';
+  import { isPlatformEmail } from '@/lib/email';
   import { normaliseNameAnswer } from '@/lib/name-answer';
-  import { formatMoscowInstant, registrationState, type RegistrationState } from '@/lib/registration';
+  import {
+    FORCE_OPEN_HOSTS,
+    formatMoscowInstant,
+    registrationState,
+    serverNow,
+    type RegistrationState,
+  } from '@/lib/registration';
+  import { matchSpecialty as findSpecialty } from '@/lib/specialty';
 
   interface Specialty {
     id: string;
@@ -337,8 +354,9 @@ const captchaSrc =
     captcha: 'Подтвердите, что вы не робот.',
     captchaRefused: 'Не удалось пройти проверку «я не робот». Пройдите её ещё раз и отправьте заявку.',
     invalid: 'Сервер не принял заявку. Проверьте введённые данные и отправьте её ещё раз.',
+    rateLimited: 'Слишком много попыток подряд. Подождите несколько минут и отправьте заявку ещё раз.',
     generic:
-      'Не удалось отправить заявку. Попробуйте ещё раз через несколько минут; если ошибка повторится — напишите организаторам.',
+      'Регистрация временно недоступна, попробуйте через несколько минут. Если ошибка повторится — напишите организаторам.',
   } as const;
 
   const root = document.querySelector<HTMLElement>('[data-signup]');
@@ -368,249 +386,281 @@ const captchaSrc =
       }
     };
 
-    const state = registrationState(REGISTRATION_WINDOW, new Date(), window.location.hostname);
-    showState(state);
-    if (state !== 'open') return;
+    let formStarted = false;
+    const openForm = (): void => {
+      if (formStarted) return;
+      formStarted = true;
 
-    // ── Field errors ──────────────────────────────────────────────────────
-    const errorFor = (field: HTMLInputElement): HTMLElement | null =>
-      document.getElementById(`${field.id}-error`);
+      // ── Field errors ──────────────────────────────────────────────────────
+      const errorFor = (field: HTMLInputElement): HTMLElement | null =>
+        document.getElementById(`${field.id}-error`);
 
-    const setError = (field: HTMLInputElement, message: string | null): void => {
-      const box = errorFor(field);
-      if (message === null) {
-        field.removeAttribute('aria-invalid');
-        if (box) {
-          box.hidden = true;
-          box.textContent = '';
+      const setError = (field: HTMLInputElement, message: string | null): void => {
+        const box = errorFor(field);
+        if (message === null) {
+          field.removeAttribute('aria-invalid');
+          if (box) {
+            box.hidden = true;
+            box.textContent = '';
+          }
+          return;
         }
-        return;
-      }
-      field.setAttribute('aria-invalid', 'true');
-      if (box) {
-        box.textContent = message;
-        box.hidden = false;
-      }
-    };
-
-    const setAlert = (message: string | null): void => {
-      alertBox.textContent = message ?? '';
-      alertBox.hidden = message === null;
-    };
-
-    // ── ФИО: the platform's normalisation, shown on blur ──────────────────
-    for (const field of form.querySelectorAll<HTMLInputElement>('[data-name-field]')) {
-      field.addEventListener('blur', () => {
-        field.value = normaliseNameAnswer(field.value);
-      });
-    }
-
-    // ── Specialties: live list, «Другое» first, no free text ───────────────
-    const matchSpecialty = (typed: string): Specialty | null => {
-      const needle = typed.trim().toLocaleLowerCase('ru');
-      if (needle === '' || specialties === null) return null;
-      return specialties.find((s) => s.name.toLocaleLowerCase('ru') === needle) ?? null;
-    };
-
-    const syncSpecialty = (): void => {
-      const match = matchSpecialty(specialtyInput.value);
-      specialtyId.value = match?.id ?? '';
-      if (match) {
-        specialtyInput.value = match.name;
-        setError(specialtyInput, null);
-      }
-    };
-    specialtyInput.addEventListener('change', syncSpecialty);
-    specialtyInput.addEventListener('blur', syncSpecialty);
-    specialtyInput.addEventListener('input', () => {
-      specialtyId.value = matchSpecialty(specialtyInput.value)?.id ?? '';
-    });
-
-    fetch(SPECIALTIES_URL, { headers: { Accept: 'application/json' } })
-      .then((res) => {
-        if (!res.ok) throw new Error(`specialties: HTTP ${res.status}`);
-        return res.json() as Promise<{ entries: Specialty[] }>;
-      })
-      .then(({ entries }) => {
-        const ordered = [...entries.filter((s) => s.isOther), ...entries.filter((s) => !s.isOther)];
-        specialties = ordered;
-        datalist.replaceChildren(
-          ...ordered.map((s) => {
-            const option = document.createElement('option');
-            option.value = s.name;
-            return option;
-          }),
-        );
-        syncSpecialty();
-      })
-      .catch(() => {
-        specialties = [];
-        setError(specialtyInput, MESSAGES.specialtiesUnavailable);
-      });
-
-    // ── Captcha (only when the build carried a sitekey) ────────────────────
-    const captchaWindow = window as CaptchaWindow;
-    const renderCaptcha = (): void => {
-      if (!captchaBox || !captchaWindow.smartCaptcha || captchaWidget !== undefined) return;
-      captchaWidget = captchaWindow.smartCaptcha.render(captchaBox, {
-        sitekey,
-        hl: 'ru',
-        callback: (token) => {
-          captchaToken = token;
-          const box = document.getElementById('signup-captcha-error');
-          if (box) box.hidden = true;
-        },
-      });
-    };
-    const resetCaptcha = (): void => {
-      captchaToken = '';
-      if (captchaWidget !== undefined) captchaWindow.smartCaptcha?.reset(captchaWidget);
-    };
-    if (sitekey && captchaBox) {
-      // The widget script may finish before or after this module runs.
-      if (captchaWindow.smartCaptcha) renderCaptcha();
-      else captchaWindow.obSmartCaptchaReady = renderCaptcha;
-    }
-
-    // ── Validation ────────────────────────────────────────────────────────
-    const field = (name: string): HTMLInputElement =>
-      form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
-
-    const validate = (): HTMLElement | null => {
-      let first: HTMLElement | null = null;
-      const fail = (input: HTMLInputElement, message: string): void => {
-        setError(input, message);
-        first ??= input;
-      };
-
-      for (const name of ['surname', 'firstName', 'patronymic', 'email', 'contactPhone']) {
-        const input = field(name);
-        input.value = input.dataset.nameField !== undefined ? normaliseNameAnswer(input.value) : input.value.trim();
-        setError(input, null);
-        if (input.required && input.value === '') fail(input, MESSAGES.required);
-        else if (name === 'email' && !input.validity.valid) fail(input, MESSAGES.email);
-        else if (name === 'contactPhone' && !isValidContactPhone(input.value)) fail(input, MESSAGES.phone);
-      }
-
-      syncSpecialty();
-      setError(specialtyInput, null);
-      if (specialties !== null && specialties.length === 0) fail(specialtyInput, MESSAGES.specialtiesUnavailable);
-      else if (specialtyInput.value.trim() === '') fail(specialtyInput, MESSAGES.required);
-      else if (specialtyId.value === '') fail(specialtyInput, MESSAGES.specialty);
-
-      for (const name of ['workplace', 'city', 'region']) {
-        const input = field(name);
-        input.value = input.value.trim();
-        setError(input, null);
-        if (input.value === '') fail(input, MESSAGES.required);
-      }
-
-      const consent = field('personalDataConsent');
-      setError(consent, null);
-      if (!consent.checked) fail(consent, MESSAGES.consent);
-
-      if (sitekey && captchaBox && captchaToken === '') {
-        const box = document.getElementById('signup-captcha-error');
+        field.setAttribute('aria-invalid', 'true');
         if (box) {
-          box.textContent = MESSAGES.captcha;
+          box.textContent = message;
           box.hidden = false;
         }
-        first ??= captchaBox;
-      }
-      return first;
-    };
-
-    // ── Submission ────────────────────────────────────────────────────────
-    const setBusy = (busy: boolean): void => {
-      submit.disabled = busy;
-      form.setAttribute('aria-busy', String(busy));
-      submit.textContent = busy ? 'Отправляем заявку…' : 'Зарегистрироваться';
-    };
-
-    const payload = (): Record<string, string | boolean> => {
-      const body: Record<string, string | boolean> = {
-        surname: field('surname').value,
-        firstName: field('firstName').value,
       };
-      const patronymic = field('patronymic').value;
-      if (patronymic !== '') body.patronymic = patronymic;
-      body.email = field('email').value;
-      body.contactPhone = field('contactPhone').value;
-      body.specialtyId = specialtyId.value;
-      body.workplace = field('workplace').value;
-      body.city = field('city').value;
-      body.region = field('region').value;
-      body.personalDataConsent = true;
-      if (captchaToken !== '') body.captchaToken = captchaToken;
-      return body;
-    };
 
-    const refusal = async (res: Response): Promise<{ code?: string; opensAt?: string }> => {
-      try {
-        return (await res.json()) as { code?: string; opensAt?: string };
-      } catch {
-        return {};
-      }
-    };
+      // The live region is never hidden: some screen-reader and browser pairs
+      // skip a region that is revealed and filled in the same tick. It stays in
+      // the tree, empty (and so collapsed by `:empty`); only its text changes.
+      const setAlert = (message: string | null): void => {
+        alertBox.textContent = message ?? '';
+      };
 
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (form.getAttribute('aria-busy') === 'true') return;
-      setAlert(null);
-      const invalid = validate();
-      if (invalid) {
-        invalid.focus();
-        return;
-      }
-
-      const body = payload();
-      setBusy(true);
-      let res: Response;
-      try {
-        res = await fetch(SIGN_UP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(body),
+      // ── ФИО: the platform's normalisation, shown on blur ──────────────────
+      for (const field of form.querySelectorAll<HTMLInputElement>('[data-name-field]')) {
+        field.addEventListener('blur', () => {
+          field.value = normaliseNameAnswer(field.value);
         });
-      } catch {
-        setBusy(false);
-        resetCaptcha();
-        setAlert(MESSAGES.generic);
-        return;
-      }
-      setBusy(false);
-
-      if (res.ok) {
-        form.hidden = true;
-        root.querySelector<HTMLElement>('[data-signup-email]')!.textContent = String(body.email);
-        success.hidden = false;
-        root.querySelector<HTMLElement>('[data-signup-success-text]')!.focus();
-        return;
       }
 
-      resetCaptcha();
-      if (res.status === 422) {
-        const { code, opensAt } = await refusal(res);
-        if (code === 'not-yet-open') {
-          if (opensAt) {
-            try {
-              root.querySelector<HTMLElement>('[data-signup-opens-at]')!.textContent =
-                formatMoscowInstant(opensAt);
-            } catch {
-              // An unparseable instant from the API keeps the configured one.
+      // ── Specialties: live list, «Другое» first, no free text ───────────────
+      const matchSpecialty = (typed: string, allowFragment = true): Specialty | null =>
+        specialties === null ? null : findSpecialty(specialties, typed, { allowFragment });
+
+      const syncSpecialty = (): void => {
+        const match = matchSpecialty(specialtyInput.value);
+        specialtyId.value = match?.id ?? '';
+        if (match) {
+          specialtyInput.value = match.name;
+          setError(specialtyInput, null);
+        }
+      };
+      specialtyInput.addEventListener('change', syncSpecialty);
+      specialtyInput.addEventListener('blur', syncSpecialty);
+      specialtyInput.addEventListener('input', () => {
+        // Exact names only while typing: a fragment resolves on change/blur,
+        // where the input is rewritten to the full name the participant sees.
+        specialtyId.value = matchSpecialty(specialtyInput.value, false)?.id ?? '';
+      });
+
+      fetch(SPECIALTIES_URL, { headers: { Accept: 'application/json' } })
+        .then((res) => {
+          if (!res.ok) throw new Error(`specialties: HTTP ${res.status}`);
+          return res.json() as Promise<{ entries: Specialty[] }>;
+        })
+        .then(({ entries }) => {
+          const ordered = [...entries.filter((s) => s.isOther), ...entries.filter((s) => !s.isOther)];
+          specialties = ordered;
+          datalist.replaceChildren(
+            ...ordered.map((s) => {
+              const option = document.createElement('option');
+              option.value = s.name;
+              return option;
+            }),
+          );
+          syncSpecialty();
+        })
+        .catch(() => {
+          specialties = [];
+          setError(specialtyInput, MESSAGES.specialtiesUnavailable);
+        });
+
+      // ── Captcha (only when the build carried a sitekey) ────────────────────
+      const captchaWindow = window as CaptchaWindow;
+      const renderCaptcha = (): void => {
+        if (!captchaBox || !captchaWindow.smartCaptcha || captchaWidget !== undefined) return;
+        captchaWidget = captchaWindow.smartCaptcha.render(captchaBox, {
+          sitekey,
+          hl: 'ru',
+          callback: (token) => {
+            captchaToken = token;
+            const box = document.getElementById('signup-captcha-error');
+            if (box) {
+              box.hidden = true;
+              box.textContent = '';
             }
-          }
-          showState('not-yet-open', true);
-          return;
-        }
-        if (code === 'closed') {
-          showState('closed', true);
-          return;
-        }
-        setAlert(MESSAGES.invalid);
-        return;
+          },
+        });
+      };
+      const resetCaptcha = (): void => {
+        captchaToken = '';
+        if (captchaWidget !== undefined) captchaWindow.smartCaptcha?.reset(captchaWidget);
+      };
+      if (sitekey && captchaBox) {
+        // The widget script may finish before or after this module runs.
+        if (captchaWindow.smartCaptcha) renderCaptcha();
+        else captchaWindow.obSmartCaptchaReady = renderCaptcha;
       }
-      setAlert(res.status === 403 && sitekey ? MESSAGES.captchaRefused : MESSAGES.generic);
-    });
+
+      // ── Validation ────────────────────────────────────────────────────────
+      const field = (name: string): HTMLInputElement =>
+        form.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+
+      const validate = (): HTMLElement | null => {
+        let first: HTMLElement | null = null;
+        const fail = (input: HTMLInputElement, message: string): void => {
+          setError(input, message);
+          first ??= input;
+        };
+
+        for (const name of ['surname', 'firstName', 'patronymic', 'email', 'contactPhone']) {
+          const input = field(name);
+          input.value = input.dataset.nameField !== undefined ? normaliseNameAnswer(input.value) : input.value.trim();
+          setError(input, null);
+          if (input.required && input.value === '') fail(input, MESSAGES.required);
+          else if (name === 'email' && !isPlatformEmail(input.value)) fail(input, MESSAGES.email);
+          else if (name === 'contactPhone' && !isValidContactPhone(input.value)) fail(input, MESSAGES.phone);
+        }
+
+        syncSpecialty();
+        setError(specialtyInput, null);
+        if (specialties !== null && specialties.length === 0) fail(specialtyInput, MESSAGES.specialtiesUnavailable);
+        else if (specialtyInput.value.trim() === '') fail(specialtyInput, MESSAGES.required);
+        else if (specialtyId.value === '') fail(specialtyInput, MESSAGES.specialty);
+
+        for (const name of ['workplace', 'city', 'region']) {
+          const input = field(name);
+          input.value = input.value.trim();
+          setError(input, null);
+          if (input.value === '') fail(input, MESSAGES.required);
+        }
+
+        const consent = field('personalDataConsent');
+        setError(consent, null);
+        if (!consent.checked) fail(consent, MESSAGES.consent);
+
+        if (sitekey && captchaBox && captchaToken === '') {
+          const box = document.getElementById('signup-captcha-error');
+          if (box) {
+            box.textContent = MESSAGES.captcha;
+            box.hidden = false;
+          }
+          first ??= captchaBox;
+        }
+        return first;
+      };
+
+      // ── Submission ────────────────────────────────────────────────────────
+      const setBusy = (busy: boolean): void => {
+        submit.disabled = busy;
+        form.setAttribute('aria-busy', String(busy));
+        submit.textContent = busy ? 'Отправляем заявку…' : 'Зарегистрироваться';
+      };
+
+      const payload = (): Record<string, string | boolean> => {
+        const body: Record<string, string | boolean> = {
+          surname: field('surname').value,
+          firstName: field('firstName').value,
+        };
+        const patronymic = field('patronymic').value;
+        if (patronymic !== '') body.patronymic = patronymic;
+        body.email = field('email').value;
+        body.contactPhone = field('contactPhone').value;
+        body.specialtyId = specialtyId.value;
+        body.workplace = field('workplace').value;
+        body.city = field('city').value;
+        body.region = field('region').value;
+        body.personalDataConsent = true;
+        if (captchaToken !== '') body.captchaToken = captchaToken;
+        return body;
+      };
+
+      const refusal = async (res: Response): Promise<{ code?: string; opensAt?: string }> => {
+        try {
+          return (await res.json()) as { code?: string; opensAt?: string };
+        } catch {
+          return {};
+        }
+      };
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') return;
+        setAlert(null);
+        const invalid = validate();
+        if (invalid) {
+          invalid.focus();
+          return;
+        }
+
+        const body = payload();
+        setBusy(true);
+        let res: Response;
+        try {
+          res = await fetch(SIGN_UP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(body),
+          });
+        } catch {
+          setBusy(false);
+          resetCaptcha();
+          setAlert(MESSAGES.generic);
+          return;
+        }
+        setBusy(false);
+
+        if (res.ok) {
+          form.hidden = true;
+          root.querySelector<HTMLElement>('[data-signup-email]')!.textContent = String(body.email);
+          success.hidden = false;
+          root.querySelector<HTMLElement>('[data-signup-success-text]')!.focus();
+          return;
+        }
+
+        resetCaptcha();
+        if (res.status === 400) {
+          setAlert(MESSAGES.invalid);
+          return;
+        }
+        if (res.status === 429) {
+          setAlert(MESSAGES.rateLimited);
+          return;
+        }
+        if (res.status === 422) {
+          const { code, opensAt } = await refusal(res);
+          if (code === 'not-yet-open') {
+            if (opensAt) {
+              try {
+                root.querySelector<HTMLElement>('[data-signup-opens-at]')!.textContent =
+                  formatMoscowInstant(opensAt);
+              } catch {
+                // An unparseable instant from the API keeps the configured one.
+              }
+            }
+            showState('not-yet-open', true);
+            return;
+          }
+          if (code === 'closed') {
+            showState('closed', true);
+            return;
+          }
+        }
+        // Everything else — 401 from a gated upstream, 422 sign-up-unavailable
+        // (a platform-side configuration problem), 5xx — is not the participant's
+        // to fix, so it never asks them to check their data.
+        setAlert(res.status === 403 && sitekey ? MESSAGES.captchaRefused : MESSAGES.generic);
+      });
+    };
+
+    const hostname = window.location.hostname;
+    const judge = (now: Date): void => {
+      const state = registrationState(REGISTRATION_WINDOW, now, hostname);
+      showState(state);
+      if (state === 'open') openForm();
+    };
+    judge(new Date());
+    // The device clock only gives the first paint; the server's clock decides,
+    // as the platform's does. Force-open hosts are open whatever the time.
+    if (!(FORCE_OPEN_HOSTS as readonly string[]).includes(hostname)) {
+      fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })
+        .then((res) => judge(serverNow(res.headers.get('Date'), new Date())))
+        .catch(() => {
+          // Offline or blocked: the device clock's answer stands.
+        });
+    }
   }
 </script>

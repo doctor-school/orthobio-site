@@ -143,10 +143,21 @@ test.describe('without JavaScript', () => {
 
       for (const link of await page.locator(EXTERNAL_LINKS).all()) {
         const href = await link.getAttribute('href');
-        await expect(
-          link,
-          `${path} → ${href} opens a new tab without saying so`,
-        ).toHaveAccessibleName(NEW_TAB_ANNOUNCED);
+        // The sign-up form's state cards are revealed only by its script, so
+        // with scripting off they stay `hidden` and a hidden link has no
+        // accessible name at all. Their markup must still carry the
+        // announcement (Issue #88: «Узнать первым» on the «откроется» card);
+        // the name itself is asserted where the card is shown, signup.spec.ts.
+        if (await link.evaluate((el) => el.closest('[hidden]') !== null)) {
+          await expect(link, `${path} → ${href} opens a new tab without saying so`).toContainText(
+            NEW_TAB_ANNOUNCED,
+          );
+        } else {
+          await expect(
+            link,
+            `${path} → ${href} opens a new tab without saying so`,
+          ).toHaveAccessibleName(NEW_TAB_ANNOUNCED);
+        }
         checked += 1;
       }
     }
@@ -162,8 +173,9 @@ test.describe('without JavaScript', () => {
     // number from the failure message, and check it moved by exactly as many
     // links as the content edit added.
     // 56 since Issue #82: the two Yandex Maps links of the /registration venue
-    // card and the OpenStreetMap credit on its map.
-    expect(checked, 'the sweep must reach every external link on the site').toBe(56);
+    // card and the OpenStreetMap credit on its map. 57 since Issue #88: the
+    // «Узнать первым» Telegram CTA on the /registration «откроется» card.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(57);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

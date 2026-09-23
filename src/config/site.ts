@@ -55,20 +55,17 @@ export const UPCOMING_CONGRESS_VENUE = {
   /** Venue name alone, for sentences that already name the city. */
   name: 'ГК «Милан»',
   /**
-   * The venue card on /registration (Issue #82, approved design): the hotel
-   * name, the address on its own line and how to get there. The name and the
-   * walking time come from the owner-approved #82 design mock, not from
-   * docs/recon; not independently verified.
-   * TODO(Антон): «Отель «Милан»» here vs «ГК «Милан»» elsewhere on the site —
-   * одно и то же место; оставить оба написания или привести к одному?
-   * TODO(Антон): сверить «15 минут пешком» от м. «Домодедовская» до 1 октября. The address keeps
-   * the design's short form («28А», no «д.»). Typography by hand, as above:
-   * no-break spaces after «ул.»/«м.», before the dash and inside «15 минут».
+   * The venue card on /registration (Issue #82, approved design): the venue
+   * name, the address on its own line and how to get there. Name and walking
+   * time confirmed by the owner in Issue #88 («ГК «Милан»», 11 minutes — the
+   * design mock's «Отель» and 15 were wrong). The address keeps the design's
+   * short form («28А», no «д.»). Typography by hand, as above: no-break spaces
+   * after «ул.»/«м.», before the dash and inside «11 минут».
    */
   card: {
-    name: 'Отель «Милан»',
+    name: 'ГК «Милан»',
     address: 'Москва, ул. Шипиловская, 28А',
-    note: 'м. «Домодедовская» — 15 минут пешком',
+    note: 'м. «Домодедовская» — 11 минут пешком',
   },
   /** The organisation's page on Yandex Maps — the target of the venue card. */
   mapUrl: 'https://yandex.ru/maps/org/milan/1088776161/',
@@ -188,6 +185,14 @@ export const SMARTCAPTCHA_SITEKEY_PREVIEW: string = String(
  */
 export const REGISTRATION_URL = '/registration';
 export const REGISTRATION_CTA_LABEL = 'Регистрация на конгресс';
+
+/**
+ * «Узнать первым» on the /registration «откроется …» card (Issue #88, owner
+ * decision): the Doctor.School Telegram channel. The ONLY «узнать первым»
+ * link on the site — the e2e suite holds every such link to this URL.
+ */
+export const NOTIFY_CHANNEL_URL = 'https://t.me/DoctorSchool';
+export const NOTIFY_CTA_LABEL = 'Узнать первым';
 
 /**
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).

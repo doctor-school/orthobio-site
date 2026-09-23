@@ -2405,44 +2405,43 @@ details[open] > .ob-faq__q::after {
   isolation: isolate;
 }
 
-/* Decorative only, in the margins beside the container — which exist from xl
-   (the design says 1300px; xl is the ladder's step). Inlined through the import
-   so `currentColor` resolves to a token, as in the home hero. */
+/* Decorative only (Issue #88, after the owner's review of #87): two tonal
+   metaballs emerging from BEHIND the green panel — one past its top-right
+   corner, one past its bottom-left — echoing the card's own corner pattern at
+   page scale. Anchored to the form column rather than to the viewport, so the
+   pair keeps the same balance at every width from lg; behind the opaque panel
+   (z-index -1, the panel is in flow) they can never cover a field, and they
+   are tints, not the hero's full green, so they never compete with it. Hidden
+   below lg like `.ob-hero__pattern`: the stacked page has no air for them.
+   Inlined through the import so `currentColor` resolves to a token. */
 .ob-reg__edge {
   display: none;
   position: absolute;
   z-index: -1;
   height: auto;
-  color: var(--ob-green);
   pointer-events: none;
   user-select: none;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .ob-reg__edge {
     display: block;
   }
 
   .ob-reg__edge--a {
     width: var(--reg-edge-a-width);
-    right: calc(50% - var(--reg-edge-a-offset));
+    right: var(--reg-edge-a-right);
     top: var(--reg-edge-a-top);
+    rotate: -40deg;
+    color: color-mix(in oklab, var(--ob-green) 22%, var(--bg));
   }
 
   .ob-reg__edge--b {
-    z-index: -2;
     width: var(--reg-edge-b-width);
-    right: calc(50% - var(--reg-edge-b-offset));
-    top: var(--reg-edge-b-top);
-    transform: rotate(180deg);
-    opacity: 0.5;
-  }
-
-  .ob-reg__edge--c {
-    width: var(--reg-edge-c-width);
-    left: calc(50% - var(--reg-edge-c-offset));
-    bottom: var(--reg-edge-c-bottom);
-    opacity: 0.5;
+    left: var(--reg-edge-b-left);
+    bottom: var(--reg-edge-b-bottom);
+    rotate: 96deg;
+    color: color-mix(in oklab, var(--ob-sky) 16%, var(--bg));
   }
 }
 
@@ -2476,7 +2475,12 @@ details[open] > .ob-faq__q::after {
   font-size: var(--fs-small);
 }
 
+/* `align-self: start` keeps the column exactly as tall as the panel, so the
+   edge metaballs anchored to it follow the panel's corners — the short status
+   cards included — instead of the row the venue card stretches. */
 .ob-reg__form {
+  position: relative;
+  align-self: start;
   grid-area: form;
   min-width: 0;
 }
@@ -2723,11 +2727,14 @@ details[open] > .ob-faq__q::after {
 }
 
 /* White card; `isolation` keeps the corner metaballs (z-index -1) above the
-   card's own background and below its content. */
+   card's own background and below its content. The card does NOT clip: a list
+   field's popup may hang past its foot (Issue #88), so the metaballs are
+   clipped by their own layer instead, and `z-index` lifts the card over the
+   page blocks that follow it (the venue card below lg). */
 .ob-signup__card {
   position: relative;
+  z-index: 1;
   isolation: isolate;
-  overflow: hidden;
   padding: var(--sp-5) var(--ob-signup-card-pad-inline);
   border-radius: var(--r-md);
   background: var(--bg);
@@ -2738,6 +2745,15 @@ details[open] > .ob-faq__q::after {
   .ob-signup__card {
     padding: var(--sp-6) var(--ob-signup-card-pad-inline-wide) var(--ob-signup-card-pad-inline-wide);
   }
+}
+
+.ob-signup__pats {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
 }
 
 .ob-signup__pat {
@@ -2924,8 +2940,9 @@ details[open] > .ob-faq__q::after {
   border-color: var(--error);
 }
 
-/* Datalist fields: a chevron says «there is a list». Chrome's own datalist
-   indicator is hidden so the field does not show two. */
+/* List fields (Issue #88, design `Combo`): an editable combobox with its own
+   listbox under the field. The chevron says «there is a list» and toggles it
+   on a press; it turns over while the list is open. */
 .ob-signup__combo {
   position: relative;
   min-width: 0;
@@ -2935,12 +2952,6 @@ details[open] > .ob-faq__q::after {
   padding-right: var(--ob-input-pad-combo);
 }
 
-.ob-signup__combo .ob-signup__input::-webkit-calendar-picker-indicator {
-  display: none;
-}
-
-/* The chevron opens the list on a click (the script calls showPicker()), as
-   the hidden native arrow did — so it is a mouse target with states. */
 .ob-signup__chev {
   position: absolute;
   right: var(--ob-input-chevron-inset);
@@ -2951,7 +2962,9 @@ details[open] > .ob-faq__q::after {
   height: var(--ob-input-chevron);
   color: var(--ob-green-text);
   cursor: pointer;
-  transition: color var(--t-state);
+  transition:
+    color var(--t-state),
+    rotate var(--t-state);
 }
 
 .ob-signup__chev svg {
@@ -2965,6 +2978,94 @@ details[open] > .ob-faq__q::after {
 
 .ob-signup__chev:active {
   color: var(--ob-sky-text);
+}
+
+.ob-signup__combo.is-open .ob-signup__chev {
+  rotate: 180deg;
+}
+
+/* Above every later field of the card (their chevrons and the consent box are
+   positioned too); the card itself sits above the page's later blocks. */
+.ob-signup__list {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: calc(100% + var(--sp-1));
+  max-height: var(--ob-combo-list-max);
+  margin: 0;
+  padding: var(--sp-1);
+  overflow: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  background: var(--bg);
+  border: var(--border-thin) solid var(--ob-combo-list-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lift);
+}
+
+.ob-signup__opt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: var(--ob-combo-opt-height);
+  padding: var(--ob-combo-opt-pad);
+  border-radius: var(--r-sm);
+  font-size: var(--ob-combo-opt-fs);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ob-signup__opt b {
+  font-weight: var(--fw-bold);
+  color: var(--ob-green-text);
+}
+
+.ob-signup__opt:hover {
+  background: var(--surface-faint);
+}
+
+/* The keyboard's option (aria-activedescendant) and the pointer's share one
+   look, so the two never disagree about which option Enter would pick. */
+.ob-signup__opt.is-active {
+  background: var(--ob-green-tint);
+}
+
+.ob-signup__opt:active {
+  background: color-mix(in oklab, var(--ob-green-tint) 65%, var(--ob-green) 35%);
+}
+
+/* The committed value; `aria-selected` follows the active row (APG). */
+.ob-signup__opt.is-selected {
+  font-weight: var(--fw-semibold);
+}
+
+.ob-signup__opt-sub {
+  color: var(--text-muted);
+  font-weight: var(--fw-regular);
+}
+
+/* «Другое» is pinned at the foot of the list, under a hairline. */
+.ob-signup__opt--pinned {
+  position: relative;
+  margin-top: var(--sp-1);
+}
+
+.ob-signup__opt--pinned::before {
+  content: '';
+  position: absolute;
+  left: var(--sp-2);
+  right: var(--sp-2);
+  top: calc(var(--sp-1) / -2 - var(--border-thin));
+  border-top: var(--border-thin) solid var(--hairline);
+}
+
+.ob-signup__opt-empty {
+  padding: var(--ob-combo-opt-pad);
+  font-size: var(--fs-small);
+  color: var(--text-muted);
 }
 
 /* Quiet hint line with a green dot (design `.ob-sf__hint`). */

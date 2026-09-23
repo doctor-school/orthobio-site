@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ROUTES, YEAR_ROUTES } from './_routes';
+import { PROFILE_ROUTES, ROUTES, YEAR_ROUTES } from './_routes';
 
 /**
  * Content-integrity guards for the ТЗ §4 principles: honest placeholders, no
@@ -43,7 +43,8 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
 test('the home page leads to registration without a subscription CTA', async ({ page }) => {
   await page.goto('/');
   // Issue #78: the primary CTA is the on-site form; the opening date stays
-  // beside it, and the retired «узнать первым» channel is gone for good.
+  // beside it. The only «узнать первым» link lives on the /registration
+  // «откроется» card (Issue #88) — see the next test — never on the home page.
   await expect(page.getByRole('link', { name: 'Регистрация на конгресс' })).toHaveAttribute(
     'href',
     '/registration',
@@ -51,6 +52,23 @@ test('the home page leads to registration without a subscription CTA', async ({ 
   await expect(page.getByText('Регистрация откроется 1 октября 2026 года')).toBeVisible();
   await expect(page.getByRole('link', { name: /узнать первым/i })).toHaveCount(0);
   await expect(page.getByText(/канал.*будет объявлен/i)).toHaveCount(0);
+});
+
+// Issue #88: the owner approved exactly one «узнать первым» link — the
+// Doctor.School Telegram channel on the /registration «откроется» card. Any
+// other target, or the link turning up on another page, fails here.
+const NOTIFY_CHANNEL_URL = 'https://t.me/DoctorSchool';
+test('«узнать первым» appears only on /registration, and only to the approved channel', async ({ page }) => {
+  // The partner profiles too: one template, but on the site all the same.
+  for (const path of [...ROUTES, ...PROFILE_ROUTES]) {
+    await page.goto(path);
+    // Hidden state cards included: the markup, not the current date, decides.
+    const hrefs = await page
+      .locator('a')
+      .filter({ hasText: /узнать первым/i })
+      .evaluateAll((links) => links.map((a) => a.getAttribute('href')));
+    expect(hrefs, path).toEqual(path === '/registration/' ? [NOTIFY_CHANNEL_URL] : []);
+  }
 });
 
 test('only the owner-approved public contacts are published', async ({ page }) => {

@@ -10,11 +10,13 @@
  * change the hash and silently invalidate every recorded consent.
  *
  * Structure is INFERRED for markup only: a numbered top-level line («1. Общие
- * положения») becomes a section heading, everything else a paragraph.
+ * положения») becomes a section heading, everything else a paragraph. Lines
+ * are trimmed (HTML would collapse that whitespace anyway) — their words never
+ * change.
  */
 
 export interface PolicySection {
-  /** `null` for the preamble before the first numbered heading. */
+  /** `null` for a preamble before the first numbered heading. */
   heading: string | null;
   paragraphs: string[];
 }
@@ -24,23 +26,34 @@ export interface PolicyDocument {
   sections: PolicySection[];
 }
 
-/** «1. Общие положения» — a single number, a dot, then a capital letter. */
+/**
+ * «1. Общие положения» — one number, a dot, whitespace, then a capital letter.
+ * A clause such as «1.1. Оператор…» has a digit after the first dot and so is
+ * a paragraph, not a heading.
+ */
 const SECTION_HEADING = /^\d+\.\s+\p{Lu}/u;
 
 export function parsePolicy(text: string): PolicyDocument {
-  const lines = text.split('\n').map((l) => l.trim());
-  const [title = '', ...rest] = lines.filter((l, i) => i === 0 || true);
+  // Splitting on LF and trimming also drops a CR, so CRLF input parses the same.
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  const [title = '', ...body] = lines;
+
   const sections: PolicySection[] = [];
-  let current: PolicySection = { heading: null, paragraphs: [] };
-  for (const line of rest) {
-    if (line === '') continue;
+  let current: PolicySection | null = null;
+  for (const line of body) {
     if (SECTION_HEADING.test(line)) {
-      if (current.heading !== null || current.paragraphs.length > 0) sections.push(current);
       current = { heading: line, paragraphs: [] };
-    } else {
-      current.paragraphs.push(line);
+      sections.push(current);
+      continue;
     }
+    if (current === null) {
+      current = { heading: null, paragraphs: [] };
+      sections.push(current);
+    }
+    current.paragraphs.push(line);
   }
-  if (current.heading !== null || current.paragraphs.length > 0) sections.push(current);
   return { title, sections };
 }

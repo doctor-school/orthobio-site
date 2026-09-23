@@ -1,0 +1,46 @@
+---
+/**
+ * StrokeIcon — the 20×20 line icons of the registration design (calendar,
+ * lock, tick, chevron). One place for the geometry and the stroke weight;
+ * decorative by default, because every use sits next to text that says the
+ * same thing.
+ */
+type Name = 'calendar' | 'lock' | 'check' | 'chevron';
+
+interface Props {
+  name: Name;
+  class?: string;
+}
+
+const { name, class: className } = Astro.props;
+---
+
+<svg
+  class={className}
+  viewBox="0 0 20 20"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.75"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  {
+    name === 'calendar' && (
+      <>
+        <rect x="3" y="4.5" width="14" height="12.5" rx="2" />
+        <path d="M3 8.5h14M7 2.5v3.5M13 2.5v3.5" />
+      </>
+    )
+  }
+  {
+    name === 'lock' && (
+      <>
+        <rect x="4" y="9" width="12" height="8.5" rx="2" />
+        <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+      </>
+    )
+  }
+  {name === 'check' && <path d="M4.5 10.5l3.5 3.5 7.5-8" />}
+  {name === 'chevron' && <path d="M5.5 8l4.5 4.5L14.5 8" />}
+</svg>

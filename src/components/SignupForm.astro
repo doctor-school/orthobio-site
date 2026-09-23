@@ -24,7 +24,15 @@
  * data-processing shield stays visible (`hideShield` is left unset): Yandex
  * requires users to be told SmartCaptcha processes their data, and the shield
  * is that notice.
+ *
+ * Look (Issue #82, design SignupForm): a white card on a green panel with
+ * tonal metaballs in its corners; the status cards are the same card with a
+ * badge. Glyphs that script-written text would wipe (field errors, the alert)
+ * are CSS masks, and the consent tick is drawn on the native checkbox, so the
+ * selectors the script and the e2e suite rely on stay as they were.
  */
+import SignupPattern from '@/components/SignupPattern.astro';
+import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
   CONTACT_EMAIL,
   REGISTRATION_WINDOW,
@@ -32,10 +40,11 @@ import {
   SMARTCAPTCHA_SITEKEY_PREVIEW,
   UPCOMING_CONGRESS_DATES,
 } from '@/config/site';
-import { formatMoscowInstant } from '@/lib/registration';
+import { FORCE_OPEN_HOSTS, formatMoscowInstant } from '@/lib/registration';
 
 const opensLabel = formatMoscowInstant(REGISTRATION_WINDOW.opensAt);
 const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIEW !== '';
+const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
 ---
 
 <div
@@ -45,17 +54,34 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
   data-sitekey-preview={SMARTCAPTCHA_SITEKEY_PREVIEW}
 >
   <noscript>
-    <div class="ob-signup__card ob-signup__state">
-      <h2 class="ob-signup__title">Регистрация на конгресс</h2>
-      <p class="ob-signup__text">Для регистрации включите JavaScript в браузере.</p>
+    <div class="ob-signup__card ob-signup__card--status ob-signup__status">
+      <SignupPattern />
+      <h2 class="ob-signup__stitle">Регистрация на конгресс</h2>
+      <p class="ob-signup__stext">Для регистрации включите JavaScript в браузере.</p>
     </div>
   </noscript>
 
   <div class="ob-signup__card" data-signup-state="open" hidden>
-    <h2 class="ob-signup__title" id="signup-title">Регистрация на конгресс</h2>
-    <p class="ob-signup__dates">{UPCOMING_CONGRESS_DATES.display} года, Москва</p>
+    <SignupPattern />
+    <div class="ob-signup__head" data-signup-head>
+      <h2 class="ob-signup__title" id="signup-title">Регистрация на конгресс</h2>
+      <p class="ob-signup__sub">{UPCOMING_CONGRESS_DATES.display} года, Москва</p>
+    </div>
 
-    <form class="ob-signup__form" data-signup-form novalidate aria-labelledby="signup-title">
+    <!-- `method="post"` and the disabled button are a pair of belts for the
+         moments before the module has attached its submit handler (the card
+         is revealed before first paint, the module runs later — or never, if
+         it fails to load). A disabled default button makes implicit
+         submission (Enter) a no-op; POST keeps a native submit, should one
+         ever happen, out of URLs, history and access logs. openForm() enables
+         the button once the handler is in place. -->
+    <form
+      class="ob-signup__form"
+      method="post"
+      data-signup-form
+      novalidate
+      aria-labelledby="signup-title"
+    >
       <div class="ob-signup__row ob-signup__row--3">
         <div class="ob-signup__field">
           <label class="ob-signup__label" for="signup-surname">Фамилия</label>
@@ -159,32 +185,6 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
 
       <div class="ob-signup__row">
         <div class="ob-signup__field">
-          <label class="ob-signup__label" for="signup-specialty">Специальность</label>
-          <input
-            class="ob-signup__input"
-            id="signup-specialty"
-            type="text"
-            list="signup-specialties"
-            autocomplete="off"
-            placeholder="Начните вводить название"
-            maxlength="200"
-            required
-            aria-required="true"
-            aria-describedby="signup-specialty-hint signup-specialty-error"
-          />
-          <datalist id="signup-specialties"></datalist>
-          <input type="hidden" name="specialtyId" data-specialty-id />
-          <div class="ob-signup__msgs">
-            <p class="ob-signup__hint" id="signup-specialty-hint">
-              Если вы не медицинский работник, выберите «Другое».
-            </p>
-            <p class="ob-signup__error" id="signup-specialty-error" hidden></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="ob-signup__row">
-        <div class="ob-signup__field">
           <label class="ob-signup__label" for="signup-workplace">Место работы</label>
           <input
             class="ob-signup__input"
@@ -204,23 +204,59 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         </div>
       </div>
 
-      <div class="ob-signup__row ob-signup__row--2">
+      <div class="ob-signup__row">
+        <div class="ob-signup__field">
+          <label class="ob-signup__label" for="signup-specialty">Специальность</label>
+          <div class="ob-signup__combo">
+            <input
+              class="ob-signup__input"
+              id="signup-specialty"
+              type="text"
+              list="signup-specialties"
+              autocomplete="off"
+              placeholder="Начните вводить"
+              maxlength="200"
+              required
+              aria-required="true"
+              aria-describedby="signup-specialty-hint signup-specialty-error"
+            />
+            <span class="ob-signup__chev" data-combo-open aria-hidden="true">
+              <StrokeIcon name="chevron" />
+            </span>
+          </div>
+          <datalist id="signup-specialties"></datalist>
+          <input type="hidden" name="specialtyId" data-specialty-id />
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__hint" id="signup-specialty-hint">
+              Если вы не медицинский работник, выберите «Другое».
+            </p>
+            <p class="ob-signup__error" id="signup-specialty-error" hidden></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ob-signup__row ob-signup__row--2 ob-signup__row--place">
         <div class="ob-signup__field">
           <label class="ob-signup__label" for="signup-city">Населённый пункт</label>
-          <input
-            class="ob-signup__input"
-            id="signup-city"
-            name="city"
-            type="text"
-            list="signup-settlements"
-            autocomplete="off"
-            placeholder="Начните вводить название"
-            maxlength="200"
-            required
-            aria-required="true"
-            aria-describedby="signup-city-error"
-            data-settlement
-          />
+          <div class="ob-signup__combo">
+            <input
+              class="ob-signup__input"
+              id="signup-city"
+              name="city"
+              type="text"
+              list="signup-settlements"
+              autocomplete="off"
+              placeholder="Например, Химки"
+              maxlength="200"
+              required
+              aria-required="true"
+              aria-describedby="signup-city-error"
+              data-settlement
+            />
+            <span class="ob-signup__chev" data-combo-open aria-hidden="true">
+              <StrokeIcon name="chevron" />
+            </span>
+          </div>
           <datalist id="signup-settlements"></datalist>
           <div class="ob-signup__msgs">
             <p class="ob-signup__error" id="signup-city-error" hidden></p>
@@ -251,66 +287,147 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         <p class="ob-sr-only" role="status" data-region-status></p>
       </div>
 
-      <div class="ob-signup__field">
-        <div class="ob-signup__consent">
-          <input
-            class="ob-signup__check"
-            id="signup-consent"
-            name="personalDataConsent"
-            type="checkbox"
-            required
-            aria-required="true"
-            aria-describedby="signup-consent-error"
-          />
-          <label class="ob-signup__consent-label" for="signup-consent">
-            Я согласен(а) на обработку персональных данных в соответствии с <a href="/privacy"
-              >политикой конфиденциальности</a
-            >
-          </label>
-        </div>
-        <div class="ob-signup__msgs">
-          <p class="ob-signup__error" id="signup-consent-error" hidden></p>
+      <div class="ob-signup__row">
+        <div class="ob-signup__field">
+          <div class="ob-signup__consent">
+            <input
+              class="ob-signup__check"
+              id="signup-consent"
+              name="personalDataConsent"
+              type="checkbox"
+              required
+              aria-required="true"
+              aria-describedby="signup-consent-error"
+            />
+            <label class="ob-signup__consent-label" for="signup-consent">
+              Я согласен(а) на обработку персональных данных в соответствии с <a href="/privacy"
+                >политикой конфиденциальности</a
+              >
+            </label>
+          </div>
+          <div class="ob-signup__msgs">
+            <p class="ob-signup__error" id="signup-consent-error" hidden></p>
+          </div>
         </div>
       </div>
 
       <div class="ob-signup__actions">
         <p class="ob-signup__alert" data-signup-alert role="alert"></p>
-        <button class="ob-btn ob-btn--primary ob-btn--lg ob-btn--block" type="submit" data-signup-submit>
+        <button class="ob-btn ob-btn--accent ob-btn--lg ob-btn--block" type="submit" data-signup-submit disabled>
           Зарегистрироваться
         </button>
-        {hasCaptchaKey && <div class="ob-signup__captcha" data-captcha />}
+        {
+          hasCaptchaKey && (
+            <>
+              <div class="ob-signup__captcha" data-captcha />
+              <p class="ob-signup__captcha-note">Форма защищена Yandex SmartCaptcha</p>
+            </>
+          )
+        }
       </div>
     </form>
 
-    <div class="ob-signup__success" data-signup-success role="status" hidden>
-      <p class="ob-signup__text" tabindex="-1" data-signup-success-text>
-        Заявка принята — письмо с подтверждением придёт на <strong data-signup-email></strong>.
+    <!-- The heading takes the focus (design); its description carries the
+         address, so one announcement holds both. -->
+    <div class="ob-signup__success ob-signup__status" data-signup-success role="status" hidden>
+      <span class="ob-signup__badge ob-signup__badge--ok" aria-hidden="true">
+        <StrokeIcon name="check" />
+      </span>
+      <h2
+        class="ob-signup__stitle"
+        tabindex="-1"
+        aria-describedby="signup-success-text"
+        data-signup-success-text
+      >
+        Заявка принята
+      </h2>
+      <p class="ob-signup__stext" id="signup-success-text">
+        Письмо-подтверждение придёт на <b data-signup-email></b> в&nbsp;течение нескольких минут. Если
+        его нет&nbsp;— проверьте папку «Спам».
       </p>
     </div>
   </div>
 
-  <div class="ob-signup__card ob-signup__state" data-signup-state="not-yet-open" hidden>
-    <h2 class="ob-signup__title" tabindex="-1">
+  <!--
+    TODO(Антон): the design adds an «Узнать первым» accent button to this card,
+    linking to a Doctor.School channel. Issue #78 retired the «узнать первым»
+    channel and there is no approved URL, so the card keeps the page-bound line.
+  -->
+  <div
+    class="ob-signup__card ob-signup__card--status ob-signup__status"
+    data-signup-state="not-yet-open"
+    hidden
+  >
+    <SignupPattern />
+    <span class="ob-signup__badge" aria-hidden="true">
+      <StrokeIcon name="calendar" />
+    </span>
+    <h2 class="ob-signup__stitle" tabindex="-1">
       Регистрация откроется <span data-signup-opens-at>{opensLabel}</span>
     </h2>
-    <p class="ob-signup__text">
+    <p class="ob-signup__stext">
       Форма появится на этой странице в момент открытия регистрации. Конгресс пройдёт {
         UPCOMING_CONGRESS_DATES.display
       } года.
     </p>
   </div>
 
-  <div class="ob-signup__card ob-signup__state" data-signup-state="closed" hidden>
-    <h2 class="ob-signup__title" tabindex="-1">Регистрация на конгресс закрыта</h2>
+  <div class="ob-signup__card ob-signup__card--status ob-signup__status" data-signup-state="closed" hidden>
+    <SignupPattern />
+    <span class="ob-signup__badge ob-signup__badge--neutral" aria-hidden="true">
+      <StrokeIcon name="lock" />
+    </span>
+    <h2 class="ob-signup__stitle" tabindex="-1">Регистрация на конгресс закрыта</h2>
+    <p class="ob-signup__stext">
+      Приём заявок завершился {closesLabel}. Если вы зарегистрировались, письмо-подтверждение уже
+      в&nbsp;вашей почте.
+    </p>
     {
       CONTACT_EMAIL && (
-        <p class="ob-signup__text">
+        <p class="ob-signup__stext">
           По вопросам участия пишите на <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
         </p>
       )
     }
   </div>
 </div>
+
+<!--
+  First-paint state (PR #87 audit: CLS 0.13–0.28). Every card ships `hidden`
+  and the module below runs only after the first paint, so the form column
+  used to open from zero height and push the venue card down. This parser-
+  blocking snippet reveals the card the device clock predicts before anything
+  is painted; the module then judges again (server clock included) and
+  switches only if the answer differs. The rule is `registrationState` of
+  lib/registration.ts restated in plain JS — an inline script cannot import —
+  and its inputs come from the same constants, so only the three comparisons
+  are duplicated; an e2e test runs this snippet alone (module blocked) at the
+  boundary instants and holds it to `registrationState`'s answers.
+  Without scripting nothing runs and only the <noscript> card shows, as before.
+-->
+<script
+  is:inline
+  define:vars={{
+    opensAt: REGISTRATION_WINDOW.opensAt,
+    closesAt: REGISTRATION_WINDOW.closesAt,
+    forceOpenHosts: FORCE_OPEN_HOSTS,
+  }}
+>
+  var signupRoot = document.querySelector('[data-signup]');
+  if (signupRoot) {
+    var now = Date.now();
+    var state =
+      forceOpenHosts.indexOf(location.hostname) !== -1
+        ? 'open'
+        : now < Date.parse(opensAt)
+          ? 'not-yet-open'
+          : closesAt && now >= Date.parse(closesAt)
+            ? 'closed'
+            : 'open';
+    var card = signupRoot.querySelector('[data-signup-state="' + state + '"]');
+    if (card) card.hidden = false;
+  }
+</script>
 
 <script>
   import { REGISTRATION_WINDOW } from '@/config/site';
@@ -412,7 +529,7 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         card.hidden = card.dataset.signupState !== state;
       }
       if (focus && state !== 'open') {
-        root.querySelector<HTMLElement>(`[data-signup-state="${state}"] .ob-signup__title`)?.focus();
+        root.querySelector<HTMLElement>(`[data-signup-state="${state}"] .ob-signup__stitle`)?.focus();
       }
     };
 
@@ -727,6 +844,8 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
 
         if (res.ok) {
           form.hidden = true;
+          // The success block is the card's whole content, so the form's head goes too.
+          root.querySelector<HTMLElement>('[data-signup-head]')!.hidden = true;
           root.querySelector<HTMLElement>('[data-signup-email]')!.textContent = String(body.email);
           success.hidden = false;
           root.querySelector<HTMLElement>('[data-signup-success-text]')!.focus();
@@ -844,6 +963,26 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         }
         attempt();
       });
+      // The handler is in place: the button the markup ships disabled may work.
+      submit.disabled = false;
+
+      // ── Chevron: opens the list on a click, as Chrome's own datalist arrow
+      // (hidden in favour of the design's chevron) did. Mouse-only by nature;
+      // the keyboard has ArrowDown / Alt+ArrowDown on the field itself.
+      for (const chevron of form.querySelectorAll<HTMLElement>('[data-combo-open]')) {
+        chevron.addEventListener('mousedown', (event) => {
+          const input = chevron.parentElement?.querySelector('input');
+          if (!input) return;
+          event.preventDefault();
+          input.focus();
+          try {
+            input.showPicker();
+          } catch {
+            // No picker for a datalist in this engine: the focused field still
+            // offers its list as the participant types.
+          }
+        });
+      }
 
       // ── Captcha widget ────────────────────────────────────────────────────
       const renderCaptcha = (): void => {

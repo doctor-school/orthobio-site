@@ -161,7 +161,9 @@ test.describe('without JavaScript', () => {
     // `url`, a video or a PDF legitimately moves it. Run the suite, take the
     // number from the failure message, and check it moved by exactly as many
     // links as the content edit added.
-    expect(checked, 'the sweep must reach every external link on the site').toBe(53);
+    // 56 since Issue #82: the two Yandex Maps links of the /registration venue
+    // card and the OpenStreetMap credit on its map.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(56);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

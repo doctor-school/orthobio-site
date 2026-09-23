@@ -138,6 +138,17 @@
   --btn-primary-bg-hover: var(--ds-blue-pressed);
   --btn-primary-bg-active: oklch(0.24 0.09 258);
   --btn-primary-fg: #ffffff;
+  /* Accent action (design: Button variant="accent") — the sign-up submit and
+     the sign-up card's own focus ring / ticked checkbox. Built on the AA-safe
+     green text derivative, so white on it measures 5.3:1 and the ring clears
+     the 3:1 of SC 1.4.11 on white. Rest and hover are the design system's
+     own values (`--ob-green-text` → `--ink`). */
+  --btn-accent-bg: var(--ob-green-text);
+  --btn-accent-bg-hover: var(--ink);
+  /* Not a design-system token: the design defines rest and hover only. The
+     pressed state sits between them, so a press reads as a change from both. */
+  --btn-accent-bg-active: oklch(0.32 0.08 138);
+  --btn-accent-fg: #ffffff;
   /* Play-button scrim on the video facade (over the dark ink plate). */
   --scrim-play: oklch(0.35 0.05 250 / 0.85);
   --on-dark: #ffffff;
@@ -336,13 +347,73 @@
   --year-pattern-strip: 200px;
   --company-copy-basis: 240px;
   --company-fact-label: 200px;
-  /* Sign-up form (Issue #78). Field outline at ≥3:1 against both the white
-     field and the card surface behind it (WCAG 1.4.11) — the hairline ramp is
-     decorative and measures ~1.5:1, too faint to show where a field is. */
-  --field-border: oklch(0.62 0.014 250);
-  --field-pad: 10px 14px;
-  --field-check-size: 20px;
-  --reg-photo-width: 560px;
+  /* Sign-up form card (Issue #82 design: SignupForm). The design draws the
+     field and checkbox outlines at oklch(0.87 0.02 140) / oklch(0.72 0.05 140),
+     which measure ~1.4:1 and ~2.2:1 on white — below the 3:1 WCAG 1.4.11 asks
+     of the boundary that tells a reader where a field is. Same green hue,
+     darkened to the floor (≈3.6:1 on white and on --ob-green-tint). */
+  --ob-input-border: oklch(0.62 0.04 140);
+  --ob-input-height: 48px;
+  --ob-input-pad-inline: 14px;
+  --ob-input-pad-combo: 42px;
+  --ob-input-chevron: 20px;
+  --ob-input-chevron-inset: 14px;
+  --ob-check-size: 20px;
+  --ob-check-radius: 5px;
+  --ob-check-border: 1.5px;
+  --ob-check-icon: 14px;
+  --ob-signup-width: 560px;
+  --ob-signup-row-gap: 20px;
+  --ob-signup-label-lh: 20px;
+  --ob-signup-card-pad-inline: 20px;
+  --ob-signup-card-pad-inline-wide: 28px;
+  --ob-signup-head-pad-end: 64px;
+  --ob-signup-msg-icon: 16px;
+  --ob-signup-alert-icon: 20px;
+  --ob-signup-alert-pad: 12px 14px;
+  --ob-signup-hint-dot: 6px;
+  /* Tonal metaballs in the card corners (design `.ob-sf__pat--a|b|c`). */
+  --ob-signup-pat-a-width: 150px;
+  --ob-signup-pat-a-right: -22px;
+  --ob-signup-pat-a-top: -150px;
+  --ob-signup-pat-b-width: 118px;
+  --ob-signup-pat-b-right: 62px;
+  --ob-signup-pat-b-top: -156px;
+  --ob-signup-pat-c-width: 170px;
+  --ob-signup-pat-c-left: -70px;
+  --ob-signup-pat-c-bottom: -190px;
+  --ob-signup-pat-a-width-wide: 190px;
+  --ob-signup-pat-a-right-wide: -30px;
+  --ob-signup-pat-a-top-wide: -190px;
+  --ob-signup-pat-b-width-wide: 140px;
+  --ob-signup-pat-b-right-wide: 96px;
+  --ob-signup-pat-b-top-wide: -200px;
+  /* Glyphs drawn by CSS: the field error and the form alert have their text
+     set by script, so the icon cannot be a child node that `textContent` would
+     wipe, and the tick is painted on the native checkbox itself. The error
+     glyph is a MASK (stroke colour irrelevant — a mask reads alpha only; the
+     paint is the element's background); the tick is a background image, so
+     its stroke is the on-accent white. */
+  --icon-error: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='10' cy='10' r='7.5'/%3E%3Cpath d='M10 6.2v4.3M10 13.6v.1'/%3E%3C/svg%3E");
+  --icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='white' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 10.5l3.5 3.5 7.5-8'/%3E%3C/svg%3E");
+  /* Registration page (design: SignupSection, approved aside = venue card). */
+  --reg-form-col: clamp(460px, 48%, 560px);
+  --reg-aside-width: 560px;
+  --reg-dates-floor: 200px;
+  --reg-dates-icon: 20px;
+  --reg-map-pin: 18px;
+  --reg-map-pin-ring: 5px;
+  /* Edge metaballs of the page (design `.reg-main__pat--a|b|c`), anchored to
+     the viewport centre so they sit in the margins beside the container. */
+  --reg-edge-a-width: 300px;
+  --reg-edge-a-offset: 916px;
+  --reg-edge-a-top: -150px;
+  --reg-edge-b-width: 220px;
+  --reg-edge-b-offset: 836px;
+  --reg-edge-b-top: 440px;
+  --reg-edge-c-width: 220px;
+  --reg-edge-c-offset: 836px;
+  --reg-edge-c-bottom: -260px;
 
   /* --- Layout & focus ------------------------------------------------------ */
   /* `vh` keeps the shell compatible with older browsers; the feature query
@@ -364,6 +435,16 @@
   --focus-shadow:
     0 0 0 2px var(--focus-ring-halo),
     0 0 0 4px var(--focus-ring);
+  /* The same pair in two variants the global rule picks up when a component
+     swaps `--focus-shadow`: drawn inward (a map inside a card that clips its
+     corners), and in the sign-up card's accent green (design: the ring follows
+     the card's action colour; 5.3:1 on white, 1.4.11 needs 3:1). */
+  --focus-shadow-inset:
+    inset 0 0 0 2px var(--focus-ring-halo),
+    inset 0 0 0 4px var(--focus-ring);
+  --focus-shadow-accent:
+    0 0 0 2px var(--focus-ring-halo),
+    0 0 0 4px var(--btn-accent-bg);
 
   /* State transition — the only motion in the system (120–160ms ease-out). */
   --t-state: 0.13s ease-out;

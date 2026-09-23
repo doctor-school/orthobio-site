@@ -1,54 +1,118 @@
 ---
 /**
- * /registration — congress sign-up (Issue #78; platform 044).
+ * /registration — congress sign-up (Issue #78; platform 044), styled to the
+ * approved design (Issue #82: SignupSection, aside = venue card with a map,
+ * edge pattern on).
  *
- * Layout follows the owner's Stage-A reference as a PATTERN (styles are the
- * site's own tokens): two columns from lg — the section heading, what the
- * participant gets and the venue photo on the left, the form card on a
- * contrasting surface on the right — stacked below lg with the intro first.
+ * Two columns from lg — the heading, the lead, the registration window and the
+ * venue card on the left, the form card on its green panel on the right —
+ * stacked below lg as intro → form → venue.
  *
  * The copy of the left column is page content (`pages/registration.yaml`); the
- * form, its labels and its states are interface and live in `SignupForm`.
+ * dates and the venue are config facts (`REGISTRATION_WINDOW`,
+ * `UPCOMING_CONGRESS_VENUE`); the form, its labels and its states are
+ * interface and live in `SignupForm`.
+ *
+ * The map is a static raster composed once from OpenStreetMap tiles and
+ * self-hosted (docs/assets-manifest.yaml `venue-map`): the page never loads a
+ * map service, only links to one. ODbL requires the visible «© участники
+ * OpenStreetMap» credit, so it is real text in the map's corner — a sibling of
+ * the map link, not inside it, because links cannot nest. The raster is
+ * centred on the venue, so the pin overlay marks the spot; the image itself is
+ * decorative (`alt=""`) because the link carries the name. Every map link
+ * leaves the site, so it opens a new tab and says so, like every outbound link.
  */
 import { Image } from 'astro:assets';
 
-import hotelMilan from '@/assets/hotel-milan.webp';
+import Metaball from '@/assets/metaball-element.svg';
+import venueMap from '@/assets/venue-map.png';
+import NewTabHint from '@/components/NewTabHint.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import SignupForm from '@/components/SignupForm.astro';
-import { UPCOMING_CONGRESS_VENUE } from '@/config/site';
+import StrokeIcon from '@/components/StrokeIcon.astro';
+import { REGISTRATION_WINDOW, UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import { getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import { formatMoscowInstant } from '@/lib/registration';
 
 const { data: page } = await getPage('registration');
+const venue = UPCOMING_CONGRESS_VENUE;
+const dates = [
+  { term: 'Открытие регистрации', value: formatMoscowInstant(REGISTRATION_WINDOW.opensAt) },
+  { term: 'Закрытие регистрации', value: formatMoscowInstant(REGISTRATION_WINDOW.closesAt) },
+];
 ---
 
 <BaseLayout title={page.title} description={page.description}>
-  <div class="ob-container ob-section ob-reg">
-    <div class="ob-reg__intro">
-      <SectionHeading level="h1" overline={page.overline} title={page.title} />
-      {
-        page.lead.length > 0 && (
-          <div class="ob-prose">
-            {page.lead.map((p) => (
-              <p>{p}</p>
-            ))}
+  <div class="ob-reg">
+    <Metaball class="ob-reg__edge ob-reg__edge--a" aria-hidden="true" />
+    <Metaball class="ob-reg__edge ob-reg__edge--b" aria-hidden="true" />
+    <Metaball class="ob-reg__edge ob-reg__edge--c" aria-hidden="true" />
+
+    <div class="ob-container ob-section ob-reg__grid">
+      <div class="ob-reg__intro">
+        <SectionHeading level="h1" overline={page.overline} title={page.title} />
+        {
+          page.lead.length > 0 && (
+            <div class="ob-prose">
+              {page.lead.map((p) => (
+                <p>{p}</p>
+              ))}
+            </div>
+          )
+        }
+        <dl class="ob-reg__dates">
+          {
+            dates.map(({ term, value }) => (
+              <div class="ob-reg__date">
+                <dt>
+                  <StrokeIcon class="ob-reg__date-icon" name="calendar" />
+                  {term}
+                </dt>
+                <dd>{value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+
+      <div class="ob-reg__form">
+        <SignupForm />
+      </div>
+
+      <div class="ob-reg__aside">
+        <div class="ob-reg__venue">
+          <div class="ob-reg__map">
+            <a class="ob-reg__map-link" href={venue.mapUrl} target="_blank" rel="noopener">
+              <span class="ob-sr-only">{venue.card.name} на карте</span>
+              <NewTabHint />
+              <Image
+                class="ob-reg__map-img"
+                src={venueMap}
+                alt=""
+                widths={[360, 650, 1300]}
+                sizes="(min-width: 1024px) 560px, 100vw"
+                loading="lazy"
+              />
+              <span class="ob-reg__pin" aria-hidden="true"></span>
+            </a>
+            <p class="ob-reg__attr">
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">
+                © участники OpenStreetMap<NewTabHint />
+              </a>
+            </p>
           </div>
-        )
-      }
-      <figure class="ob-reg__venue">
-        <Image
-          class="ob-reg__photo"
-          src={hotelMilan}
-          alt={`Здание ${UPCOMING_CONGRESS_VENUE.name} — площадка конгресса`}
-          widths={[360, 560, 720]}
-          sizes="(min-width: 1024px) 560px, 100vw"
-          loading="lazy"
-        />
-        <figcaption class="ob-reg__caption">{UPCOMING_CONGRESS_VENUE.display}</figcaption>
-      </figure>
-    </div>
-    <div class="ob-reg__form">
-      <SignupForm />
+          <div class="ob-reg__vbody">
+            <p class="ob-reg__vover">Место проведения</p>
+            <p class="ob-reg__vname">{venue.card.name}</p>
+            <p class="ob-reg__vaddr">{venue.card.address}</p>
+            <p class="ob-reg__vnote">{venue.card.note}</p>
+            <a class="ob-reg__vlink ob-arrow" href={venue.mapUrl} target="_blank" rel="noopener">
+              Открыть в Яндекс Картах<NewTabHint />
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </BaseLayout>

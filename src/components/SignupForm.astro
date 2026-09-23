@@ -617,6 +617,42 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         setAlert(res.status === 403 && captchaOn ? MESSAGES.captchaRefused : MESSAGES.generic);
       };
 
+      // ── Captcha check around a submission ─────────────────────────────────
+      // Longest a submit may wait for the invisible check (a pop-up challenge
+      // included) before the button is given back with the captcha message.
+      const CAPTCHA_WAIT_MS = 60_000;
+      // `challenge-hidden` also fires right after a pass, possibly before the
+      // token callback; only a pop-up closed with no token after this grace
+      // counts as the participant cancelling.
+      const CHALLENGE_HIDDEN_GRACE_MS = 1_000;
+      let captchaWatchdog: number | undefined;
+      let captchaScriptFailed = false;
+
+      const stopWaitingForCaptcha = (): void => {
+        submitAwaitsCaptcha = false;
+        window.clearTimeout(captchaWatchdog);
+        captchaWatchdog = undefined;
+      };
+
+      // Background failures (no submit waiting) only clear the token; the
+      // participant hears about the captcha only when their submit is stuck.
+      const captchaFailed = (): void => {
+        const pending = submitAwaitsCaptcha;
+        stopWaitingForCaptcha();
+        resetCaptcha();
+        if (pending) {
+          setBusy(false);
+          setAlert(MESSAGES.captcha);
+        }
+      };
+
+      const executeCaptcha = (): void => {
+        // Invisible mode: execute() runs the check and, once it passes, calls
+        // render()'s `callback` with the token — after a pop-up challenge only
+        // if Yandex asks for one.
+        if (captchaWidget !== undefined) captchaWindow.smartCaptcha?.execute(captchaWidget);
+      };
+
       const attempt = (): void => {
         setAlert(null);
         const invalid = validate();
@@ -626,18 +662,13 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
           return;
         }
         if (captchaOn && captchaToken === '') {
-          const api = captchaWindow.smartCaptcha;
-          if (!api || captchaWidget === undefined) {
-            // The widget script never arrived (blocked or offline).
-            setAlert(MESSAGES.captcha);
-            return;
-          }
           submitAwaitsCaptcha = true;
           setBusy(true);
-          // Invisible mode: execute() runs the check and, once it passes, calls
-          // render()'s `callback` with the token — after a pop-up challenge only
-          // if Yandex asks for one.
-          api.execute(captchaWidget);
+          window.clearTimeout(captchaWatchdog);
+          captchaWatchdog = window.setTimeout(captchaFailed, CAPTCHA_WAIT_MS);
+          if (captchaScriptFailed) captchaFailed();
+          // A widget still loading runs the check from renderCaptcha.
+          else executeCaptcha();
           return;
         }
         void send();
@@ -650,12 +681,6 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
       });
 
       // ── Captcha widget ────────────────────────────────────────────────────
-      const captchaFailed = (): void => {
-        submitAwaitsCaptcha = false;
-        resetCaptcha();
-        setBusy(false);
-        setAlert(MESSAGES.captcha);
-      };
       const renderCaptcha = (): void => {
         const api = captchaWindow.smartCaptcha;
         if (!captchaBox || !api || captchaWidget !== undefined) return;
@@ -666,16 +691,19 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
           callback: (token) => {
             captchaToken = token;
             if (submitAwaitsCaptcha) {
-              submitAwaitsCaptcha = false;
+              stopWaitingForCaptcha();
               attempt();
             }
           },
         });
         captchaWidget = widget;
-        // A challenge pop-up closed without a pass gives the button back; a
-        // token that still arrives resumes the submission through the callback.
         api.subscribe(widget, 'challenge-hidden', () => {
-          if (captchaToken === '') setBusy(false);
+          window.setTimeout(() => {
+            if (!submitAwaitsCaptcha || captchaToken !== '') return;
+            // Cancelled: a token that still arrives is kept for the next submit.
+            stopWaitingForCaptcha();
+            setBusy(false);
+          }, CHALLENGE_HIDDEN_GRACE_MS);
         });
         // Tokens are single-use and short-lived; the next submit re-executes.
         api.subscribe(widget, 'token-expired', () => {
@@ -683,6 +711,7 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         });
         api.subscribe(widget, 'network-error', captchaFailed);
         api.subscribe(widget, 'javascript-error', captchaFailed);
+        if (submitAwaitsCaptcha) executeCaptcha();
       };
       if (captchaOn) {
         // The third-party script is requested only once this host is known to
@@ -693,6 +722,10 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
           const script = document.createElement('script');
           script.src = CAPTCHA_SRC;
           script.defer = true;
+          script.addEventListener('error', () => {
+            captchaScriptFailed = true;
+            captchaFailed();
+          });
           document.head.append(script);
         }
       }

@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 import {
   FOOTER,
   REGISTRATION_OPENS,
+  REGISTRATION_WINDOW,
   SUBMISSION_WINDOW,
-  SUBSCRIBE_LABEL,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 
@@ -124,9 +124,11 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
     expect(REGISTRATION_OPENS.date).toBe(iso);
   });
 
-  it('is what the chrome and the CTA strings print', () => {
-    expect(SUBSCRIBE_LABEL).toContain(REGISTRATION_OPENS.display);
+  it('is what the chrome prints and the day the sign-up window opens', () => {
     expect(FOOTER.contactsPending).toContain(REGISTRATION_OPENS.display);
+    // The window the /registration page evaluates must open on the same day
+    // the copy announces — two constants, one fact.
+    expect(REGISTRATION_WINDOW.opensAt.slice(0, 10)).toBe(REGISTRATION_OPENS.date);
   });
 
   it.each(pageFiles)('%s dates registration only as REGISTRATION_OPENS', (file) => {

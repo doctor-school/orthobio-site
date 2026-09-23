@@ -952,16 +952,21 @@
   margin-bottom: 0;
 }
 
-/* CTA channel not decided yet (Issue #4 ⚠️): with no link configured the block
-   still ships — as a static, honest statement instead of a dead button. */
-.ob-hero__cta-pending {
-  display: inline-block;
-  background: var(--ob-sky-tint);
+/* Primary CTA plus the opening date beside it (Issue #78). The date is a plain
+   statement, not a second pill: next to a filled button a tinted block read as
+   another, disabled button. Wraps under the button on a phone. */
+.ob-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-5);
+}
+
+.ob-hero__cta-when {
+  margin: 0;
   color: var(--ob-sky-text);
   font-weight: var(--fw-semibold);
-  border-radius: var(--r-md);
-  padding: var(--button-pad-lg);
-  max-width: 100%;
+  min-width: 0;
 }
 
 .ob-hero__cta-note {
@@ -2356,6 +2361,330 @@ details[open] > .ob-faq__q::after {
     align-items: baseline;
     gap: var(--sp-4);
   }
+}
+
+/* ── Button: full-width modifier ─────────────────────────────────────────── */
+
+/* A card's single action spans the card (sign-up form, Issue #78). */
+.ob-btn--block {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Submitting: the button is disabled so a double press cannot post twice; the
+   pressed colour tells the reader the press registered. */
+.ob-btn--primary:disabled {
+  background: var(--btn-primary-bg-active);
+  cursor: progress;
+}
+
+/* ── Registration page (/registration) ───────────────────────────────────── */
+
+/* Intro + venue photo beside the form card from lg; stacked, intro first,
+   below it. Tracks are minmax(0, …) so a long word can never widen a column. */
+.ob-reg {
+  display: grid;
+  gap: var(--sp-7);
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: var(--sp-sec);
+}
+
+@media (min-width: 1024px) {
+  .ob-reg {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+  }
+}
+
+.ob-reg__intro {
+  min-width: 0;
+}
+
+.ob-reg__venue {
+  margin: var(--sp-6) 0 0;
+  max-width: var(--reg-photo-width);
+}
+
+.ob-reg__photo {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ob-reg__caption {
+  margin-top: var(--sp-3);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
+
+/* ── Sign-up form card (SignupForm) ──────────────────────────────────────── */
+
+.ob-signup {
+  min-width: 0;
+}
+
+/* The script switches states with the `hidden` attribute. The UA's
+   `[hidden] { display: none }` loses to any author `display`, and the form is a
+   grid — so the attribute is restated here, where it outranks the blocks it
+   hides. */
+.ob-signup [hidden] {
+  display: none;
+}
+
+.ob-signup__card {
+  background: var(--surface-section);
+  border: var(--border-thin) solid var(--hairline);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5) var(--sp-4);
+}
+
+@media (min-width: 640px) {
+  .ob-signup__card {
+    padding: var(--sp-6);
+  }
+}
+
+.ob-signup__title {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  font-weight: var(--fw-bold);
+  color: var(--text-body);
+}
+
+.ob-signup__dates {
+  margin-top: var(--sp-2);
+  color: var(--ob-sky-text);
+  font-weight: var(--fw-medium);
+}
+
+.ob-signup__text {
+  margin-top: var(--sp-3);
+  color: var(--text-muted);
+  overflow-wrap: break-word;
+}
+
+/* The success line takes programmatic focus so it is announced; it is not an
+   interactive control, so it gets no ring when focused from script. */
+.ob-signup__text:focus {
+  outline: none;
+}
+
+.ob-signup__form {
+  display: grid;
+  gap: var(--sp-4);
+  margin-top: var(--sp-5);
+}
+
+/* One rhythm: every row is the same grid with the same gaps, so fields share
+   one height and rows share one vertical step. */
+.ob-signup__row {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 768px) {
+  .ob-signup__row--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ob-signup__row--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Label, control and messages share the row's tracks through a subgrid, so a
+   label that wraps to two lines («Отчество (если есть)» in a narrow column)
+   pushes every control of the row down together instead of misaligning them.
+   The subgrid's own row gap is zero and spacing rides on the items, so the
+   messages track of a field with nothing to say collapses to nothing. Where
+   subgrid is unsupported the field is an ordinary grid — still usable. */
+.ob-signup__field {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+  min-width: 0;
+}
+
+.ob-signup__msgs {
+  display: grid;
+  gap: var(--gap-micro);
+  min-width: 0;
+}
+
+.ob-signup__msgs:has(> :not([hidden])) {
+  padding-top: var(--gap-tight);
+}
+
+.ob-signup__label {
+  align-self: end;
+  padding-bottom: var(--gap-tight);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+}
+
+.ob-signup__optional {
+  font-weight: var(--fw-regular);
+  color: var(--text-muted);
+}
+
+.ob-signup__input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--control-square);
+  padding: var(--field-pad);
+  font: inherit;
+  color: var(--text-body);
+  background: var(--surface-card);
+  border: var(--border-thin) solid var(--field-border);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-state);
+}
+
+.ob-signup__input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.ob-signup__input:hover {
+  border-color: var(--ink);
+}
+
+.ob-signup__input:active {
+  border-color: var(--focus-ring);
+}
+
+.ob-signup__input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.ob-signup__hint {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--text-muted);
+}
+
+.ob-signup__error {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-medium);
+  color: var(--error);
+}
+
+.ob-signup__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+}
+
+.ob-signup__check {
+  flex: none;
+  width: var(--field-check-size);
+  height: var(--field-check-size);
+  margin: var(--gap-micro) 0 0;
+  accent-color: var(--btn-primary-bg);
+  cursor: pointer;
+}
+
+.ob-signup__check:hover,
+.ob-signup__check:active {
+  accent-color: var(--btn-primary-bg-hover);
+}
+
+.ob-signup__consent-label {
+  min-width: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.ob-signup__consent-label a:active {
+  color: var(--ob-sky-text);
+}
+
+.ob-signup__captcha {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* The alert shares a grid cell with the button, so while it is empty it adds
+   neither a box nor a form-grid gap — yet it is never `hidden`/`display:none`:
+   the live region has to exist before its text arrives to be announced. */
+.ob-signup__actions {
+  display: grid;
+  min-width: 0;
+}
+
+/* Form-level refusal (network, captcha, server): one announced line above the
+   button, on the error colour's family. */
+.ob-signup__alert {
+  margin: 0;
+  color: var(--error);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-medium);
+}
+
+.ob-signup__alert:not(:empty) {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--border-thin) solid var(--error);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+}
+
+.ob-signup__success {
+  margin-top: var(--sp-5);
+}
+
+/* The state cards («откроется …», «закрыта») are statements, not forms: the
+   title takes programmatic focus when the API switches the page to them. */
+.ob-signup__state .ob-signup__title:focus {
+  outline: none;
+}
+
+/* ── Privacy policy (/privacy) ───────────────────────────────────────────── */
+
+.ob-policy {
+  max-width: var(--measure);
+  padding-bottom: var(--sp-sec);
+  color: var(--text-body);
+}
+
+.ob-policy__title {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  font-weight: var(--fw-bold);
+  margin-bottom: var(--sp-6);
+}
+
+.ob-policy__section + .ob-policy__section {
+  margin-top: var(--sp-6);
+}
+
+.ob-policy__heading {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  font-weight: var(--fw-semibold);
+  margin-bottom: var(--sp-3);
+}
+
+.ob-policy p {
+  margin-bottom: var(--sp-3);
+  overflow-wrap: break-word;
+}
+
+.ob-policy p:last-child {
+  margin-bottom: 0;
 }
 
 /* ── end @layer components ───────────────────────────────────────────────── */

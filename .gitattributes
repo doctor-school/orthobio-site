@@ -3,3 +3,8 @@
 # fail with "no such file or directory".
 infra/host/* text eol=lf
 infra/nginx/* text eol=lf
+
+# The privacy policy's sha256 is the platform consent version (Issue #78,
+# tests/unit/privacy-policy.test.ts): a CRLF checkout would change the bytes the
+# site publishes and detach every recorded consent from its text.
+src/content/legal/* text eol=lf

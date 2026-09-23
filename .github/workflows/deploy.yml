@@ -58,6 +58,11 @@ jobs:
       # The hard gate for preview noindex. Issue #6 switches this Variable and
       # SITE_HOST together only after the separate production vhost is ready.
       SITE_INDEXABLE: ${{ vars.SITE_INDEXABLE }}
+      # Yandex SmartCaptcha site key for the congress sign-up form, inlined into
+      # the build by Astro. A site key is public by design, so a Variable, not a
+      # Secret; per environment, so preview and production may carry different
+      # keys. Unset builds the form without the widget — the intended fallback.
+      PUBLIC_SMARTCAPTCHA_SITEKEY: ${{ vars.SMARTCAPTCHA_SITEKEY }}
     # Four guards, all required (see the SECURITY note above):
     #   event == 'push'                     — a pull_request CI run never qualifies
     #   head_repository == this repository  — a fork's run never qualifies

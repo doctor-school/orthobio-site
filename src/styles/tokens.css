@@ -336,6 +336,13 @@
   --year-pattern-strip: 200px;
   --company-copy-basis: 240px;
   --company-fact-label: 200px;
+  /* Sign-up form (Issue #78). Field outline at ≥3:1 against both the white
+     field and the card surface behind it (WCAG 1.4.11) — the hairline ramp is
+     decorative and measures ~1.5:1, too faint to show where a field is. */
+  --field-border: oklch(0.62 0.014 250);
+  --field-pad: 10px 14px;
+  --field-check-size: 20px;
+  --reg-photo-width: 560px;
 
   /* --- Layout & focus ------------------------------------------------------ */
   /* `vh` keeps the shell compatible with older browsers; the feature query

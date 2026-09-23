@@ -1,11 +1,14 @@
 # Assets rescue manifest — Congress ОРТОБИОЛОГИЯ archive 2021–2026 (Issue #2)
 #
-# Four sections, four rescues, each with its own counters and header:
+# Four rescue sections, each with its own counters and header, plus one
+# provenance section for images committed to the repo:
 #   years:         the Issue #2 photo/PDF/video sweep (2026-07-27), below;
 #   logos:         the Issue #22 partner-logo library (2026-07-29), 49 objects;
 #   profiles:      the Issue #24 company-profile rescue (2026-07-29) — TEXT
 #                  only, zero objects uploaded, reason recorded there;
-#   video_posters: the Issue #33 poster frames (2026-07-29), 23 objects.
+#   video_posters: the Issue #33 poster frames (2026-07-29), 23 objects;
+#   site_assets:   owner-supplied images shipped from src/assets/ through
+#                  astro:assets (not S3, not rescued), recorded for provenance.
 #
 # Rescued on 2026-07-27 from seven external platforms before link rot.
 # Local staging: C:\Users\sidor\orthobio-assets\<year>\... (outside the repo;
@@ -1753,3 +1756,18 @@ video_posters:
       s3_status: uploaded
       original: { w: 1536, h: 864, bytes: 111511 }
       object: { w: 800, h: 450, bytes: 28758, sha256: '69b31092276a7aadccd8001438e034334ed1d2dfb16954a2521e94b0ae7daa41' }
+
+site_assets:
+  # Images committed under src/assets/ and optimised at build time by
+  # astro:assets. They are not in the S3 bucket and not in s3_objects_total.
+  items:
+    - id: venue-hotel-milan
+      issue: 78
+      description: 'Photo of ГК «Милан» (Москва, ул. Шипиловская, д. 28А), the venue of the 2027 congress; /registration'
+      source: owner # supplied by Anton in the Issue #78 working chat
+      supplied_at: '2026-09-23'
+      type: photo
+      status: committed
+      local: 'src/assets/hotel-milan.webp'
+      s3_key: null # shipped from the build as /_astro/*, not from the bucket
+      object: { w: 1448, h: 1086, bytes: 153636, sha256: 'c18882581e3d2b9fce91e09776607d1513193d8f039f24acfd530a299ac9768d' }

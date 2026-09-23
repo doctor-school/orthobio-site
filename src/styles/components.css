@@ -2610,10 +2610,13 @@ details[open] > .ob-faq__q::after {
   color: var(--ob-sky-text);
 }
 
+/* Mount point of the invisible SmartCaptcha widget. It sits in the gap-less
+   actions grid, not the form grid, so while empty it adds no row gap. The
+   data-processing shield is placed by the widget itself (`shieldPosition`,
+   bottom-right by default), not in this box. */
 .ob-signup__captcha {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
 }
 
 /* The alert shares a grid cell with the button, so while it is empty it adds

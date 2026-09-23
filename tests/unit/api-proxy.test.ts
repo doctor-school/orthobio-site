@@ -139,10 +139,13 @@ describe('redirect map', () => {
 });
 
 describe('deploy workflow', () => {
-  it('exposes the SmartCaptcha site key as a Variable, not a Secret', () => {
+  it('exposes both SmartCaptcha site keys as Variables, not Secrets', () => {
     const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8');
     expect(workflow).toContain(
       'PUBLIC_SMARTCAPTCHA_SITEKEY: ${{ vars.SMARTCAPTCHA_SITEKEY }}',
+    );
+    expect(workflow).toContain(
+      'PUBLIC_SMARTCAPTCHA_SITEKEY_PREVIEW: ${{ vars.SMARTCAPTCHA_SITEKEY_PREVIEW }}',
     );
     expect(workflow).not.toContain('secrets.SMARTCAPTCHA');
   });

@@ -75,3 +75,15 @@ export function formatMoscowInstant(iso: string): string {
   // Intl prints «1 октября 2026 г.»; the site's own convention is «года».
   return `${day.replace(/\s*г\.$/, ' года')}, ${time} (мск)`;
 }
+
+/**
+ * The instant the window is judged against: the server's `Date` header when it
+ * parses, the device clock otherwise. Managed clinic PCs often run minutes or
+ * days off; the platform judges by its own clock, so a device that is behind
+ * would show «откроется …» while the API already accepts sign-ups.
+ */
+export function serverNow(dateHeader: string | null, fallback: Date): Date {
+  if (!dateHeader) return fallback;
+  const ms = Date.parse(dateHeader);
+  return Number.isNaN(ms) ? fallback : new Date(ms);
+}

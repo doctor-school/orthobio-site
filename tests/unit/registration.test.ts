@@ -5,6 +5,7 @@ import {
   FORCE_OPEN_HOSTS,
   formatMoscowInstant,
   registrationState,
+  serverNow,
   type RegistrationWindow,
 } from '../../src/lib/registration';
 
@@ -87,5 +88,22 @@ describe('REGISTRATION_WINDOW', () => {
 
   it('has no closing instant until the owner supplies one (ds-platform#2292)', () => {
     expect(REGISTRATION_WINDOW.closesAt).toBeNull();
+  });
+});
+
+describe('serverNow', () => {
+  const device = new Date('2026-09-28T10:00:00Z');
+
+  it('prefers the server Date header, so a slow device clock cannot hide an open form', () => {
+    const now = serverNow('Thu, 01 Oct 2026 09:00:00 GMT', device);
+    expect(now.toISOString()).toBe('2026-10-01T09:00:00.000Z');
+    expect(registrationState(WINDOW, now)).toBe('open');
+    expect(registrationState(WINDOW, device)).toBe('not-yet-open');
+  });
+
+  it('falls back to the device clock without a usable header', () => {
+    expect(serverNow(null, device)).toBe(device);
+    expect(serverNow('', device)).toBe(device);
+    expect(serverNow('not a date', device)).toBe(device);
   });
 });

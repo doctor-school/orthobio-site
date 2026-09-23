@@ -15,24 +15,35 @@
  * normalisation on blur mirrors 044 EARS-33, the phone check mirrors EARS-29,
  * and a refusal from the API is always rendered, whatever the form thought.
  *
- * SmartCaptcha is rendered only when `PUBLIC_SMARTCAPTCHA_SITEKEY` was set at
- * build time (see `SMARTCAPTCHA_SITEKEY` in config/site.ts); without it there is
- * no widget, no third-party script and no `captchaToken` in the request.
+ * SmartCaptcha is invisible (Issue #81): no checkbox, the check runs on submit
+ * and only a suspicious session gets a challenge pop-up. Preview and
+ * production ship the same build, so both site keys are printed as data
+ * attributes and the script picks one by hostname (`pickSitekey`,
+ * lib/captcha.ts). With no key for the current host there is no widget, no
+ * third-party script and no `captchaToken` in the request. The widget's own
+ * data-processing shield stays visible (`hideShield` is left unset): Yandex
+ * requires users to be told SmartCaptcha processes their data, and the shield
+ * is that notice.
  */
 import {
   CONTACT_EMAIL,
   REGISTRATION_WINDOW,
   SMARTCAPTCHA_SITEKEY,
+  SMARTCAPTCHA_SITEKEY_PREVIEW,
   UPCOMING_CONGRESS_DATES,
 } from '@/config/site';
 import { formatMoscowInstant } from '@/lib/registration';
 
 const opensLabel = formatMoscowInstant(REGISTRATION_WINDOW.opensAt);
-const captchaSrc =
-  'https://smartcaptcha.cloud.yandex.ru/captcha.js?render=onload&onload=obSmartCaptchaReady';
+const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIEW !== '';
 ---
 
-<div class="ob-signup" data-signup data-sitekey={SMARTCAPTCHA_SITEKEY}>
+<div
+  class="ob-signup"
+  data-signup
+  data-sitekey-prod={SMARTCAPTCHA_SITEKEY}
+  data-sitekey-preview={SMARTCAPTCHA_SITEKEY_PREVIEW}
+>
   <noscript>
     <div class="ob-signup__card ob-signup__state">
       <h2 class="ob-signup__title">Регистрация на конгресс</h2>
@@ -254,29 +265,12 @@ const captchaSrc =
         </div>
       </div>
 
-      {
-        SMARTCAPTCHA_SITEKEY && (
-          <div class="ob-signup__field">
-            <div
-              class="ob-signup__captcha"
-              data-captcha
-              tabindex="-1"
-              role="group"
-              aria-label="Проверка «я не робот»"
-              aria-describedby="signup-captcha-error"
-            />
-            <div class="ob-signup__msgs">
-              <p class="ob-signup__error" id="signup-captcha-error" hidden />
-            </div>
-          </div>
-        )
-      }
-
       <div class="ob-signup__actions">
         <p class="ob-signup__alert" data-signup-alert role="alert"></p>
         <button class="ob-btn ob-btn--primary ob-btn--lg ob-btn--block" type="submit" data-signup-submit>
           Зарегистрироваться
         </button>
+        {hasCaptchaKey && <div class="ob-signup__captcha" data-captcha />}
       </div>
     </form>
 
@@ -310,10 +304,9 @@ const captchaSrc =
   </div>
 </div>
 
-{SMARTCAPTCHA_SITEKEY && <script is:inline src={captchaSrc} defer></script>}
-
 <script>
   import { REGISTRATION_WINDOW } from '@/config/site';
+  import { pickSitekey } from '@/lib/captcha';
   import { isValidContactPhone } from '@/lib/contact-phone';
   import { isPlatformEmail } from '@/lib/email';
   import { normaliseNameAnswer } from '@/lib/name-answer';
@@ -333,13 +326,22 @@ const captchaSrc =
     isOther: boolean;
   }
 
+  type CaptchaEvent = 'challenge-hidden' | 'token-expired' | 'network-error' | 'javascript-error';
+
   interface SmartCaptcha {
-    render(container: HTMLElement, params: { sitekey: string; hl?: string; callback?: (token: string) => void }): number;
+    render(
+      container: HTMLElement,
+      params: { sitekey: string; hl?: string; invisible?: boolean; callback?: (token: string) => void },
+    ): number;
+    execute(widgetId?: number): void;
     reset(widgetId?: number): void;
+    subscribe(widgetId: number, event: CaptchaEvent, callback: () => void): () => void;
   }
 
   type CaptchaWindow = Window & { smartCaptcha?: SmartCaptcha; obSmartCaptchaReady?: () => void };
 
+  const CAPTCHA_SRC =
+    'https://smartcaptcha.cloud.yandex.ru/captcha.js?render=onload&onload=obSmartCaptchaReady';
   const SPECIALTIES_URL = '/api/v1/public/specialties';
   const SIGN_UP_URL = '/api/v1/congress/sign-up';
 
@@ -351,8 +353,9 @@ const captchaSrc =
     specialtiesUnavailable:
       'Не удалось загрузить список специальностей. Обновите страницу, чтобы попробовать ещё раз.',
     consent: 'Чтобы отправить заявку, подтвердите согласие на обработку персональных данных.',
-    captcha: 'Подтвердите, что вы не робот.',
-    captchaRefused: 'Не удалось пройти проверку «я не робот». Пройдите её ещё раз и отправьте заявку.',
+    captcha:
+      'Не удалось выполнить проверку «я не робот». Проверьте подключение к интернету и отправьте заявку ещё раз.',
+    captchaRefused: 'Не удалось пройти проверку «я не робот». Отправьте заявку ещё раз.',
     invalid: 'Сервер не принял заявку. Проверьте введённые данные и отправьте её ещё раз.',
     rateLimited: 'Слишком много попыток подряд. Подождите несколько минут и отправьте заявку ещё раз.',
     generic:
@@ -370,12 +373,18 @@ const captchaSrc =
     const specialtyInput = form.querySelector<HTMLInputElement>('#signup-specialty')!;
     const specialtyId = form.querySelector<HTMLInputElement>('[data-specialty-id]')!;
     const datalist = form.querySelector<HTMLDataListElement>('#signup-specialties')!;
-    const sitekey = root.dataset.sitekey ?? '';
+    const sitekey = pickSitekey(window.location.hostname, {
+      prod: root.dataset.sitekeyProd ?? '',
+      preview: root.dataset.sitekeyPreview ?? '',
+    });
     const captchaBox = root.querySelector<HTMLElement>('[data-captcha]');
 
     let specialties: Specialty[] | null = null;
     let captchaToken = '';
     let captchaWidget: number | undefined;
+    // Set while a submit waits for the invisible check; the token callback
+    // then carries the submission on.
+    let submitAwaitsCaptcha = false;
 
     const showState = (state: RegistrationState, focus = false): void => {
       for (const card of root.querySelectorAll<HTMLElement>('[data-signup-state]')) {
@@ -468,32 +477,13 @@ const captchaSrc =
           setError(specialtyInput, MESSAGES.specialtiesUnavailable);
         });
 
-      // ── Captcha (only when the build carried a sitekey) ────────────────────
+      // ── Captcha state (only when this host has a sitekey) ─────────────────
       const captchaWindow = window as CaptchaWindow;
-      const renderCaptcha = (): void => {
-        if (!captchaBox || !captchaWindow.smartCaptcha || captchaWidget !== undefined) return;
-        captchaWidget = captchaWindow.smartCaptcha.render(captchaBox, {
-          sitekey,
-          hl: 'ru',
-          callback: (token) => {
-            captchaToken = token;
-            const box = document.getElementById('signup-captcha-error');
-            if (box) {
-              box.hidden = true;
-              box.textContent = '';
-            }
-          },
-        });
-      };
+      const captchaOn = sitekey !== '' && captchaBox !== null;
       const resetCaptcha = (): void => {
         captchaToken = '';
         if (captchaWidget !== undefined) captchaWindow.smartCaptcha?.reset(captchaWidget);
       };
-      if (sitekey && captchaBox) {
-        // The widget script may finish before or after this module runs.
-        if (captchaWindow.smartCaptcha) renderCaptcha();
-        else captchaWindow.obSmartCaptchaReady = renderCaptcha;
-      }
 
       // ── Validation ────────────────────────────────────────────────────────
       const field = (name: string): HTMLInputElement =>
@@ -531,15 +521,6 @@ const captchaSrc =
         const consent = field('personalDataConsent');
         setError(consent, null);
         if (!consent.checked) fail(consent, MESSAGES.consent);
-
-        if (sitekey && captchaBox && captchaToken === '') {
-          const box = document.getElementById('signup-captcha-error');
-          if (box) {
-            box.textContent = MESSAGES.captcha;
-            box.hidden = false;
-          }
-          first ??= captchaBox;
-        }
         return first;
       };
 
@@ -576,16 +557,7 @@ const captchaSrc =
         }
       };
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        if (form.getAttribute('aria-busy') === 'true') return;
-        setAlert(null);
-        const invalid = validate();
-        if (invalid) {
-          invalid.focus();
-          return;
-        }
-
+      const send = async (): Promise<void> => {
         const body = payload();
         setBusy(true);
         let res: Response;
@@ -642,8 +614,88 @@ const captchaSrc =
         // Everything else — 401 from a gated upstream, 422 sign-up-unavailable
         // (a platform-side configuration problem), 5xx — is not the participant's
         // to fix, so it never asks them to check their data.
-        setAlert(res.status === 403 && sitekey ? MESSAGES.captchaRefused : MESSAGES.generic);
+        setAlert(res.status === 403 && captchaOn ? MESSAGES.captchaRefused : MESSAGES.generic);
+      };
+
+      const attempt = (): void => {
+        setAlert(null);
+        const invalid = validate();
+        if (invalid) {
+          setBusy(false);
+          invalid.focus();
+          return;
+        }
+        if (captchaOn && captchaToken === '') {
+          const api = captchaWindow.smartCaptcha;
+          if (!api || captchaWidget === undefined) {
+            // The widget script never arrived (blocked or offline).
+            setAlert(MESSAGES.captcha);
+            return;
+          }
+          submitAwaitsCaptcha = true;
+          setBusy(true);
+          // Invisible mode: execute() runs the check and, once it passes, calls
+          // render()'s `callback` with the token — after a pop-up challenge only
+          // if Yandex asks for one.
+          api.execute(captchaWidget);
+          return;
+        }
+        void send();
+      };
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (form.getAttribute('aria-busy') === 'true') return;
+        attempt();
       });
+
+      // ── Captcha widget ────────────────────────────────────────────────────
+      const captchaFailed = (): void => {
+        submitAwaitsCaptcha = false;
+        resetCaptcha();
+        setBusy(false);
+        setAlert(MESSAGES.captcha);
+      };
+      const renderCaptcha = (): void => {
+        const api = captchaWindow.smartCaptcha;
+        if (!captchaBox || !api || captchaWidget !== undefined) return;
+        const widget = api.render(captchaBox, {
+          sitekey,
+          hl: 'ru',
+          invisible: true,
+          callback: (token) => {
+            captchaToken = token;
+            if (submitAwaitsCaptcha) {
+              submitAwaitsCaptcha = false;
+              attempt();
+            }
+          },
+        });
+        captchaWidget = widget;
+        // A challenge pop-up closed without a pass gives the button back; a
+        // token that still arrives resumes the submission through the callback.
+        api.subscribe(widget, 'challenge-hidden', () => {
+          if (captchaToken === '') setBusy(false);
+        });
+        // Tokens are single-use and short-lived; the next submit re-executes.
+        api.subscribe(widget, 'token-expired', () => {
+          captchaToken = '';
+        });
+        api.subscribe(widget, 'network-error', captchaFailed);
+        api.subscribe(widget, 'javascript-error', captchaFailed);
+      };
+      if (captchaOn) {
+        // The third-party script is requested only once this host is known to
+        // have a key, and may finish before or after this module runs.
+        if (captchaWindow.smartCaptcha) renderCaptcha();
+        else {
+          captchaWindow.obSmartCaptchaReady = renderCaptcha;
+          const script = document.createElement('script');
+          script.src = CAPTCHA_SRC;
+          script.defer = true;
+          document.head.append(script);
+        }
+      }
     };
 
     const hostname = window.location.hostname;

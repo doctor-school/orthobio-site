@@ -145,15 +145,22 @@ export const REGISTRATION_WINDOW = {
 } as const satisfies { opensAt: string; closesAt: string };
 
 /**
- * Yandex SmartCaptcha client key, read at BUILD time from the env var
- * `PUBLIC_SMARTCAPTCHA_SITEKEY` (a public key by design — it is printed into the
- * page; the server key lives only in the platform API's env). Empty means no
- * widget, no script and no `captchaToken` in the request — the local and e2e
- * builds run that way, and a platform that does enforce the captcha then
- * refuses with 403, which the form reports as a generic error.
+ * Yandex SmartCaptcha client keys, read at BUILD time from the env vars
+ * `PUBLIC_SMARTCAPTCHA_SITEKEY` (production, captcha ds-platform-prod) and
+ * `PUBLIC_SMARTCAPTCHA_SITEKEY_PREVIEW` (preview, captcha ds-platform-stage).
+ * Both are public by design — printed into the page; the server keys live only
+ * in the platform API's env. Preview and production ship the same build, so
+ * both keys are emitted and the browser picks one by hostname
+ * (`pickSitekey` in lib/captcha.ts, Issue #81). An empty key for the current
+ * host means no widget, no script and no `captchaToken` in the request — the
+ * local and e2e builds run that way, and a platform that does enforce the
+ * captcha then refuses with 403, which the form reports as a generic error.
  */
 export const SMARTCAPTCHA_SITEKEY: string = String(
   import.meta.env.PUBLIC_SMARTCAPTCHA_SITEKEY ?? '',
+).trim();
+export const SMARTCAPTCHA_SITEKEY_PREVIEW: string = String(
+  import.meta.env.PUBLIC_SMARTCAPTCHA_SITEKEY_PREVIEW ?? '',
 ).trim();
 
 /**

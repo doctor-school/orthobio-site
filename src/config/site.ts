@@ -119,21 +119,44 @@ export const SUBMISSION_WINDOW = {
 } as const;
 
 /**
- * Owner decision (Issue #54, 2026-07-30): launch without a subscription CTA
- * until registration opens. `null` is the approved production state, not a
- * pending account decision. The home page renders only the opening date;
- * setting a URL later turns the same block into the primary CTA.
+ * Registration window as the site DISPLAYS it (Issue #78; platform 044
+ * EARS-28). Enforcement is the platform API's — its env pair
+ * `CONGRESS_SIGNUP_WINDOW_OPENS_AT` / `…_CLOSES_AT` refuses a submission outside
+ * the window. These instants and the API's must be the same instants; keeping
+ * them equal is a launch check on ds-platform#2292, since they live in two
+ * repositories. The page evaluates the window in the browser
+ * (`src/lib/registration.ts` explains why not at build time).
+ *
+ * `opensAt` is the same day as `REGISTRATION_OPENS` above, as an instant with an
+ * explicit Moscow offset. `closesAt` is `null` because the owner has not set a
+ * closing instant yet (ds-platform#2292): `null` means «never closes» to the
+ * page, which is the honest reading of «no date decided», and the API still
+ * refuses once its own closing instant passes.
  */
-export const SUBSCRIBE_URL: string | null = null;
+export const REGISTRATION_WINDOW = {
+  opensAt: '2026-10-01T00:00:00+03:00',
+  closesAt: null,
+} as const satisfies { opensAt: string; closesAt: string | null };
 
 /**
- * Label of the «узнать первым» CTA (constant regardless of the channel).
- *
- * «года» is part of the sentence, not of the constant: after a bare day the
- * phrase reads truncated («откроется 1 октября 2026 — узнать первым»), while
- * the same constant after a dash needs no tail («к открытию — 1 октября 2026»).
+ * Yandex SmartCaptcha client key, read at BUILD time from the env var
+ * `PUBLIC_SMARTCAPTCHA_SITEKEY` (a public key by design — it is printed into the
+ * page; the server key lives only in the platform API's env). Empty means no
+ * widget, no script and no `captchaToken` in the request — the local and e2e
+ * builds run that way, and a platform that does enforce the captcha then
+ * refuses with 403, which the form reports as a generic error.
  */
-export const SUBSCRIBE_LABEL = `Регистрация откроется ${REGISTRATION_OPENS.display} года — узнать первым`;
+export const SMARTCAPTCHA_SITEKEY: string = String(
+  import.meta.env.PUBLIC_SMARTCAPTCHA_SITEKEY ?? '',
+).trim();
+
+/**
+ * Home-page primary CTA (Issue #78): the congress sign-up form. An internal
+ * route, so the button stays in the current tab; the page itself decides
+ * whether it shows the form or the «откроется …» / «закрыта» state.
+ */
+export const REGISTRATION_URL = '/registration';
+export const REGISTRATION_CTA_LABEL = 'Регистрация на конгресс';
 
 /**
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).
@@ -173,8 +196,18 @@ export const NAV = [
   { href: '/faq', label: 'FAQ' },
 ] as const;
 
-/** Footer sitemap — the full §4 map, including routes absent from the nav. */
-export const FOOTER_LINKS = [...NAV, { href: '/contacts', label: 'Контакты' }] as const;
+/**
+ * Footer sitemap — the full §4 map, including routes absent from the nav: the
+ * contacts page, and the two sign-up routes of Issue #78 (the form is reached
+ * from the home-page CTA, the policy from the form's consent checkbox; the
+ * footer is where both are findable from every page without crowding the nav).
+ */
+export const FOOTER_LINKS = [
+  ...NAV,
+  { href: '/contacts', label: 'Контакты' },
+  { href: REGISTRATION_URL, label: 'Регистрация' },
+  { href: '/privacy', label: 'Политика конфиденциальности' },
+] as const;
 
 /**
  * Chrome strings (header/footer). UI chrome, not editorial page copy: like the

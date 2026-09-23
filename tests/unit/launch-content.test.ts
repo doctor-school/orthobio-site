@@ -4,16 +4,31 @@ import {
   CONTACT_EMAIL,
   CONTACT_PHONE,
   REGISTRATION_OPENS,
+  FOOTER_LINKS,
+  NAV,
+  REGISTRATION_CTA_LABEL,
+  REGISTRATION_URL,
   SUBMISSION_WINDOW,
-  SUBSCRIBE_URL,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 
 describe('owner-approved pre-registration launch content', () => {
-  it('ships without a subscription CTA before registration opens', () => {
+  it('points the home-page CTA at the on-site registration form (Issue #78)', () => {
     expect(REGISTRATION_OPENS.display).toBe('1 октября 2026');
     expect(REGISTRATION_OPENS.date).toBe('2026-10-01');
-    expect(SUBSCRIBE_URL).toBeNull();
+    // Internal route, not an outbound channel: the page itself shows the form
+    // or the «откроется …» state, so the CTA is honest before the opening day.
+    expect(REGISTRATION_URL).toBe('/registration');
+    expect(REGISTRATION_CTA_LABEL).toBe('Регистрация на конгресс');
+  });
+
+  it('lists the sign-up routes in the footer sitemap but not in the nav', () => {
+    const footer = FOOTER_LINKS.map(({ href, label }) => ({ href, label }));
+    expect(footer).toContainEqual({ href: '/registration', label: 'Регистрация' });
+    expect(footer).toContainEqual({ href: '/privacy', label: 'Политика конфиденциальности' });
+    const nav: readonly string[] = NAV.map(({ href }) => href);
+    expect(nav).not.toContain('/registration');
+    expect(nav).not.toContain('/privacy');
   });
 
   it('publishes the Doctor.School manager contacts', () => {

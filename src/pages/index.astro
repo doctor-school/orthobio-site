@@ -1,6 +1,6 @@
 ---
 /**
- * Главная (/) — ТЗ §4: hero 2027, цифры прошлых лет, CTA «узнать первым»,
+ * Главная (/) — ТЗ §4: hero 2027, цифры прошлых лет, CTA регистрации,
  * честная заглушка программы и тизер архива.
  *
  * The program placeholder is READ FROM the /program page entry, so the honest
@@ -13,9 +13,9 @@ import SectionHeading from '@/components/SectionHeading.astro';
 import Stat from '@/components/Stat.astro';
 import Stub from '@/components/Stub.astro';
 import {
+  REGISTRATION_CTA_LABEL,
   REGISTRATION_OPENS,
-  SUBSCRIBE_LABEL,
-  SUBSCRIBE_URL,
+  REGISTRATION_URL,
   UPCOMING_CONGRESS_DATES,
   UPCOMING_CONGRESS_VENUE,
 } from '@/config/site';
@@ -40,21 +40,15 @@ const recentYears = (await getCongressYears()).slice(0, 3);
   >
     {page.lead.map((p) => <p>{p}</p>)}
 
-    <div slot="cta">
-      {
-        SUBSCRIBE_URL ? (
-          <Button size="lg" href={SUBSCRIBE_URL} external>
-            {SUBSCRIBE_LABEL}
-          </Button>
-        ) : (
-          <>
-            {/* Issue #54: no subscription CTA before registration opens. */}
-            <p class="ob-hero__cta-pending">
-              Регистрация откроется {REGISTRATION_OPENS.display} года
-            </p>
-          </>
-        )
-      }
+    {/* Issue #78: the primary CTA leads to the on-site form. The opening
+        sentence stays beside it — before 1 October the form page shows the
+        same «откроется» state, and the reader should not have to click to
+        learn it. */}
+    <div slot="cta" class="ob-hero__cta">
+      <Button size="lg" href={REGISTRATION_URL}>
+        {REGISTRATION_CTA_LABEL}
+      </Button>
+      <p class="ob-hero__cta-when">Регистрация откроется {REGISTRATION_OPENS.display} года</p>
     </div>
 
     <Fragment slot="stats">

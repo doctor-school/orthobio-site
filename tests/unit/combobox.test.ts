@@ -49,6 +49,12 @@ describe('filterOptions', () => {
     expect(filterOptions(['Химки', 'Москва'], 'г. хим', { ...byName, normalise })).toEqual(['Химки']);
   });
 
+  it('keeps only the options that start with the query under `prefixOnly`', () => {
+    const places = ['Наро-Фоминск', 'Минусинск', 'Мирный'];
+    expect(filterOptions(places, 'минск', { ...byName, prefixOnly: true })).toEqual([]);
+    expect(filterOptions(places, 'ми', { ...byName, prefixOnly: true })).toEqual(['Минусинск', 'Мирный']);
+  });
+
   it('returns nothing when no option contains the query', () => {
     expect(filterOptions(SPECIALTIES, 'хирург-волшебник', byName)).toEqual([]);
   });

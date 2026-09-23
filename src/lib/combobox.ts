@@ -32,6 +32,12 @@ export interface FilterOptions<T> {
   normalise?: (foldedQuery: string) => string;
   /** At most this many options; the directory has thousands. */
   limit?: number;
+  /**
+   * Only options that START with the query. Places are typed from their first
+   * letter, and a foreign «Минск» must not surface «Наро-Фоминск» — an open
+   * list over the next field would turn a click there into a wrong pick.
+   */
+  prefixOnly?: boolean;
 }
 
 /**
@@ -42,7 +48,7 @@ export interface FilterOptions<T> {
 export function filterOptions<T>(
   options: readonly T[],
   query: string,
-  { text, normalise = (q) => q, limit = Infinity }: FilterOptions<T>,
+  { text, normalise = (q) => q, limit = Infinity, prefixOnly = false }: FilterOptions<T>,
 ): T[] {
   const needle = normalise(foldQuery(query));
   if (needle === '') return options.slice(0, limit);
@@ -51,7 +57,7 @@ export function filterOptions<T>(
   for (const option of options) {
     const at = foldCase(text(option)).indexOf(needle);
     if (at === 0) starts.push(option);
-    else if (at > 0) contains.push(option);
+    else if (at > 0 && !prefixOnly) contains.push(option);
   }
   return [...starts, ...contains].slice(0, limit);
 }

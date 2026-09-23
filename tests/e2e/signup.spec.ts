@@ -63,10 +63,18 @@ async function mockSignUp(
   return requests;
 }
 
+const specialtyOptions = (page: Page) => page.locator('#signup-specialty-list [role="option"]');
+const cityOptions = (page: Page) => page.locator('#signup-city-list [role="option"]');
+
+/** Opens the page and waits for the specialty list, leaving no field focused. */
 async function open(page: Page): Promise<void> {
   await mockSpecialties(page);
   await page.goto('/registration');
-  await expect(page.locator('#signup-specialties option')).toHaveCount(3);
+  const specialty = page.getByLabel('Специальность');
+  await specialty.click();
+  await expect(specialtyOptions(page)).toHaveCount(3);
+  await page.keyboard.press('Escape');
+  await specialty.blur();
 }
 
 async function fillValid(page: Page, { patronymic = '', city = true } = {}): Promise<void> {
@@ -75,16 +83,28 @@ async function fillValid(page: Page, { patronymic = '', city = true } = {}): Pro
   if (patronymic) await page.getByLabel(/Отчество/).fill(patronymic);
   await page.getByLabel('E-mail').fill('ivanov@example.com');
   await page.getByLabel('Телефон').fill('+7 (999) 123-45-67');
+  // Typed, not picked, and the list dismissed with Escape: the form's own
+  // resolution is what these fixtures exercise; picking has its own tests.
   await page.getByLabel('Специальность').fill(ORTHOPEDICS.name);
+  await page.keyboard.press('Escape');
   await page.getByLabel('Место работы').fill('ГКБ № 1');
-  if (city) await page.getByLabel('Населённый пункт').fill('Москва');
+  if (city) {
+    await page.getByLabel('Населённый пункт').fill('Москва');
+    await page.keyboard.press('Escape');
+  }
   await page.getByLabel(/согласен/).check();
 }
 
 /** Focuses «Населённый пункт» and waits for the directory it loads. */
 async function focusCity(page: Page): Promise<void> {
-  await page.getByLabel('Населённый пункт').focus();
-  await expect(page.locator('#signup-settlements option')).not.toHaveCount(0);
+  const city = page.getByLabel('Населённый пункт');
+  await city.focus();
+  // The list can only open once the directory is in: ArrowDown until it does.
+  await expect(async () => {
+    await page.keyboard.press('ArrowDown');
+    await expect(cityOptions(page).first()).toBeVisible({ timeout: 500 });
+  }).toPass();
+  await page.keyboard.press('Escape');
 }
 
 /**
@@ -127,17 +147,18 @@ const blockSignupModule = (page: Page) =>
 const submit = (page: Page) => page.getByRole('button', { name: 'Зарегистрироваться' }).click();
 
 test.describe('sign-up form', () => {
-  test('is shown on the local host, with «Другое» first in the specialty list', async ({ page }) => {
+  test('is shown on the local host, with «Другое» pinned last in the specialty list', async ({ page }) => {
     await open(page);
     await expect(page.getByRole('heading', { level: 2, name: 'Регистрация на конгресс' })).toBeVisible();
     await expect(page.getByText('23–24 апреля 2027 года, Москва')).toBeVisible();
     await expect(page.getByRole('heading', { name: /Регистрация откроется/ })).toBeHidden();
     await expect(page.getByRole('heading', { name: /закрыта/ })).toBeHidden();
 
-    const options = await page.locator('#signup-specialties option').evaluateAll((els) =>
-      els.map((el) => (el as HTMLOptionElement).value),
-    );
-    expect(options).toEqual([OTHER.name, ORTHOPEDICS.name, SPORTS.name]);
+    // Design: «Другое» pinned at the foot, under a hairline, the rest in the
+    // platform's order.
+    await page.getByLabel('Специальность').click();
+    await expect(specialtyOptions(page)).toHaveText([ORTHOPEDICS.name, SPORTS.name, OTHER.name]);
+    await expect(specialtyOptions(page).last()).toHaveClass(/ob-signup__opt--pinned/);
     // The hint names the option exactly as the list shows it.
     await expect(page.locator('#signup-specialty-hint')).toContainText(`«${OTHER.name}»`);
   });
@@ -462,8 +483,7 @@ test.describe('sign-up form', () => {
     });
     await open(page);
     expect(directory).toEqual([]);
-    await page.getByLabel('Населённый пункт').focus();
-    await expect(page.locator('#signup-settlements option')).not.toHaveCount(0);
+    await focusCity(page);
     expect(directory).toHaveLength(1);
     expect(new URL(directory[0]).pathname).toMatch(/^\/_astro\/settlements\.[\w-]+\.json$/);
   });
@@ -475,7 +495,10 @@ test.describe('sign-up form', () => {
     await focusCity(page);
     await page.getByLabel('Населённый пункт').fill('г. химки');
     await page.getByLabel('Место работы').focus();
-    await expect(page.getByLabel('Населённый пункт')).toHaveValue('Химки — Московская область');
+    // The name in the field, the region under it (design).
+    await expect(page.getByLabel('Населённый пункт')).toHaveValue('Химки');
+    await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
+    await expect(page.locator('#signup-city-hint')).toBeVisible();
     await expect(page.getByLabel('Регион')).toBeHidden();
     await submit(page);
 
@@ -574,7 +597,8 @@ test.describe('sign-up form', () => {
     await expect(page.getByLabel('Регион')).toBeHidden();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel(/согласен/)).toBeFocused();
-    await expect(page.getByLabel('Населённый пункт')).toHaveValue('Комсомольск-на-Амуре — Хабаровский край');
+    await expect(page.getByLabel('Населённый пункт')).toHaveValue('Комсомольск-на-Амуре');
+    await expect(page.locator('#signup-city-hint')).toHaveText('Хабаровский край');
   });
 
   test('judges a city value that arrived without a focus against the directory', async ({ page }) => {
@@ -631,6 +655,189 @@ test.describe('sign-up form', () => {
 // The responsive and a11y ladders (responsive.spec.ts, a11y.spec.ts) already
 // walk /registration at every width; these pin what they cannot see — the
 // VALUES the page prints, the column order, and the states they never render.
+// Issue #88: the list fields are the design's own combobox, not a native
+// <datalist>. The list suggests; what a value resolves to is still the form's
+// (tests above), so these pin the widget itself.
+test.describe('sign-up list fields', () => {
+  test('typing opens the specialty list, highlights the typed part and keeps «Другое» last', async ({ page }) => {
+    await open(page);
+    const input = page.getByRole('combobox', { name: 'Специальность' });
+    const list = page.getByRole('listbox', { name: 'Список специальностей' });
+    await expect(list).toBeHidden();
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+
+    await input.pressSequentially('орт');
+    await expect(list).toBeVisible();
+    await expect(input).toHaveAttribute('aria-expanded', 'true');
+    await expect(input).toHaveAttribute('aria-controls', 'signup-specialty-list');
+    await expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    // Both names contain «орт»; «Другое» stays pinned whatever was typed.
+    await expect(specialtyOptions(page)).toHaveText([ORTHOPEDICS.name, SPORTS.name, OTHER.name]);
+    await expect(specialtyOptions(page).first().locator('b')).toHaveText('орт');
+    // The first option is active, and the input says so.
+    const first = await specialtyOptions(page).first().getAttribute('id');
+    await expect(input).toHaveAttribute('aria-activedescendant', first!);
+    await expect(specialtyOptions(page).first()).toHaveClass(/is-active/);
+  });
+
+  test('picks an option with the arrows and Enter, and sends its id', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page);
+    const input = page.getByRole('combobox', { name: 'Специальность' });
+    await input.fill('');
+    await input.pressSequentially('орт');
+    await page.keyboard.press('ArrowDown');
+    const second = await specialtyOptions(page).nth(1).getAttribute('id');
+    await expect(input).toHaveAttribute('aria-activedescendant', second!);
+    await page.keyboard.press('Enter');
+
+    await expect(input).toHaveValue(SPORTS.name);
+    await expect(page.getByRole('listbox', { name: 'Список специальностей' })).toBeHidden();
+    await expect(input).not.toHaveAttribute('aria-activedescendant', /.*/);
+    await expect(input).toBeFocused();
+    // Enter picked; it did not submit the form.
+    expect(requests).toHaveLength(0);
+
+    await submit(page);
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    expect((requests[0].postDataJSON() as Record<string, unknown>).specialtyId).toBe(SPORTS.id);
+  });
+
+  test('ArrowUp stops at the first option, Escape closes and keeps the typed text', async ({ page }) => {
+    await open(page);
+    const input = page.getByRole('combobox', { name: 'Специальность' });
+    await input.pressSequentially('орт');
+    await page.keyboard.press('ArrowUp');
+    await expect(specialtyOptions(page).first()).toHaveClass(/is-active/);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('listbox', { name: 'Список специальностей' })).toBeHidden();
+    await expect(input).toHaveValue('орт');
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('says nothing matched, and still offers «Другое»', async ({ page }) => {
+    await open(page);
+    await page.getByRole('combobox', { name: 'Специальность' }).pressSequentially('Хирург-волшебник');
+    await expect(page.locator('#signup-specialty-list')).toContainText('Ничего не найдено');
+    await expect(specialtyOptions(page)).toHaveText([OTHER.name]);
+  });
+
+  test('Tab closes the list without picking', async ({ page }) => {
+    await open(page);
+    const input = page.getByRole('combobox', { name: 'Специальность' });
+    await input.pressSequentially('орт');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('listbox', { name: 'Список специальностей' })).toBeHidden();
+    await expect(input).toHaveValue('орт');
+    await expect(page.locator('[data-specialty-id]')).toHaveValue('');
+  });
+
+  test('a click outside closes the list', async ({ page }) => {
+    await open(page);
+    await page.getByRole('combobox', { name: 'Специальность' }).pressSequentially('орт');
+    await expect(page.getByRole('listbox', { name: 'Список специальностей' })).toBeVisible();
+    await page.getByRole('heading', { level: 1 }).click();
+    await expect(page.getByRole('listbox', { name: 'Список специальностей' })).toBeHidden();
+  });
+
+  test('a click on an option picks it', async ({ page }) => {
+    await open(page);
+    const input = page.getByRole('combobox', { name: 'Специальность' });
+    await input.pressSequentially('спорт');
+    await specialtyOptions(page).filter({ hasText: SPORTS.name }).click();
+    await expect(input).toHaveValue(SPORTS.name);
+    await expect(page.locator('[data-specialty-id]')).toHaveValue(SPORTS.id);
+    await expect(input).toBeFocused();
+  });
+
+  test('lists places as «Город — Регион» and shows the picked region under the field', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page, { city: false });
+    await focusCity(page);
+    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await input.pressSequentially('химк');
+    const option = cityOptions(page).filter({ hasText: 'Московская область' }).filter({ hasText: /^Химки/ });
+    await expect(option.locator('span').first()).toHaveText('Химки');
+    await expect(option.locator('b')).toHaveText('Химк');
+    await expect(option.locator('.ob-signup__opt-sub')).toHaveText('— Московская область');
+
+    await option.click();
+    await expect(input).toHaveValue('Химки');
+    const hint = page.locator('#signup-city-hint');
+    await expect(hint).toBeVisible();
+    await expect(hint).toHaveText('Московская область');
+    await expect(input).toHaveAttribute('aria-describedby', /signup-city-hint/);
+    await expect(page.getByLabel('Регион')).toBeHidden();
+
+    await submit(page);
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    const body = requests[0].postDataJSON() as Record<string, unknown>;
+    expect(body.city).toBe('Химки');
+    expect(body.region).toBe('Московская область');
+  });
+
+  test('a pick settles a name found in several regions, and survives the blur', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page, { city: false });
+    await focusCity(page);
+    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await input.pressSequentially('Кировск');
+    await expect(page.getByLabel('Регион')).toBeVisible();
+
+    await cityOptions(page).filter({ hasText: 'Мурманская область' }).click();
+    await expect(input).toHaveValue('Кировск');
+    await expect(page.locator('#signup-city-hint')).toHaveText('Мурманская область');
+    await expect(page.getByLabel('Регион')).toBeHidden();
+
+    await page.getByLabel('Место работы').focus();
+    await expect(input).toHaveValue('Кировск');
+    await submit(page);
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    const body = requests[0].postDataJSON() as Record<string, unknown>;
+    expect(body.city).toBe('Кировск');
+    expect(body.region).toBe('Мурманская область');
+  });
+
+  test('a place outside the directory closes the list and asks for the region', async ({ page }) => {
+    await open(page);
+    await focusCity(page);
+    await page.getByRole('combobox', { name: 'Населённый пункт' }).pressSequentially('Минск');
+    await expect(page.getByRole('listbox', { name: 'Список населённых пунктов' })).toBeHidden();
+    await expect(page.locator('#signup-city-hint')).toBeHidden();
+    await expect(page.getByLabel('Регион')).toBeVisible();
+  });
+
+  // The open list hangs past the card; it must not widen the page anywhere.
+  for (const width of OVERFLOW_WIDTHS) {
+    test(`an open list holds the layout and passes axe at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await open(page);
+      await focusCity(page);
+      const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+      await input.pressSequentially('кир');
+      await expect(cityOptions(page).first()).toBeVisible();
+
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+      const list = (await page.locator('#signup-city-list').boundingBox())!;
+      const field = (await input.boundingBox())!;
+      expect(Math.abs(list.x - field.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(list.width - field.width)).toBeLessThanOrEqual(1);
+      expect(list.y).toBeGreaterThanOrEqual(field.y + field.height);
+      // Every option is a comfortable touch target (design: 44px).
+      const heights = await cityOptions(page).evaluateAll((els) =>
+        els.slice(0, 5).map((el) => el.getBoundingClientRect().height),
+      );
+      for (const height of heights) expect(height).toBeGreaterThanOrEqual(44);
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+      const blocking = results.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
+      expect(blocking, JSON.stringify(blocking.map((v) => v.id))).toEqual([]);
+    });
+  }
+});
+
 test.describe('registration page design', () => {
   test('prints the registration window and the venue from config', async ({ page }) => {
     await open(page);
@@ -890,25 +1097,39 @@ test.describe('registration page after the PR #87 audit', () => {
     expect(box!.y).toBeGreaterThan(map!.y + map!.height / 2);
   });
 
-  // Chrome's own datalist arrow is hidden for the design's chevron, so the
-  // chevron has to do its job: open the list on a click.
+  // The design's chevron is the only arrow in the field (no native datalist
+  // indicator any more), and it toggles the field's own list.
   for (const label of ['Специальность', 'Населённый пункт']) {
-    test(`a click on the «${label}» chevron focuses the field and opens its list`, async ({ page }) => {
-      await page.addInitScript(() => {
-        const calls: string[] = [];
-        (window as unknown as { __pickers: string[] }).__pickers = calls;
-        HTMLInputElement.prototype.showPicker = function (this: HTMLInputElement) {
-          calls.push(this.id);
-        };
-      });
+    test(`a click on the «${label}» chevron focuses the field and toggles its list`, async ({ page }) => {
       await open(page);
+      if (label === 'Населённый пункт') await focusCity(page);
       const input = page.getByLabel(label, { exact: true });
-      await input.locator('xpath=following-sibling::*[@data-combo-open]').click();
+      const chevron = input.locator('xpath=following-sibling::*[@data-combo-open]');
+      const list = page.locator(`#${await input.getAttribute('aria-controls')}`);
+      await page.getByLabel('Место работы').focus();
+
+      await chevron.click();
       await expect(input).toBeFocused();
-      const calls = await page.evaluate(() => (window as unknown as { __pickers: string[] }).__pickers);
-      expect(calls).toEqual([await input.getAttribute('id')]);
+      await expect(list).toBeVisible();
+      await expect(input).toHaveAttribute('aria-expanded', 'true');
+
+      await chevron.click();
+      await expect(list).toBeHidden();
+      await expect(input).toHaveAttribute('aria-expanded', 'false');
+      await expect(input).toBeFocused();
     });
   }
+
+  test('no native picker indicator is painted beside the chevron', async ({ page }) => {
+    await open(page);
+    for (const label of ['Специальность', 'Населённый пункт']) {
+      const input = page.getByLabel(label, { exact: true });
+      // No datalist behind the field, so Chrome has no indicator to draw.
+      await expect(input).not.toHaveAttribute('list', /.*/);
+      expect(await input.evaluate((el: HTMLInputElement) => el.list)).toBeNull();
+    }
+    await expect(page.locator('#signup-form datalist, [data-signup] datalist')).toHaveCount(0);
+  });
 
   // Every state card used to be revealed after the first paint, so the form
   // column opened from zero height and shoved the venue card down (CLS up to

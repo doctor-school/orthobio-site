@@ -215,7 +215,10 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
               class="ob-signup__input"
               id="signup-specialty"
               type="text"
-              list="signup-specialties"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="signup-specialty-list"
               autocomplete="off"
               placeholder="Начните вводить"
               maxlength="200"
@@ -226,8 +229,15 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
             <span class="ob-signup__chev" data-combo-open aria-hidden="true">
               <StrokeIcon name="chevron" />
             </span>
+            <ul
+              class="ob-signup__list"
+              id="signup-specialty-list"
+              role="listbox"
+              aria-label="Список специальностей"
+              hidden
+            >
+            </ul>
           </div>
-          <datalist id="signup-specialties"></datalist>
           <input type="hidden" name="specialtyId" data-specialty-id />
           <div class="ob-signup__msgs">
             <p class="ob-signup__hint" id="signup-specialty-hint">
@@ -247,21 +257,34 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
               id="signup-city"
               name="city"
               type="text"
-              list="signup-settlements"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded="false"
+              aria-controls="signup-city-list"
               autocomplete="off"
               placeholder="Например, Химки"
               maxlength="200"
               required
               aria-required="true"
-              aria-describedby="signup-city-error"
+              aria-describedby="signup-city-hint signup-city-error"
               data-settlement
             />
             <span class="ob-signup__chev" data-combo-open aria-hidden="true">
               <StrokeIcon name="chevron" />
             </span>
+            <ul
+              class="ob-signup__list"
+              id="signup-city-list"
+              role="listbox"
+              aria-label="Список населённых пунктов"
+              hidden
+            >
+            </ul>
           </div>
-          <datalist id="signup-settlements"></datalist>
           <div class="ob-signup__msgs">
+            <!-- The region of a directory entry (design: «Химки» in the field,
+                 «Московская область» under it). -->
+            <p class="ob-signup__hint" id="signup-city-hint" data-city-hint hidden></p>
             <p class="ob-signup__error" id="signup-city-error" hidden></p>
           </div>
         </div>
@@ -441,9 +464,12 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     serverNow,
     type RegistrationState,
   } from '@/lib/registration';
+  import { createCombobox } from '@/scripts/combobox';
   import {
     createSettlementIndex,
     expandDirectory,
+    normalisePlace,
+    settlementNameQuery,
     type Settlement,
     type SettlementDirectory,
     type SettlementIndex,
@@ -509,7 +535,6 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     const success = root.querySelector<HTMLElement>('[data-signup-success]')!;
     const specialtyInput = form.querySelector<HTMLInputElement>('#signup-specialty')!;
     const specialtyId = form.querySelector<HTMLInputElement>('[data-specialty-id]')!;
-    const datalist = form.querySelector<HTMLDataListElement>('#signup-specialties')!;
     const sitekey = pickSitekey(window.location.hostname, {
       prod: root.dataset.sitekeyProd ?? '',
       preview: root.dataset.sitekeyPreview ?? '',
@@ -572,7 +597,10 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         });
       }
 
-      // ── Specialties: live list, «Другое» first, no free text ───────────────
+      const chevronOf = (input: HTMLInputElement): HTMLElement | null =>
+        input.parentElement?.querySelector<HTMLElement>('[data-combo-open]') ?? null;
+
+      // ── Specialties: live list, «Другое» pinned last, no free text ─────────
       const matchSpecialty = (typed: string, allowFragment = true): Specialty | null =>
         specialties === null ? null : findSpecialty(specialties, typed, { allowFragment });
 
@@ -592,22 +620,33 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         specialtyId.value = matchSpecialty(specialtyInput.value, false)?.id ?? '';
       });
 
+      // The design pins «Другое» under a hairline at the foot of the list,
+      // whatever was typed; the rest keep the platform's order.
+      const specialtyCombo = createCombobox<Specialty>({
+        input: specialtyInput,
+        list: form.querySelector<HTMLElement>('#signup-specialty-list')!,
+        toggle: chevronOf(specialtyInput),
+        options: () => specialties?.filter((s) => !s.isOther) ?? [],
+        pinned: () => specialties?.find((s) => s.isOther) ?? null,
+        text: (s) => s.name,
+        emptyText: 'Ничего не найдено',
+        isSelected: (s) => s.id === specialtyId.value,
+        onPick: (s) => {
+          specialtyInput.value = s.name;
+          specialtyId.value = s.id;
+          setError(specialtyInput, null);
+        },
+      });
+
       fetch(SPECIALTIES_URL, { headers: { Accept: 'application/json' } })
         .then((res) => {
           if (!res.ok) throw new Error(`specialties: HTTP ${res.status}`);
           return res.json() as Promise<{ entries: Specialty[] }>;
         })
         .then(({ entries }) => {
-          const ordered = [...entries.filter((s) => s.isOther), ...entries.filter((s) => !s.isOther)];
-          specialties = ordered;
-          datalist.replaceChildren(
-            ...ordered.map((s) => {
-              const option = document.createElement('option');
-              option.value = s.name;
-              return option;
-            }),
-          );
+          specialties = entries;
           syncSpecialty();
+          specialtyCombo.refresh();
         })
         .catch(() => {
           specialties = [];
@@ -623,7 +662,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
       const regionInput = form.querySelector<HTMLInputElement>('#signup-region')!;
       const regionHint = form.querySelector<HTMLElement>('[data-region-hint]')!;
       const regionStatus = form.querySelector<HTMLElement>('[data-region-status]')!;
-      const settlementList = form.querySelector<HTMLDataListElement>('#signup-settlements')!;
+      const cityHint = form.querySelector<HTMLElement>('[data-city-hint]')!;
       let settlementIndex: SettlementIndex | null = null;
       // Pending while the directory is in flight; submit waits for it, so a fast
       // «type the city, press Enter» is not judged against a missing directory.
@@ -656,21 +695,47 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         regionStatus.textContent = '';
       };
 
+      // An entry, once resolved, holds while the field still reads its name or
+      // label: «Кировск» picked from the list is one of three Кировски, and
+      // re-resolving the bare name would lose which.
+      const stillReads = (entry: Settlement | null): entry is Settlement => {
+        if (entry === null) return false;
+        const typed = normalisePlace(cityInput.value);
+        return typed === normalisePlace(entry.name) || typed === normalisePlace(entry.label);
+      };
+
+      // The region under the field (design): «Химки» in the input, «Московская
+      // область» beneath. A federal city's label is its name alone, so it gets
+      // none. Shown or hidden only while typing, on a pick and at submit —
+      // never on blur, for the reason `showRegion` gives.
+      const showCityHint = (entry: Settlement | null): void => {
+        const region = entry && entry.label !== entry.name ? entry.region : '';
+        cityHint.textContent = region;
+        cityHint.hidden = region === '';
+      };
+
       // Once shown, the field stays until a directory entry resolves: someone
       // correcting «Минск» back through «Мин…» should not watch it flicker.
       const decideRegion = (): void => {
         if (settlementIndex === null) return;
         const status = settlementIndex.status(cityInput.value);
-        if (status.kind === 'match') hideRegion();
+        const resolved = stillReads(settlement)
+          ? settlement
+          : status.kind === 'match'
+            ? status.settlement
+            : null;
+        showCityHint(resolved);
+        if (resolved) hideRegion();
         else if (status.kind === 'ambiguous' || status.kind === 'unknown') showRegion(status.kind);
       };
 
-      // Rewrites a resolved entry to its full label. It runs on blur too, so it
-      // must never change the layout — `decideRegion` already settled it.
+      // Rewrites a resolved entry to its name (the region is the hint). It runs
+      // on blur too, so it must never change the layout — `decideRegion`
+      // already settled it.
       const resolveSettlement = (): void => {
-        settlement = settlementIndex?.match(cityInput.value) ?? null;
+        if (!stillReads(settlement)) settlement = settlementIndex?.match(cityInput.value) ?? null;
         if (settlement) {
-          cityInput.value = settlement.label;
+          cityInput.value = settlement.name;
           setError(cityInput, null);
         }
       };
@@ -678,9 +743,34 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
       cityInput.addEventListener('blur', resolveSettlement);
       cityInput.addEventListener('input', () => {
         // Full labels and exact names only while typing; a prefix resolves on
-        // change/blur, where the input is rewritten to the label.
-        settlement = settlementIndex?.match(cityInput.value, { allowPrefix: false }) ?? null;
+        // change/blur, where the input is rewritten to the name.
+        if (!stillReads(settlement)) {
+          settlement = settlementIndex?.match(cityInput.value, { allowPrefix: false }) ?? null;
+        }
         decideRegion();
+      });
+
+      // The directory has thousands of places: the list shows the first few
+      // dozen names that BEGIN with what was typed, and narrows as the
+      // participant types. A place outside it («Минск») finds none, so no list
+      // hangs over the next field while «Регион» is revealed.
+      const cityCombo = createCombobox<Settlement>({
+        input: cityInput,
+        list: form.querySelector<HTMLElement>('#signup-city-list')!,
+        toggle: chevronOf(cityInput),
+        options: () => settlementIndex?.entries ?? [],
+        text: (entry) => entry.name,
+        sub: (entry) => (entry.label !== entry.name ? entry.region : null),
+        normalise: settlementNameQuery,
+        prefixOnly: true,
+        limit: 50,
+        isSelected: (entry) => entry === settlement,
+        onPick: (entry) => {
+          settlement = entry;
+          cityInput.value = entry.name;
+          setError(cityInput, null);
+          decideRegion();
+        },
       });
 
       // `AbortSignal.timeout` is Safari 16+ / Chrome 103+; an older engine gets
@@ -707,13 +797,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
           })
           .then((directory) => {
             settlementIndex = createSettlementIndex(expandDirectory(directory));
-            settlementList.replaceChildren(
-              ...settlementIndex.entries.map((s) => {
-                const option = document.createElement('option');
-                option.value = s.label;
-                return option;
-              }),
-            );
+            cityCombo.refresh();
           })
           .catch(() => {
             settlementIndex = createSettlementIndex([]);
@@ -774,6 +858,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         if (workplace.value === '') fail(workplace, MESSAGES.required);
 
         resolveSettlement();
+        showCityHint(settlement);
         setError(cityInput, null);
         setError(regionInput, null);
         if (cityInput.value.trim() === '') fail(cityInput, MESSAGES.required);
@@ -964,24 +1049,6 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
       });
       // The handler is in place: the button the markup ships disabled may work.
       submit.disabled = false;
-
-      // ── Chevron: opens the list on a click, as Chrome's own datalist arrow
-      // (hidden in favour of the design's chevron) did. Mouse-only by nature;
-      // the keyboard has ArrowDown / Alt+ArrowDown on the field itself.
-      for (const chevron of form.querySelectorAll<HTMLElement>('[data-combo-open]')) {
-        chevron.addEventListener('mousedown', (event) => {
-          const input = chevron.parentElement?.querySelector('input');
-          if (!input) return;
-          event.preventDefault();
-          input.focus();
-          try {
-            input.showPicker();
-          } catch {
-            // No picker for a datalist in this engine: the focused field still
-            // offers its list as the participant types.
-          }
-        });
-      }
 
       // ── Captcha widget ────────────────────────────────────────────────────
       const renderCaptcha = (): void => {

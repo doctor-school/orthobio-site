@@ -372,6 +372,12 @@
   --ob-signup-alert-icon: 20px;
   --ob-signup-alert-pad: 12px 14px;
   --ob-signup-hint-dot: 6px;
+  /* The list fields' own popup (design `Combo`, Issue #88). */
+  --ob-combo-list-max: 272px;
+  --ob-combo-list-border: oklch(0.87 0.02 140);
+  --ob-combo-opt-height: 44px;
+  --ob-combo-opt-pad: 10px 12px;
+  --ob-combo-opt-fs: 0.9375rem;
   /* Tonal metaballs in the card corners (design `.ob-sf__pat--a|b|c`). */
   --ob-signup-pat-a-width: 150px;
   --ob-signup-pat-a-right: -22px;

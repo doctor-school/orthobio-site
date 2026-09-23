@@ -107,6 +107,18 @@ async function clickAt(page: Page, target: Locator): Promise<void> {
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
+/** The widths a list covers different fields at: the narrowest and a desktop. */
+const MOUSE_WIDTHS = [360, 1280] as const;
+
+/** Submits the form and returns the place the platform received. */
+async function submittedPlace(page: Page, requests: Request[]): Promise<{ city: unknown; region: unknown }> {
+  await submit(page);
+  await expect(page.locator('[data-signup-success]')).toBeVisible();
+  expect(requests).toHaveLength(1);
+  const body = requests[0].postDataJSON() as Record<string, unknown>;
+  return { city: body.city, region: body.region };
+}
+
 /** Focuses «Населённый пункт» and waits for the directory it loads. */
 async function focusCity(page: Page): Promise<void> {
   const city = page.getByLabel('Населённый пункт');
@@ -772,74 +784,171 @@ test.describe('sign-up list fields', () => {
     await expect(page.locator('[data-specialty-id]')).toHaveValue(ORTHOPEDICS.id);
   });
 
-  test('a full, unambiguous place commits itself, and a click on consent ticks it', async ({ page }) => {
-    await open(page);
-    await focusCity(page);
-    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
-    await input.pressSequentially('химки');
-    await expect(page.getByRole('listbox', { name: 'Список населённых пунктов' })).toBeHidden();
-    await expect(input).toHaveValue('Химки');
-    await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
+  // Which field an open list covers depends on the width (PR #89 review,
+  // round 2), so the mouse paths run at the narrowest and a desktop width,
+  // and each ends on what is SENT: the city has no hidden id, the payload is
+  // built from the form's own resolved place.
+  for (const width of MOUSE_WIDTHS) {
+    test.describe(`mouse path at ${width}px`, () => {
+      test.beforeEach(async ({ page }) => {
+        await page.setViewportSize({ width, height: 800 });
+      });
 
-    const consent = page.getByLabel(/согласен/);
-    await clickAt(page, consent);
-    await expect(consent).toBeChecked();
-    await expect(input).toHaveValue('Химки');
-    await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
-  });
+      test('a full, unambiguous place commits itself, and a click on consent ticks it', async ({ page }) => {
+        const requests = await mockSignUp(page, 200);
+        await open(page);
+        await fillValid(page, { city: false });
+        const consent = page.getByLabel(/согласен/);
+        await consent.uncheck();
+        await focusCity(page);
+        const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+        await input.pressSequentially('химки');
+        await expect(page.getByRole('listbox', { name: 'Список населённых пунктов' })).toBeHidden();
+        await expect(input).toHaveValue('Химки');
+        await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
 
-  test('a name found in several regions keeps the list open, and a click on a row applies it', async ({ page }) => {
-    await open(page);
-    await focusCity(page);
-    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
-    await input.pressSequentially('Кировск');
-    const list = page.getByRole('listbox', { name: 'Список населённых пунктов' });
-    await expect(list).toBeVisible();
-    await expect(page.getByLabel('Регион')).toBeVisible();
-    // The exact name ranks before the longer ones it begins («Кировское»).
-    await expect(cityOptions(page).first().locator('span').first()).toHaveText('Кировск');
-    const sub = cityOptions(page).first().locator('.ob-signup__opt-sub');
-    // Its tail is spaced off the name in the text itself, not by the layout.
-    expect(await sub.evaluate((el) => el.textContent)).toMatch(/^\u00a0— /);
+        await clickAt(page, consent);
+        await expect(consent).toBeChecked();
+        await expect(input).toHaveValue('Химки');
+        await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
+        expect(await submittedPlace(page, requests)).toEqual({ city: 'Химки', region: 'Московская область' });
+      });
 
-    const option = cityOptions(page)
-      .filter({ hasText: 'Ленинградская область' })
-      .filter({ has: page.getByText('Кировск', { exact: true }) });
-    await clickAt(page, option);
-    await expect(list).toBeHidden();
-    await expect(input).toHaveValue('Кировск');
-    await expect(page.locator('#signup-city-hint')).toHaveText('Ленинградская область');
-    await expect(page.locator('#signup-city-hint')).toBeVisible();
-    await expect(page.getByLabel('Регион')).toBeHidden();
-  });
+      // Round 2: a same-named place typed with its region resolved the place
+      // but left every «Кировск» row open over consent, so the click there
+      // picked another region.
+      test('a shared name typed with its region commits itself, and a click on consent ticks it', async ({
+        page,
+      }) => {
+        const requests = await mockSignUp(page, 200);
+        await open(page);
+        await fillValid(page, { city: false });
+        const consent = page.getByLabel(/согласен/);
+        await consent.uncheck();
+        await focusCity(page);
+        const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+        await input.pressSequentially('Кировск, Мурманская область');
+        await expect(page.getByRole('listbox', { name: 'Список населённых пунктов' })).toBeHidden();
+        await expect(input).toHaveValue('Кировск');
+        await expect(page.locator('#signup-city-hint')).toHaveText('Мурманская область');
 
-  // A press outside the list is not swallowed: it closes the list, reaches
-  // its own target, and commits nothing for a place still being typed. (A
-  // list this long covers the consent box, as any open dropdown covers what
-  // is under it; the press goes to a field the list leaves visible.)
-  test('a partial place, then a click elsewhere: the list closes and nothing is picked', async ({ page }) => {
+        await clickAt(page, consent);
+        await expect(consent).toBeChecked();
+        await expect(input).toHaveValue('Кировск');
+        await expect(page.locator('#signup-city-hint')).toHaveText('Мурманская область');
+        await expect(page.getByLabel('Регион')).toBeHidden();
+        expect(await submittedPlace(page, requests)).toEqual({ city: 'Кировск', region: 'Мурманская область' });
+      });
+
+      test('a name found in several regions keeps the list open, and a click on a row applies it', async ({
+        page,
+      }) => {
+        const requests = await mockSignUp(page, 200);
+        await open(page);
+        await fillValid(page, { city: false });
+        await focusCity(page);
+        const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+        await input.pressSequentially('Кировск');
+        const list = page.getByRole('listbox', { name: 'Список населённых пунктов' });
+        await expect(list).toBeVisible();
+        await expect(page.getByLabel('Регион')).toBeVisible();
+        // The exact name ranks before the longer ones it begins («Кировское»).
+        await expect(cityOptions(page).first().locator('span').first()).toHaveText('Кировск');
+        const sub = cityOptions(page).first().locator('.ob-signup__opt-sub');
+        // Its tail is spaced off the name in the text itself, not by the layout.
+        expect(await sub.evaluate((el) => el.textContent)).toMatch(/^ — /);
+
+        const option = cityOptions(page)
+          .filter({ hasText: 'Ленинградская область' })
+          .filter({ has: page.getByText('Кировск', { exact: true }) });
+        await clickAt(page, option);
+        await expect(list).toBeHidden();
+        await expect(input).toHaveValue('Кировск');
+        await expect(page.locator('#signup-city-hint')).toHaveText('Ленинградская область');
+        await expect(page.locator('#signup-city-hint')).toBeVisible();
+        await expect(page.getByLabel('Регион')).toBeHidden();
+        expect(await submittedPlace(page, requests)).toEqual({ city: 'Кировск', region: 'Ленинградская область' });
+      });
+
+      // A press outside the list is not swallowed: it closes the list, reaches
+      // its own target, and commits nothing for a place still being typed. (A
+      // list this long covers the consent box, as any open dropdown covers what
+      // is under it; the press goes to a field the list leaves visible.)
+      test('a partial place, then a click elsewhere: the list closes and nothing is picked', async ({ page }) => {
+        const requests = await mockSignUp(page, 200);
+        await open(page);
+        await fillValid(page, { city: false });
+        await page.getByLabel(/согласен/).uncheck();
+        await focusCity(page);
+        const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+        await input.pressSequentially('Кировс');
+        const list = page.getByRole('listbox', { name: 'Список населённых пунктов' });
+        await expect(list).toBeVisible();
+
+        const workplace = page.getByLabel('Место работы');
+        await clickAt(page, workplace);
+        await expect(list).toBeHidden();
+        await expect(workplace).toBeFocused();
+        await expect(input).toHaveValue('Кировс');
+        await expect(page.locator('#signup-city-hint')).toBeHidden();
+
+        const consent = page.getByLabel(/согласен/);
+        await clickAt(page, consent);
+        await expect(consent).toBeChecked();
+
+        // Still no place from the list: the region is asked for, nothing is sent.
+        await submit(page);
+        await expect(page.getByLabel('Регион')).toBeVisible();
+        await expect(page.locator('#signup-region-error')).toHaveText('Заполните это поле.');
+        expect(requests).toHaveLength(0);
+      });
+    });
+  }
+
+  // «Бор» is a whole name and commits; typing on must drop it, not keep a
+  // stale pick under a longer name.
+  test('typing past a committed name drops it, and the longer name is what is sent', async ({ page }) => {
     const requests = await mockSignUp(page, 200);
     await open(page);
     await fillValid(page, { city: false });
-    await page.getByLabel(/согласен/).uncheck();
     await focusCity(page);
     const input = page.getByRole('combobox', { name: 'Населённый пункт' });
-    await input.pressSequentially('Кировс');
-    const list = page.getByRole('listbox', { name: 'Список населённых пунктов' });
-    await expect(list).toBeVisible();
+    const hint = page.locator('#signup-city-hint');
+    await input.pressSequentially('Бор');
+    await expect(hint).toBeVisible();
+    await expect(hint).not.toHaveText('Воронежская область');
 
-    const workplace = page.getByLabel('Место работы');
-    await clickAt(page, workplace);
-    await expect(list).toBeHidden();
-    await expect(workplace).toBeFocused();
-    await expect(input).toHaveValue('Кировс');
+    await input.pressSequentially('и');
+    await expect(input).toHaveValue('Бори');
+    await expect(hint).toBeHidden();
+
+    await input.pressSequentially('соглебск');
+    await expect(input).toHaveValue('Борисоглебск');
+    await expect(hint).toHaveText('Воронежская область');
+    expect(await submittedPlace(page, requests)).toEqual({ city: 'Борисоглебск', region: 'Воронежская область' });
+  });
+
+  test('editing a picked place drops the pick, and submit asks for the region', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page, { city: false });
+    await focusCity(page);
+    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await input.pressSequentially('Кировск');
+    await cityOptions(page)
+      .filter({ hasText: 'Ленинградская область' })
+      .filter({ has: page.getByText('Кировск', { exact: true }) })
+      .click();
+    await expect(page.locator('#signup-city-hint')).toHaveText('Ленинградская область');
+
+    // The same letters retyped: the text reads «Кировск» again, but as the
+    // shared name, not the pick.
+    await input.press('Backspace');
+    await input.pressSequentially('к');
+    await expect(input).toHaveValue('Кировск');
     await expect(page.locator('#signup-city-hint')).toBeHidden();
-
-    const consent = page.getByLabel(/согласен/);
-    await clickAt(page, consent);
-    await expect(consent).toBeChecked();
-
-    // Still no place from the list: the region is asked for, nothing is sent.
+    await page.keyboard.press('Escape');
+    await page.getByLabel('Место работы').focus();
     await submit(page);
     await expect(page.getByLabel('Регион')).toBeVisible();
     await expect(page.locator('#signup-region-error')).toHaveText('Заполните это поле.');

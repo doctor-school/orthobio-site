@@ -413,7 +413,7 @@
      emerge from behind the green panel's top-right and bottom-left corners. */
   --reg-edge-a-width: 170px;
   --reg-edge-a-right: -150px;
-  --reg-edge-a-top: -200px;
+  --reg-edge-a-top: -60px;
   --reg-edge-b-width: 120px;
   --reg-edge-b-left: 88px;
   --reg-edge-b-bottom: -128px;

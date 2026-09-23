@@ -1047,9 +1047,13 @@ test.describe('registration page design', () => {
     for (const width of [1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
-      const [intro, venue] = await Promise.all(
-        ['.ob-reg__intro', '.ob-reg__venue'].map((sel) => page.locator(sel).boundingBox()),
+      const [intro, venue, reg] = await Promise.all(
+        ['.ob-reg__intro', '.ob-reg__venue', '.ob-reg'].map((sel) => page.locator(sel).boundingBox()),
       );
+      // `.ob-reg` clips its overflow: a shape starting above it is cut flat by
+      // the header line (PR #89 audit), so the top one starts inside it.
+      const top = (await page.locator('.ob-reg__edge--a').boundingBox())!;
+      expect(top.y, `edge --a vs the header line @${width}`).toBeGreaterThanOrEqual(reg!.y);
       for (const edge of await edges.all()) {
         await expect(edge).toBeVisible();
         const box = (await edge.boundingBox())!;
@@ -1063,26 +1067,55 @@ test.describe('registration page design', () => {
         }
       }
       // Where a shape meets the panel, the panel is on top: the shapes sit at
-      // z-index -1 in the form column (which starts no stacking context of its
-      // own), under the in-flow panel, whose green is opaque.
+      // z-index -1, and no element between them and `.ob-reg` (the isolated
+      // floor) starts a stacking context of its own, so they paint under the
+      // in-flow panel, whose green is opaque. A pixel sample cannot prove this:
+      // the shapes are `pointer-events: none`, so `elementFromPoint` skips them.
       const stacking = await page.evaluate(() => {
-        const column = document.querySelector('.ob-reg__form')!;
         const panel = getComputedStyle(document.querySelector('.ob-signup')!);
+        const edge = document.querySelector('.ob-reg__edge')!;
+        const contexts: string[] = [];
+        for (let el = edge.parentElement; el && !el.classList.contains('ob-reg'); el = el.parentElement) {
+          const cs = getComputedStyle(el);
+          const starts =
+            (cs.position !== 'static' && cs.zIndex !== 'auto') ||
+            cs.transform !== 'none' ||
+            cs.translate !== 'none' ||
+            cs.rotate !== 'none' ||
+            cs.scale !== 'none' ||
+            cs.opacity !== '1' ||
+            cs.isolation === 'isolate' ||
+            cs.filter !== 'none' ||
+            cs.backdropFilter !== 'none' ||
+            cs.mixBlendMode !== 'normal' ||
+            /paint|layout|strict|content/.test(cs.contain) ||
+            cs.willChange !== 'auto';
+          if (starts) contexts.push(el.className);
+        }
         return {
-          z: [...column.querySelectorAll('.ob-reg__edge')].map((el) => getComputedStyle(el).zIndex),
-          columnZ: getComputedStyle(column).zIndex,
+          z: [...document.querySelectorAll('.ob-reg__edge')].map((el) => getComputedStyle(el).zIndex),
+          contexts,
           panelPosition: panel.position,
           panelBg: panel.backgroundColor,
         };
       });
       expect(stacking.z).toEqual(['-1', '-1']);
-      expect(stacking.columnZ).toBe('auto');
+      expect(stacking.contexts).toEqual([]);
       expect(stacking.panelPosition).toBe('static');
       expect(stacking.panelBg).toMatch(/^(rgb\(|oklch\((?!.*\/))/);
       // Tints, not the brand's full green, and painted through `currentColor`
       // (an <img> of the same SVG would paint black).
+      const green = await page.evaluate(() => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--ob-green)';
+        document.body.append(probe);
+        const value = getComputedStyle(probe).color;
+        probe.remove();
+        return value;
+      });
       for (const color of await edges.evaluateAll((els) => els.map((el) => getComputedStyle(el).color))) {
         expect(color).not.toBe('rgb(0, 0, 0)');
+        expect(color).not.toBe(green);
       }
     }
   });

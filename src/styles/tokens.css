@@ -409,17 +409,14 @@
   --reg-dates-icon: 20px;
   --reg-map-pin: 18px;
   --reg-map-pin-ring: 5px;
-  /* Edge metaballs of the page (design `.reg-main__pat--a|b|c`), anchored to
-     the viewport centre so they sit in the margins beside the container. */
-  --reg-edge-a-width: 300px;
-  --reg-edge-a-offset: 916px;
-  --reg-edge-a-top: -150px;
-  --reg-edge-b-width: 220px;
-  --reg-edge-b-offset: 836px;
-  --reg-edge-b-top: 440px;
-  --reg-edge-c-width: 220px;
-  --reg-edge-c-offset: 836px;
-  --reg-edge-c-bottom: -260px;
+  /* Edge metaballs of the page (Issue #88), anchored to the form column: they
+     emerge from behind the green panel's top-right and bottom-left corners. */
+  --reg-edge-a-width: 170px;
+  --reg-edge-a-right: -150px;
+  --reg-edge-a-top: -200px;
+  --reg-edge-b-width: 120px;
+  --reg-edge-b-left: 88px;
+  --reg-edge-b-bottom: -128px;
 
   /* --- Layout & focus ------------------------------------------------------ */
   /* `vh` keeps the shell compatible with older browsers; the feature query

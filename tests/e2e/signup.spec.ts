@@ -906,25 +906,60 @@ test.describe('registration page design', () => {
     expect(venue!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height);
   });
 
-  test('shows the edge pattern only where the margins can hold it, and never widens the page', async ({
-    page,
-  }) => {
+  // Issue #88: two tonal metaballs emerging from behind the green panel,
+  // from lg up like the home hero's pattern — never over a field, never over
+  // the intro or the venue card, never widening the page.
+  test('shows the edge pattern from lg, behind the form panel and clear of the text', async ({ page }) => {
     const edges = page.locator('.ob-reg__edge');
-    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.setViewportSize({ width: 1023, height: 900 });
     await open(page);
-    await expect(edges).toHaveCount(3);
+    await expect(edges).toHaveCount(2);
     for (const edge of await edges.all()) {
       await expect(edge).toBeHidden();
       await expect(edge).toHaveAttribute('aria-hidden', 'true');
     }
 
-    await page.setViewportSize({ width: 1440, height: 900 });
-    for (const edge of await edges.all()) await expect(edge).toBeVisible();
-    expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
-    // Painted in the brand green through `currentColor`, not the black an
-    // <img> of the same SVG would paint.
-    const fill = await edges.first().evaluate((el) => getComputedStyle(el).color);
-    expect(fill).not.toBe('rgb(0, 0, 0)');
+    for (const width of [1024, 1280, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+      const [intro, venue] = await Promise.all(
+        ['.ob-reg__intro', '.ob-reg__venue'].map((sel) => page.locator(sel).boundingBox()),
+      );
+      for (const edge of await edges.all()) {
+        await expect(edge).toBeVisible();
+        const box = (await edge.boundingBox())!;
+        for (const [name, other] of [['intro', intro!], ['venue', venue!]] as const) {
+          const apart =
+            box.x + box.width <= other.x ||
+            other.x + other.width <= box.x ||
+            box.y + box.height <= other.y ||
+            other.y + other.height <= box.y;
+          expect(apart, `edge vs ${name} @${width}`).toBe(true);
+        }
+      }
+      // Where a shape meets the panel, the panel is on top: the shapes sit at
+      // z-index -1 in the form column (which starts no stacking context of its
+      // own), under the in-flow panel, whose green is opaque.
+      const stacking = await page.evaluate(() => {
+        const column = document.querySelector('.ob-reg__form')!;
+        const panel = getComputedStyle(document.querySelector('.ob-signup')!);
+        return {
+          z: [...column.querySelectorAll('.ob-reg__edge')].map((el) => getComputedStyle(el).zIndex),
+          columnZ: getComputedStyle(column).zIndex,
+          panelPosition: panel.position,
+          panelBg: panel.backgroundColor,
+        };
+      });
+      expect(stacking.z).toEqual(['-1', '-1']);
+      expect(stacking.columnZ).toBe('auto');
+      expect(stacking.panelPosition).toBe('static');
+      expect(stacking.panelBg).toMatch(/^(rgb\(|oklch\((?!.*\/))/);
+      // Tints, not the brand's full green, and painted through `currentColor`
+      // (an <img> of the same SVG would paint black).
+      for (const color of await edges.evaluateAll((els) => els.map((el) => getComputedStyle(el).color))) {
+        expect(color).not.toBe('rgb(0, 0, 0)');
+      }
+    }
   });
 
   test('draws the consent tick on the checkbox itself', async ({ page }) => {

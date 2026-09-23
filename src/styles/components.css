@@ -2405,44 +2405,43 @@ details[open] > .ob-faq__q::after {
   isolation: isolate;
 }
 
-/* Decorative only, in the margins beside the container — which exist from xl
-   (the design says 1300px; xl is the ladder's step). Inlined through the import
-   so `currentColor` resolves to a token, as in the home hero. */
+/* Decorative only (Issue #88, after the owner's review of #87): two tonal
+   metaballs emerging from BEHIND the green panel — one past its top-right
+   corner, one past its bottom-left — echoing the card's own corner pattern at
+   page scale. Anchored to the form column rather than to the viewport, so the
+   pair keeps the same balance at every width from lg; behind the opaque panel
+   (z-index -1, the panel is in flow) they can never cover a field, and they
+   are tints, not the hero's full green, so they never compete with it. Hidden
+   below lg like `.ob-hero__pattern`: the stacked page has no air for them.
+   Inlined through the import so `currentColor` resolves to a token. */
 .ob-reg__edge {
   display: none;
   position: absolute;
   z-index: -1;
   height: auto;
-  color: var(--ob-green);
   pointer-events: none;
   user-select: none;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .ob-reg__edge {
     display: block;
   }
 
   .ob-reg__edge--a {
     width: var(--reg-edge-a-width);
-    right: calc(50% - var(--reg-edge-a-offset));
+    right: var(--reg-edge-a-right);
     top: var(--reg-edge-a-top);
+    rotate: -40deg;
+    color: color-mix(in oklab, var(--ob-green) 22%, var(--bg));
   }
 
   .ob-reg__edge--b {
-    z-index: -2;
     width: var(--reg-edge-b-width);
-    right: calc(50% - var(--reg-edge-b-offset));
-    top: var(--reg-edge-b-top);
-    transform: rotate(180deg);
-    opacity: 0.5;
-  }
-
-  .ob-reg__edge--c {
-    width: var(--reg-edge-c-width);
-    left: calc(50% - var(--reg-edge-c-offset));
-    bottom: var(--reg-edge-c-bottom);
-    opacity: 0.5;
+    left: var(--reg-edge-b-left);
+    bottom: var(--reg-edge-b-bottom);
+    rotate: 96deg;
+    color: color-mix(in oklab, var(--ob-sky) 16%, var(--bg));
   }
 }
 
@@ -2477,6 +2476,7 @@ details[open] > .ob-faq__q::after {
 }
 
 .ob-reg__form {
+  position: relative;
   grid-area: form;
   min-width: 0;
 }

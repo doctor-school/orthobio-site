@@ -66,7 +66,7 @@ test('«узнать первым» appears only on /registration, and only to t
       .locator('a')
       .filter({ hasText: /узнать первым/i })
       .evaluateAll((links) => links.map((a) => a.getAttribute('href')));
-    expect(hrefs, path).toEqual(path === '/registration' ? [NOTIFY_CHANNEL_URL] : []);
+    expect(hrefs, path).toEqual(path === '/registration/' ? [NOTIFY_CHANNEL_URL] : []);
   }
 });
 

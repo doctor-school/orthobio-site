@@ -10,7 +10,7 @@ Temporary static website of the **VIII Congress ОРТОБИОЛОГИЯ-2027** 
 
 **Owner:** Anton (non-developer, works through AI agents). Final call on money / accounts / DNS changes only (the initial domain switchover, Issue #6, is done); everything else runs autonomously.
 **Audience:** Russian Federation physicians — **RF accessibility is a hard constraint** (no Cloudflare-dependent chains, no Vercel; hosting on Timeweb, DNS on Beget).
-**152-FZ:** this site collects NO PII — no forms, no registration. The «узнать первым» CTA is an outbound link (Telegram/email), not a form. If a form is ever requested, it must POST to an RF-hosted receiver (see `bbm-public-website` LeadForm pattern) — never collect PII in this repo.
+**152-FZ:** the site stores NO PII and has no backend of its own. The only PII flow is the `/registration` form (`SignupForm.astro`): a same-origin POST to `SIGN_UP_URL` that our nginx passes straight through to the RF-hosted DS Platform API (upstream in `infra/nginx/*.conf`), guarded by Yandex SmartCaptcha (`SMARTCAPTCHA_SITEKEY*`). The «узнать первым» CTA is an outbound Telegram link (`NOTIFY_CHANNEL_URL`), not a form. Any new form follows the same pattern — POST to an RF-hosted receiver, never collect PII in this repo.
 
 This repo follows the conventions of its ecosystem siblings `bbm-public-website` (Astro site of bbm.academy — primary donor), `bbm-portal` (Payload CMS), and `bbm-kb`. When in doubt, look there first.
 

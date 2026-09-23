@@ -856,7 +856,7 @@ test.describe('sign-up list fields', () => {
         await expect(cityOptions(page).first().locator('span').first()).toHaveText('Кировск');
         const sub = cityOptions(page).first().locator('.ob-signup__opt-sub');
         // Its tail is spaced off the name in the text itself, not by the layout.
-        expect(await sub.evaluate((el) => el.textContent)).toMatch(/^ — /);
+        expect(await sub.evaluate((el) => el.textContent)).toMatch(/^\u00a0— /);
 
         const option = cityOptions(page)
           .filter({ hasText: 'Ленинградская область' })
@@ -1087,8 +1087,8 @@ test.describe('registration page design', () => {
 
     const venue = page.locator('.ob-reg__venue');
     await expect(venue.locator('.ob-reg__vname')).toHaveText('ГК «Милан»');
-    await expect(venue.locator('.ob-reg__vaddr')).toHaveText('Москва, ул. Шипиловская, 28А');
-    await expect(venue.locator('.ob-reg__vnote')).toHaveText('м. «Домодедовская» — 11 минут пешком');
+    await expect(venue.locator('.ob-reg__vaddr')).toHaveText('Москва, ул.\u00a0Шипиловская, 28А');
+    await expect(venue.locator('.ob-reg__vnote')).toHaveText('м.\u00a0«Домодедовская»\u00a0— 11\u00a0минут пешком');
     const mapUrl = 'https://yandex.ru/maps/org/milan/1088776161/';
     await expect(
       page.getByRole('link', { name: 'ГК «Милан» на карте (открывается в новой вкладке)' }),

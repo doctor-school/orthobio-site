@@ -261,6 +261,10 @@ sudo -n install -d -o deploy -g deploy -m 0755 "$ROOT" "$ROOT/public"
 sudo -n install -o root -g root -m 0755 /tmp/orthobio-deploy "$FORCED_COMMAND"
 sudo -n install -o root -g root -m 0755 /tmp/orthobio-apply-redirects "$REDIRECT_INSTALLER"
 sudo -n install -d -o root -g root -m 0755 /etc/nginx/snippets
+# Host-side secrets for the vhosts (the preview's stage-gate cookie). Created
+# empty and root-only; the owner writes the file into it by hand, it is never
+# staged from this repo, and the vhost's glob include tolerates its absence.
+sudo -n install -d -o root -g root -m 0700 /etc/nginx/orthobio
 
 # Seed only when absent: the deploy owns subsequent redirect-map updates.
 if [ ! -f /etc/nginx/snippets/orthobio-redirects.conf ]; then

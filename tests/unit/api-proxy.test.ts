@@ -10,9 +10,13 @@ import { describe, expect, it } from 'vitest';
  */
 
 const VHOSTS = [
-  { file: 'infra/nginx/orthobio.ru.conf', api: 'api.doctor.school' },
-  { file: 'infra/nginx/new.orthobio.ru.conf', api: 'api-main.stage.doctor.school' },
+  { file: 'infra/nginx/orthobio.ru.conf', api: 'api.doctor.school', stageGate: false },
+  { file: 'infra/nginx/new.orthobio.ru.conf', api: 'api-main.stage.doctor.school', stageGate: true },
 ] as const;
+
+// The stage API sits behind basic auth; a host-side file (never in the repo)
+// supplies the gate cookie. Glob, so an absent file is an empty include.
+const STAGE_GATE_INCLUDE = 'include /etc/nginx/orthobio/stage-gate*.conf;';
 
 const PROXIED = ['/api/v1/congress/sign-up', '/api/v1/public/specialties'] as const;
 
@@ -40,7 +44,7 @@ const directives = (file: string) =>
     .filter((line) => !line.trim().startsWith('#'))
     .join('\n');
 
-describe.each(VHOSTS)('$file', ({ file, api }) => {
+describe.each(VHOSTS)('$file', ({ file, api, stageGate }) => {
   const conf = directives(file);
 
   it('proxies exactly the two sign-up paths and no /api prefix', () => {
@@ -65,6 +69,30 @@ describe.each(VHOSTS)('$file', ({ file, api }) => {
     expect(body).not.toContain('proxy_intercept_errors');
   });
 
+  it.each(PROXIED)('leaves the cache map as the only Cache-Control on %s', (path) => {
+    expect(exactLocation(conf, path)).toContain('proxy_hide_header Cache-Control;');
+  });
+
+  it.each(PROXIED)(
+    stageGate
+      ? 'passes the stage gate and never forwards a Basic challenge on %s'
+      : 'carries no stage-gate include on %s',
+    (path) => {
+      const body = exactLocation(conf, path);
+      if (stageGate) {
+        expect(body).toContain(STAGE_GATE_INCLUDE);
+        expect(body).toContain('proxy_hide_header WWW-Authenticate;');
+      } else {
+        expect(body).not.toContain('stage-gate');
+      }
+    },
+  );
+
+  it('never carries a gate secret in the repo', () => {
+    expect(readFileSync(file, 'utf8')).not.toMatch(/ds_stage_gate=(?!<STAGE_GATE_TOKEN>)/);
+    expect(conf).not.toMatch(/proxy_set_header\s+(Cookie|Authorization)/i);
+  });
+
   it('accepts only POST on sign-up, with a small body cap', () => {
     const body = exactLocation(conf, '/api/v1/congress/sign-up');
     expect(body).toMatch(/if \(\$request_method != POST\) \{\s*return 405;\s*\}/);
@@ -80,6 +108,14 @@ describe.each(VHOSTS)('$file', ({ file, api }) => {
     expect(conf).toContain(`add_header Content-Security-Policy "${CSP}" always;`);
     expect(conf).not.toContain("form-action 'none'");
     expect(conf.match(/Content-Security-Policy/g)).toHaveLength(1);
+  });
+});
+
+describe('provisioning', () => {
+  it('creates the root-only directory the stage-gate include reads', () => {
+    expect(readFileSync('infra/host/provision.sh', 'utf8')).toContain(
+      'sudo -n install -d -o root -g root -m 0700 /etc/nginx/orthobio\n',
+    );
   });
 });
 

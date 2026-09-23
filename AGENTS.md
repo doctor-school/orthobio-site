@@ -4,19 +4,21 @@
 
 ## Project overview
 
-Temporary static website of the **VIII Congress ОРТОБИОЛОГИЯ-2027** (`orthobio.ru`) plus a consolidated archive of the 2021–2026 congresses. Built with **Astro (SSG)**. Lifespan: launch ASAP → replaced by the Doctor.School platform module around November 2026 (registration opening), with full 301-redirect control at migration.
+Temporary static website of the **VIII Congress ОРТОБИОЛОГИЯ-2027** (`orthobio.ru`) plus a consolidated archive of the 2021–2026 congresses. Built with **Astro (SSG)**. Lifespan: live since July 2026 → replaced by the Doctor.School platform module around November 2026 (registration opening), with full 301-redirect control at migration.
 
-**Owner:** Anton (non-developer, works through AI agents). Final call on money / accounts / domain switchover only; everything else runs autonomously.
+**Live state:** production is `orthobio.ru`, served by this repo's `Deploy` workflow (domain switched 2026-07-31, Issue #6 closed). `new.orthobio.ru` is a preview host of the same deploy where the registration form is force-open (`FORCE_OPEN_HOSTS` in `src/lib/registration.ts`); `/registration` on production follows the date window in `src/config/site.ts` / `src/lib/registration.ts`.
+
+**Owner:** Anton (non-developer, works through AI agents). Final call on money / accounts / DNS changes only (the initial domain switchover, Issue #6, is done); everything else runs autonomously.
 **Audience:** Russian Federation physicians — **RF accessibility is a hard constraint** (no Cloudflare-dependent chains, no Vercel; hosting on Timeweb, DNS on Beget).
-**152-FZ:** this site collects NO PII — no forms, no registration. The «узнать первым» CTA is an outbound link (Telegram/email), not a form. If a form is ever requested, it must POST to an RF-hosted receiver (see `bbm-public-website` LeadForm pattern) — never collect PII in this repo.
+**152-FZ:** the site stores NO PII and has no backend of its own. The only PII flow is the `/registration` form (`SignupForm.astro`): a same-origin POST to `SIGN_UP_URL` that our nginx passes straight through to the RF-hosted DS Platform API (upstream in `infra/nginx/*.conf`), guarded by Yandex SmartCaptcha (`SMARTCAPTCHA_SITEKEY*`). The «узнать первым» CTA is an outbound Telegram link (`NOTIFY_CHANNEL_URL`), not a form. Any new form follows the same pattern — POST to an RF-hosted receiver, never collect PII in this repo.
 
 This repo follows the conventions of its ecosystem siblings `bbm-public-website` (Astro site of bbm.academy — primary donor), `bbm-portal` (Payload CMS), and `bbm-kb`. When in doubt, look there first.
 
 ## Where to look first
 
-1. `docs/content-map-and-tz.md` — approved ТЗ: page map, content model, principles (honest placeholders, no external archive links)
+1. `docs/content-map-and-tz.md` — approved ТЗ: page map, content model, principles (honest placeholders, no external archive links). It predates the registration form (#78) and still says «Без регистрации»; where it differs, the «Live state» paragraph above takes precedence.
 2. `docs/recon/*.md` — source-of-truth reports for all archive content (2021–2026); every fact in content YAML must trace to these
-3. GitHub Issues #1–#6 — execution chain; design & decomposition live in Issues, not in docs/specs files
+3. GitHub Issues — execution chain; `gh issue list` for current state; design & decomposition live in Issues, not in docs/specs files
 
 ## Architectural decisions (do not re-litigate)
 
@@ -39,7 +41,7 @@ This repo follows the conventions of its ecosystem siblings `bbm-public-website`
 3. Open PR against `main`; fill `.github/PULL_REQUEST_TEMPLATE.md`.
 4. **Independent review is mandatory:** the orchestrator (not the implementer) dispatches `orthobio-pr-reviewer`. Every comment gets fixed or answered with rationale; loop until no `[BLOCKER]`/`[IMPORTANT]` remains.
 5. For UI-affecting PRs, run `responsive-a11y-audit` before the reviewer.
-6. Merge: `gh pr merge --squash --delete-branch` — autonomous after a clean review. Owner gate applies only to money / accounts / DNS switchover (Issue #6). Contested content facts → `TODO(Антон)` marker in the artifact, do not block merge.
+6. Merge: `gh pr merge --squash --delete-branch` — autonomous after a clean review. Owner gate applies only to money / accounts / DNS changes (the initial switchover, Issue #6, is done). Contested content facts → `TODO(Антон)` marker in the artifact, do not block merge.
 7. Never push to `main` directly; never force-push shared branches; no destructive git ops without explicit confirmation in chat.
 
 ## Code style

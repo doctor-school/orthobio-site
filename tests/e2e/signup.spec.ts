@@ -73,8 +73,7 @@ async function fillValid(page: Page, { patronymic = '' } = {}): Promise<void> {
   await page.getByLabel('Телефон').fill('+7 (999) 123-45-67');
   await page.getByLabel('Специальность').fill(ORTHOPEDICS.name);
   await page.getByLabel('Место работы').fill('ГКБ № 1');
-  await page.getByLabel('Город').fill('Москва');
-  await page.getByLabel('Область').fill('Московская область');
+  await page.getByLabel('Населённый пункт').fill('Москва');
   await page.getByLabel(/согласен/).check();
 }
 
@@ -98,11 +97,13 @@ test.describe('sign-up form', () => {
 
   test('labels every field and marks required ones', async ({ page }) => {
     await open(page);
-    for (const label of ['Фамилия', 'E-mail', 'Телефон', 'Специальность', 'Место работы', 'Город', 'Область']) {
+    for (const label of ['Фамилия', 'E-mail', 'Телефон', 'Специальность', 'Место работы', 'Населённый пункт']) {
       const field = page.getByLabel(label, { exact: true });
       await expect(field, label).toHaveAttribute('required', '');
       await expect(field, label).toHaveAttribute('aria-required', 'true');
     }
+    // «Регион» is asked only for a place the directory does not resolve.
+    await expect(page.getByLabel('Регион')).toBeHidden();
     const patronymic = page.getByLabel(/Отчество/);
     await expect(patronymic).not.toHaveAttribute('required', '');
     await expect(page.getByText('(если есть)')).toBeVisible();
@@ -117,13 +118,13 @@ test.describe('sign-up form', () => {
     await page.getByLabel('Фамилия').fill('  салтыков   щедрин ');
     await page.getByLabel('Имя', { exact: true }).fill('анна-мария');
     await page.getByLabel(/Отчество/).fill("д'артаньян");
-    await page.getByLabel('Город').fill('ростов-на-дону');
-    await page.getByLabel('Область').focus();
+    await page.getByLabel('Населённый пункт').fill('минск');
+    await page.getByLabel('Место работы').focus();
 
     await expect(page.getByLabel('Фамилия')).toHaveValue('Салтыков Щедрин');
     await expect(page.getByLabel('Имя', { exact: true })).toHaveValue('Анна-Мария');
     await expect(page.getByLabel(/Отчество/)).toHaveValue("Д'Артаньян");
-    await expect(page.getByLabel('Город')).toHaveValue('ростов-на-дону');
+    await expect(page.getByLabel('Населённый пункт')).toHaveValue('минск');
   });
 
   test('blocks an invalid phone with an inline error and sends nothing', async ({ page }) => {
@@ -183,7 +184,7 @@ test.describe('sign-up form', () => {
   test('reports every empty required field', async ({ page }) => {
     await open(page);
     await submit(page);
-    await expect(page.locator('.ob-signup__error:visible')).toHaveCount(9);
+    await expect(page.locator('.ob-signup__error:visible')).toHaveCount(8);
     await expect(page.getByLabel('Фамилия')).toBeFocused();
   });
 
@@ -225,7 +226,7 @@ test.describe('sign-up form', () => {
       specialtyId: ORTHOPEDICS.id,
       workplace: 'ГКБ № 1',
       city: 'Москва',
-      region: 'Московская область',
+      region: 'г. Москва',
       personalDataConsent: true,
     });
   });
@@ -364,8 +365,6 @@ test.describe('sign-up form', () => {
     await typeAndTab(SPORTS.name);
     await typeAndTab('Клиника');
     await typeAndTab('Тверь');
-    await page.keyboard.type('Тверская область');
-    await page.keyboard.press('Tab');
 
     await expect(page.getByLabel(/согласен/)).toBeFocused();
     await page.keyboard.press('Space');
@@ -383,6 +382,80 @@ test.describe('sign-up form', () => {
     expect(body).not.toHaveProperty('patronymic');
     expect(body.specialtyId).toBe(SPORTS.id);
     expect(body.contactPhone).toBe('8 999 765-43-21');
+    expect(body.city).toBe('Тверь');
+    expect(body.region).toBe('Тверская область');
+  });
+
+  test('loads the settlement directory lazily, from a hashed same-origin asset', async ({ page }) => {
+    const directory: string[] = [];
+    page.on('request', (req) => {
+      if (req.url().includes('settlements')) directory.push(req.url());
+    });
+    await open(page);
+    expect(directory).toEqual([]);
+    await page.getByLabel('Населённый пункт').focus();
+    await expect(page.locator('#signup-settlements option')).not.toHaveCount(0);
+    expect(directory).toHaveLength(1);
+    expect(new URL(directory[0]).pathname).toMatch(/^\/_astro\/settlements\.[\w-]+\.json$/);
+  });
+
+  test('fills the region from a directory pick and sends city and region apart', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page);
+    await page.getByLabel('Населённый пункт').fill('г. химки');
+    await page.getByLabel('Место работы').focus();
+    await expect(page.getByLabel('Населённый пункт')).toHaveValue('Химки — Московская область');
+    await expect(page.getByLabel('Регион')).toBeHidden();
+    await submit(page);
+
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    const body = requests[0].postDataJSON() as Record<string, unknown>;
+    expect(body.city).toBe('Химки');
+    expect(body.region).toBe('Московская область');
+  });
+
+  test('accepts a place outside the directory as free text, with the region asked separately', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page);
+    await page.getByLabel('Населённый пункт').fill('Минск');
+    await page.getByLabel('Место работы').focus();
+    const region = page.getByLabel('Регион');
+    await expect(region).toBeVisible();
+    await expect(region).toHaveAttribute('aria-required', 'true');
+
+    await submit(page);
+    await expect(page.locator('#signup-region-error')).toHaveText('Заполните это поле.');
+    await expect(region).toBeFocused();
+    expect(requests).toHaveLength(0);
+
+    await region.fill('Беларусь');
+    await submit(page);
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    const body = requests[0].postDataJSON() as Record<string, unknown>;
+    expect(body.city).toBe('Минск');
+    expect(body.region).toBe('Беларусь');
+  });
+
+  test('asks for the region when the directory cannot be loaded', async ({ page }) => {
+    await page.route('**/_astro/settlements.*.json', (route) => route.fulfill({ status: 503, body: '' }));
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    // Reveal the field before fillValid ticks the consent box: it shifts the layout.
+    await page.getByLabel('Населённый пункт').fill('Москва');
+    await page.getByLabel('Место работы').focus();
+    await expect(page.getByLabel('Регион')).toBeVisible();
+    await fillValid(page);
+    await expect(page.getByLabel('Регион')).toBeVisible();
+    await expect(page.getByLabel(/согласен/)).toBeChecked();
+    await page.getByLabel('Регион').fill('г. Москва');
+    await submit(page);
+
+    await expect(page.locator('[data-signup-success]')).toBeVisible();
+    const body = requests[0].postDataJSON() as Record<string, unknown>;
+    expect(body.city).toBe('Москва');
+    expect(body.region).toBe('г. Москва');
   });
 
   // The error and success states are what the ladder in responsive.spec.ts
@@ -391,8 +464,12 @@ test.describe('sign-up form', () => {
     test(`holds with every error shown at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
       await open(page);
+      // A place outside the directory, so the «Регион» field is measured too:
+      // its error replaces the one the empty «Населённый пункт» would show.
+      await page.getByLabel('Населённый пункт').fill('Минск');
       await submit(page);
-      await expect(page.locator('.ob-signup__error:visible')).toHaveCount(9);
+      await expect(page.getByLabel('Регион')).toBeVisible();
+      await expect(page.locator('.ob-signup__error:visible')).toHaveCount(8);
 
       expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
       await expectNoHeadingSpill(page, `/registration errors @${width}`);

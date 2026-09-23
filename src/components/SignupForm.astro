@@ -206,38 +206,44 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
 
       <div class="ob-signup__row ob-signup__row--2">
         <div class="ob-signup__field">
-          <label class="ob-signup__label" for="signup-city">Город</label>
+          <label class="ob-signup__label" for="signup-city">Населённый пункт</label>
           <input
             class="ob-signup__input"
             id="signup-city"
             name="city"
             type="text"
-            autocomplete="address-level2"
-            placeholder="Москва"
+            list="signup-settlements"
+            autocomplete="off"
+            placeholder="Начните вводить название"
             maxlength="200"
             required
             aria-required="true"
             aria-describedby="signup-city-error"
+            data-settlement
           />
+          <datalist id="signup-settlements"></datalist>
           <div class="ob-signup__msgs">
             <p class="ob-signup__error" id="signup-city-error" hidden></p>
           </div>
         </div>
-        <div class="ob-signup__field">
-          <label class="ob-signup__label" for="signup-region">Область</label>
+        <div class="ob-signup__field" data-region-field hidden>
+          <label class="ob-signup__label" for="signup-region">Регион</label>
           <input
             class="ob-signup__input"
             id="signup-region"
             name="region"
             type="text"
             autocomplete="address-level1"
-            placeholder="Московская область"
+            placeholder="Область, край, республика или страна"
             maxlength="200"
             required
             aria-required="true"
-            aria-describedby="signup-region-error"
+            aria-describedby="signup-region-hint signup-region-error"
           />
           <div class="ob-signup__msgs">
+            <p class="ob-signup__hint" id="signup-region-hint">
+              Этого населённого пункта нет в списке — укажите регион или страну.
+            </p>
             <p class="ob-signup__error" id="signup-region-error" hidden></p>
           </div>
         </div>
@@ -317,7 +323,17 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
     serverNow,
     type RegistrationState,
   } from '@/lib/registration';
+  import {
+    createSettlementIndex,
+    expandDirectory,
+    type Settlement,
+    type SettlementDirectory,
+    type SettlementIndex,
+  } from '@/lib/settlements';
   import { matchSpecialty as findSpecialty } from '@/lib/specialty';
+  // `?url`: emitted as a content-hashed `/_astro/` file (immutable cache) and
+  // fetched only when the field is first focused, so the page itself stays light.
+  import SETTLEMENTS_URL from '@/data/settlements.json?url';
 
   interface Specialty {
     id: string;
@@ -480,6 +496,86 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
           setError(specialtyInput, MESSAGES.specialtiesUnavailable);
         });
 
+      // ── Settlement: directory pick, free text as the fallback ─────────────
+      // A pick carries its region; anything else — a foreign or unlisted place,
+      // or a directory that failed to load — reveals the «Регион» field, which
+      // the platform requires as a separate answer.
+      const cityInput = form.querySelector<HTMLInputElement>('[data-settlement]')!;
+      const regionField = form.querySelector<HTMLElement>('[data-region-field]')!;
+      const regionInput = form.querySelector<HTMLInputElement>('#signup-region')!;
+      const settlementList = form.querySelector<HTMLDataListElement>('#signup-settlements')!;
+      let settlementIndex: SettlementIndex | null = null;
+      // Pending while the directory is in flight; submit waits for it, so a fast
+      // «type the city, press Enter» is not judged against a missing directory.
+      let settlementsLoading: Promise<void> | null = null;
+      let settlement: Settlement | null = null;
+
+      const showRegion = (show: boolean): void => {
+        regionField.hidden = !show;
+        if (!show) setError(regionInput, null);
+      };
+
+      // Revealing «Регион» grows the form, and on blur that happens between the
+      // press and the release of a click on «Зарегистрироваться» — the button
+      // moves away and the click is lost. While the button is pressed the reveal
+      // is left to validation, which runs on that very submit.
+      let submitPressed = false;
+      submit.addEventListener('pointerdown', () => {
+        submitPressed = true;
+      });
+      window.addEventListener('pointerup', () => {
+        submitPressed = false;
+      });
+
+      const syncSettlement = (): void => {
+        const typed = cityInput.value.trim();
+        settlement = settlementIndex?.match(typed) ?? null;
+        if (settlement) {
+          cityInput.value = settlement.label;
+          setError(cityInput, null);
+        }
+        // Until the directory has answered, a typed name may still resolve.
+        const unresolved = settlement === null && typed !== '';
+        if (settlementIndex !== null && !(unresolved && submitPressed)) showRegion(unresolved);
+      };
+      cityInput.addEventListener('change', syncSettlement);
+      cityInput.addEventListener('blur', syncSettlement);
+      cityInput.addEventListener('input', () => {
+        // Full labels and exact names only while typing; a prefix resolves on
+        // change/blur, where the input is rewritten to the label.
+        settlement = settlementIndex?.match(cityInput.value, { allowPrefix: false }) ?? null;
+        if (settlement) showRegion(false);
+      });
+
+      cityInput.addEventListener('focus', () => {
+        if (settlementIndex !== null || settlementsLoading !== null) return;
+        settlementsLoading = fetch(SETTLEMENTS_URL, {
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(10_000),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`settlements: HTTP ${res.status}`);
+            return res.json() as Promise<SettlementDirectory>;
+          })
+          .then((directory) => {
+            settlementIndex = createSettlementIndex(expandDirectory(directory));
+            settlementList.replaceChildren(
+              ...settlementIndex.entries.map((s) => {
+                const option = document.createElement('option');
+                option.value = s.label;
+                return option;
+              }),
+            );
+          })
+          .catch(() => {
+            settlementIndex = createSettlementIndex([]);
+          })
+          .finally(() => {
+            settlementsLoading = null;
+            if (document.activeElement !== cityInput) syncSettlement();
+          });
+      });
+
       // ── Captcha state (only when this host has a sitekey) ─────────────────
       const captchaWindow = window as CaptchaWindow;
       const captchaOn = sitekey !== '' && captchaBox !== null;
@@ -514,11 +610,19 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         else if (specialtyInput.value.trim() === '') fail(specialtyInput, MESSAGES.required);
         else if (specialtyId.value === '') fail(specialtyInput, MESSAGES.specialty);
 
-        for (const name of ['workplace', 'city', 'region']) {
-          const input = field(name);
-          input.value = input.value.trim();
-          setError(input, null);
-          if (input.value === '') fail(input, MESSAGES.required);
+        const workplace = field('workplace');
+        workplace.value = workplace.value.trim();
+        setError(workplace, null);
+        if (workplace.value === '') fail(workplace, MESSAGES.required);
+
+        syncSettlement();
+        setError(cityInput, null);
+        setError(regionInput, null);
+        if (cityInput.value.trim() === '') fail(cityInput, MESSAGES.required);
+        else if (settlement === null) {
+          showRegion(true);
+          regionInput.value = regionInput.value.trim();
+          if (regionInput.value === '') fail(regionInput, MESSAGES.required);
         }
 
         const consent = field('personalDataConsent');
@@ -545,8 +649,8 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         body.contactPhone = field('contactPhone').value;
         body.specialtyId = specialtyId.value;
         body.workplace = field('workplace').value;
-        body.city = field('city').value;
-        body.region = field('region').value;
+        body.city = settlement?.name ?? cityInput.value.trim();
+        body.region = settlement?.region ?? regionInput.value;
         body.personalDataConsent = true;
         if (captchaToken !== '') body.captchaToken = captchaToken;
         return body;
@@ -684,9 +788,15 @@ const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIE
         void send();
       };
 
-      form.addEventListener('submit', (event) => {
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (form.getAttribute('aria-busy') === 'true') return;
+        // A city typed and submitted before the directory answered is judged
+        // against it, not against a missing one; attempt() clears the busy state.
+        if (settlementsLoading) {
+          setBusy(true);
+          await settlementsLoading;
+        }
         attempt();
       });
 

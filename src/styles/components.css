@@ -838,13 +838,14 @@
   }
 }
 
-/* Brand pattern — decorative only; hidden on phones where there is no white
+/* Brand edge pattern (`EdgePattern`: the home hero and /registration, Issue
+   #90) — decorative only; hidden on phones where there is no white
    air to place it in (design: «не подкладывать под плотный текст»).
    The element ships with `fill="currentColor"`, so the pattern is tinted by a
    token instead of the mark's own #7cba48: it is the graphic language, not the
    «ОРТО» mark, and the brief's rule «знак не перекрашивать» does not cover it
    (the design's own brand-pattern guideline recolours it over dark fields). */
-.ob-hero__pattern {
+.ob-edge-pattern {
   display: none;
   position: absolute;
   pointer-events: none;
@@ -856,7 +857,7 @@
 }
 
 @media (min-width: 1024px) {
-  .ob-hero__pattern {
+  .ob-edge-pattern {
     display: block;
   }
 
@@ -865,10 +866,10 @@
      the second, inward instance recedes to a tonal layer — bundle
      `components/hero/Hero` places instance A with no opacity and instance B at
      0.5. The former 0.22/0.12 override greyed the identity out of the page. */
-  .ob-hero__pattern--a {
-  width: var(--hero-pattern-a-width);
-  top: var(--hero-pattern-a-top);
-  right: var(--hero-pattern-a-right);
+  .ob-edge-pattern--a {
+    width: var(--edge-pattern-a-width);
+    top: var(--edge-pattern-a-top);
+    right: var(--edge-pattern-a-right);
   }
 
   /* Instance B is rotated, so it paints a box 2.2× its CSS width — the bundle's
@@ -883,10 +884,10 @@
      a11y defect. The layer is therefore scaled to the free strip across the
      whole band and returns to the bundle's own geometry at 1280 below, where
      the window can hold it. */
-  .ob-hero__pattern--b {
-  width: var(--hero-pattern-b-width);
-  bottom: var(--hero-pattern-b-bottom);
-  right: var(--hero-pattern-b-right);
+  .ob-edge-pattern--b {
+    width: var(--edge-pattern-b-width);
+    bottom: var(--edge-pattern-b-bottom);
+    right: var(--edge-pattern-b-right);
     transform: rotate(150deg);
     opacity: 0.5;
   }
@@ -895,9 +896,9 @@
 @media (min-width: 1280px) {
   /* The bundle's placement for instance B, restored as soon as the viewport has
      room for it beside the text column (see the note above). */
-  .ob-hero__pattern--b {
-    width: var(--hero-pattern-b-width-wide);
-    right: var(--hero-pattern-b-right-wide);
+  .ob-edge-pattern--b {
+    width: var(--edge-pattern-b-width-wide);
+    right: var(--edge-pattern-b-right-wide);
   }
 }
 
@@ -2131,7 +2132,7 @@ details[open] > .ob-faq__q::after {
    the sky-tinted plate, not on white, where the design calls for «тональные
    слои» rather than full-strength artwork.
 
-   Hidden below 1024 exactly like `.ob-hero__pattern`, and for the same design
+   Hidden below 1024 exactly like `.ob-edge-pattern`, and for the same design
    rule — «не подкладывать под плотный текст». The bundle's placement anchors
    the layer to the band's right edge (`right: -80px` over a 280px width), so
    the strip it occupies is «viewport − 200px»: it clears the copy on a desktop
@@ -2397,58 +2398,35 @@ details[open] > .ob-faq__q::after {
 /* ── Registration page (/registration) ───────────────────────────────────── */
 
 /* Design: SignupSection (Issue #82), approved aside = venue card with a map.
-   The wrapper clips the three edge metaballs, so they can never widen the page;
-   `isolation` gives their negative z-index a floor above the page background. */
+   A full-bleed band carrying the home hero's `EdgePattern` (Issue #90) under
+   the same contract as `.ob-hero`: the clip keeps the bleeding shapes from
+   widening the page, and the grid below is positioned so the copy and the
+   form's opaque green panel paint above them.
+   The band also absorbs the footer's top margin (pulled up, given back as
+   padding): otherwise the clip would cut the lower shape flat across the white
+   gap above the footer. This way the cut falls on the footer's hairline, the
+   way the home hero's falls on its own bottom border.
+   That only holds if the band also fills `main`: on a viewport taller than the
+   page, `body > main` grows (base.css) and the footer moves down with it, so
+   the band grows too. Scoped with `:has()` so no other page's main changes. */
 .ob-reg {
   position: relative;
   overflow: hidden;
-  isolation: isolate;
+  flex: 1 0 auto;
+  margin-bottom: calc(-1 * var(--sp-sec));
+  padding-bottom: var(--sp-sec);
 }
 
-/* Decorative only (Issue #88, after the owner's review of #87): two tonal
-   metaballs emerging from BEHIND the green panel — one past its top-right
-   corner, one past its bottom-left — echoing the card's own corner pattern at
-   page scale. Anchored to the form column rather than to the viewport, so the
-   pair keeps the same balance at every width from lg; behind the opaque panel
-   (z-index -1, the panel is in flow) they can never cover a field, and they
-   are tints, not the hero's full green, so they never compete with it. Hidden
-   below lg like `.ob-hero__pattern`: the stacked page has no air for them.
-   Inlined through the import so `currentColor` resolves to a token. */
-.ob-reg__edge {
-  display: none;
-  position: absolute;
-  z-index: -1;
-  height: auto;
-  pointer-events: none;
-  user-select: none;
-}
-
-@media (min-width: 1024px) {
-  .ob-reg__edge {
-    display: block;
-  }
-
-  .ob-reg__edge--a {
-    width: var(--reg-edge-a-width);
-    right: var(--reg-edge-a-right);
-    top: var(--reg-edge-a-top);
-    rotate: -40deg;
-    color: color-mix(in oklab, var(--ob-green) 22%, var(--bg));
-  }
-
-  .ob-reg__edge--b {
-    width: var(--reg-edge-b-width);
-    left: var(--reg-edge-b-left);
-    bottom: var(--reg-edge-b-bottom);
-    rotate: 96deg;
-    color: color-mix(in oklab, var(--ob-sky) 16%, var(--bg));
-  }
+body > main:has(> .ob-reg) {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Stacked intro → form → venue below lg; from lg the form owns the right
    column and the venue card follows the intro on the left. Tracks are
    minmax(0, …) so a long word can never widen a column. */
 .ob-reg__grid {
+  position: relative;
   display: grid;
   gap: var(--sp-6);
   grid-template-columns: minmax(0, 1fr);
@@ -2475,11 +2453,9 @@ details[open] > .ob-faq__q::after {
   font-size: var(--fs-small);
 }
 
-/* `align-self: start` keeps the column exactly as tall as the panel, so the
-   edge metaballs anchored to it follow the panel's corners — the short status
-   cards included — instead of the row the venue card stretches. */
+/* `align-self: start` keeps the column exactly as tall as the panel — the
+   short status cards included — instead of the row the venue card stretches. */
 .ob-reg__form {
-  position: relative;
   align-self: start;
   grid-area: form;
   min-width: 0;
@@ -2726,15 +2702,12 @@ details[open] > .ob-faq__q::after {
   display: none;
 }
 
-/* White card; `isolation` keeps the corner metaballs (z-index -1) above the
-   card's own background and below its content. The card does NOT clip: a list
-   field's popup may hang past its foot (Issue #88), so the metaballs are
-   clipped by their own layer instead, and `z-index` lifts the card over the
-   page blocks that follow it (the venue card below lg). */
+/* White card. It does NOT clip: a list field's popup may hang past its foot
+   (Issue #88), and `z-index` lifts the card over the page blocks that follow
+   it (the venue card below lg). */
 .ob-signup__card {
   position: relative;
   z-index: 1;
-  isolation: isolate;
   padding: var(--sp-5) var(--ob-signup-card-pad-inline);
   border-radius: var(--r-md);
   background: var(--bg);
@@ -2747,65 +2720,8 @@ details[open] > .ob-faq__q::after {
   }
 }
 
-.ob-signup__pats {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.ob-signup__pat {
-  position: absolute;
-  z-index: -1;
-  height: auto;
-  pointer-events: none;
-  user-select: none;
-}
-
-.ob-signup__pat--a {
-  width: var(--ob-signup-pat-a-width);
-  right: var(--ob-signup-pat-a-right);
-  top: var(--ob-signup-pat-a-top);
-  rotate: -40deg;
-  color: color-mix(in oklab, var(--ob-green) 16%, var(--bg));
-}
-
-.ob-signup__pat--b {
-  width: var(--ob-signup-pat-b-width);
-  right: var(--ob-signup-pat-b-right);
-  top: var(--ob-signup-pat-b-top);
-  rotate: -40deg;
-  color: color-mix(in oklab, var(--ob-lime) 20%, var(--bg));
-}
-
-.ob-signup__pat--c {
-  width: var(--ob-signup-pat-c-width);
-  left: var(--ob-signup-pat-c-left);
-  bottom: var(--ob-signup-pat-c-bottom);
-  rotate: 34deg;
-  color: color-mix(in oklab, var(--ob-sky) 12%, var(--bg));
-}
-
-@media (min-width: 768px) {
-  .ob-signup__pat--a {
-    width: var(--ob-signup-pat-a-width-wide);
-    right: var(--ob-signup-pat-a-right-wide);
-    top: var(--ob-signup-pat-a-top-wide);
-  }
-
-  .ob-signup__pat--b {
-    width: var(--ob-signup-pat-b-width-wide);
-    right: var(--ob-signup-pat-b-right-wide);
-    top: var(--ob-signup-pat-b-top-wide);
-  }
-}
-
-/* The head keeps clear of the top-right metaballs. */
 .ob-signup__head {
   margin: 0 0 var(--sp-5);
-  padding-right: var(--ob-signup-head-pad-end);
 }
 
 .ob-signup__title {

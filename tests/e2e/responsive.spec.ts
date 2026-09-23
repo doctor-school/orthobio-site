@@ -116,7 +116,7 @@ test.describe('responsive', () => {
    *
    * Both cover BOTH instances: A runs at full opacity and is the louder one.
    */
-  const HERO_PATTERNS = ['.ob-hero__pattern--a', '.ob-hero__pattern--b'] as const;
+  const HERO_PATTERNS = ['.ob-edge-pattern--a', '.ob-edge-pattern--b'] as const;
 
   /**
    * Measures decorative pattern layers against the copy of the band they sit

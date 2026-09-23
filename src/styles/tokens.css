@@ -306,14 +306,14 @@
   --stub-badge-icon-size: 26px;
   --stub-badge-compact-size: 44px;
   --stub-badge-compact-icon-size: 22px;
-  --hero-pattern-a-width: 320px;
-  --hero-pattern-a-top: -90px;
-  --hero-pattern-a-right: -70px;
-  --hero-pattern-b-width: 140px;
-  --hero-pattern-b-bottom: -120px;
-  --hero-pattern-b-right: 110px;
-  --hero-pattern-b-width-wide: 240px;
-  --hero-pattern-b-right-wide: 220px;
+  --edge-pattern-a-width: 320px;
+  --edge-pattern-a-top: -90px;
+  --edge-pattern-a-right: -70px;
+  --edge-pattern-b-width: 140px;
+  --edge-pattern-b-bottom: -120px;
+  --edge-pattern-b-right: 110px;
+  --edge-pattern-b-width-wide: 240px;
+  --edge-pattern-b-right-wide: 220px;
   --hero-title-viewport-cap: 10vw;
   --hero-title-measure: 16em;
   --card-tag-pad: 2px 10px;
@@ -367,7 +367,6 @@
   --ob-signup-label-lh: 20px;
   --ob-signup-card-pad-inline: 20px;
   --ob-signup-card-pad-inline-wide: 28px;
-  --ob-signup-head-pad-end: 64px;
   --ob-signup-msg-icon: 16px;
   --ob-signup-alert-icon: 20px;
   --ob-signup-alert-pad: 12px 14px;
@@ -378,22 +377,6 @@
   --ob-combo-opt-height: 44px;
   --ob-combo-opt-pad: 10px 12px;
   --ob-combo-opt-fs: 0.9375rem;
-  /* Tonal metaballs in the card corners (design `.ob-sf__pat--a|b|c`). */
-  --ob-signup-pat-a-width: 150px;
-  --ob-signup-pat-a-right: -22px;
-  --ob-signup-pat-a-top: -150px;
-  --ob-signup-pat-b-width: 118px;
-  --ob-signup-pat-b-right: 62px;
-  --ob-signup-pat-b-top: -156px;
-  --ob-signup-pat-c-width: 170px;
-  --ob-signup-pat-c-left: -70px;
-  --ob-signup-pat-c-bottom: -190px;
-  --ob-signup-pat-a-width-wide: 190px;
-  --ob-signup-pat-a-right-wide: -30px;
-  --ob-signup-pat-a-top-wide: -190px;
-  --ob-signup-pat-b-width-wide: 140px;
-  --ob-signup-pat-b-right-wide: 96px;
-  --ob-signup-pat-b-top-wide: -200px;
   /* Glyphs drawn by CSS: the field error and the form alert have their text
      set by script, so the icon cannot be a child node that `textContent` would
      wipe, and the tick is painted on the native checkbox itself. The error
@@ -409,14 +392,6 @@
   --reg-dates-icon: 20px;
   --reg-map-pin: 18px;
   --reg-map-pin-ring: 5px;
-  /* Edge metaballs of the page (Issue #88), anchored to the form column: they
-     emerge from behind the green panel's top-right and bottom-left corners. */
-  --reg-edge-a-width: 170px;
-  --reg-edge-a-right: -150px;
-  --reg-edge-a-top: -60px;
-  --reg-edge-b-width: 120px;
-  --reg-edge-b-left: 88px;
-  --reg-edge-b-bottom: -128px;
 
   /* --- Layout & focus ------------------------------------------------------ */
   /* `vh` keeps the shell compatible with older browsers; the feature query

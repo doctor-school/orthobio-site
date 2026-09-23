@@ -169,7 +169,7 @@ const SURFACES: Record<string, RGB> = {
   'brand pattern, hero instance B (tonal, on white)': over(
     surfaceOf('--ob-green'),
     surfaceOf('--bg'),
-    opacityOf('.ob-hero__pattern--b'),
+    opacityOf('.ob-edge-pattern--b'),
   ),
   'brand pattern, year header (tonal, on --ob-sky-tint)': over(
     surfaceOf('--ob-green'),

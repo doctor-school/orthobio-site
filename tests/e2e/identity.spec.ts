@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { TIER_DOT } from '../tier-dot';
 
 /**
@@ -203,3 +203,119 @@ for (const width of [360, 390, 1280]) {
     }
   });
 }
+
+// ── The edge pattern (Issue #90) ────────────────────────────────────────────
+
+/**
+ * `EdgePattern` was extracted from the home hero so /registration could carry
+ * the very same element, and «как на главной» is the invariant: the two pages
+ * are measured side by side in the same test, so any divergence fails and
+ * every deliberate re-tune of `--edge-pattern-*` passes without an edit here.
+ * (That the home hero did not move in the extraction was proven once, in PR
+ * #91: identical geometry against a789a1e and a 0-pixel diff of the hero.)
+ *
+ * The home page additionally carries the design facts that do not come from
+ * the geometry tokens: the brand's FULL green through `currentColor` (resolved
+ * from `--ob-green` at runtime, like the rest of this file), instance A at full
+ * strength and upright, instance B receding to a half-strength tonal layer,
+ * turned 150°.
+ *
+ * Geometry is taken against the host band's PADDING box (the containing block
+ * the offsets resolve against), horizontally from the viewport's right edge
+ * and vertically from the edge each instance is anchored to (A: top, B:
+ * bottom), so bands of different heights still compare equal.
+ */
+const EDGE_PATTERN_WIDTHS = [1024, 1280, 1440, 1920] as const;
+/** rotate(150deg) as `getComputedStyle` serialises it. */
+const MATRIX_150DEG = 'matrix(-0.866025, 0.5, -0.5, -0.866025, 0, 0)';
+
+async function measureEdgePattern(page: Page, host: string) {
+  return page.evaluate((host) => {
+    const band = document.querySelector(host)!;
+    const cs = getComputedStyle(band);
+    const box = band.getBoundingClientRect();
+    const pad = {
+      top: box.top + parseFloat(cs.borderTopWidth),
+      bottom: box.bottom - parseFloat(cs.borderBottomWidth),
+    };
+    const viewportRight = document.documentElement.clientWidth;
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--ob-green)';
+    document.body.append(probe);
+    const green = getComputedStyle(probe).color;
+    probe.remove();
+    const shapes = [...band.querySelectorAll(':scope > .ob-edge-pattern')].map((el) => {
+      const r = el.getBoundingClientRect();
+      const s = getComputedStyle(el);
+      return {
+        cls: el.getAttribute('class'),
+        ariaHidden: el.getAttribute('aria-hidden'),
+        color: s.color,
+        fill: getComputedStyle(el.querySelector('path')!).fill,
+        opacity: s.opacity,
+        transform: s.transform,
+        right: viewportRight - r.right,
+        top: r.top - pad.top,
+        bottom: pad.bottom - r.bottom,
+        width: r.width,
+        height: r.height,
+      };
+    });
+    return { green, shapes };
+  }, host);
+}
+
+test('the home hero edge pattern paints the design: full green, A upright, B a turned tonal layer', async ({
+  page,
+}) => {
+  for (const width of EDGE_PATTERN_WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const { green, shapes } = await measureEdgePattern(page, '.ob-hero');
+    const where = `/ @${width}`;
+    expect(shapes.map((s) => s.cls), where).toEqual([
+      'ob-edge-pattern ob-edge-pattern--a',
+      'ob-edge-pattern ob-edge-pattern--b',
+    ]);
+    for (const s of shapes) {
+      expect(s.ariaHidden, where).toBe('true');
+      // An <img> of the SVG would paint black, a tint would be the #89 regression.
+      expect(s.color, where).toBe(green);
+      expect(s.fill, where).toBe(green);
+    }
+    const [a, b] = shapes;
+    expect([a.opacity, a.transform], `${where} A`).toEqual(['1', 'none']);
+    expect([b.opacity, b.transform], `${where} B`).toEqual(['0.5', MATRIX_150DEG]);
+  }
+});
+
+test('/registration carries the home hero edge pattern, shape for shape', async ({ page }) => {
+  for (const width of EDGE_PATTERN_WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    const home = await measureEdgePattern(page, '.ob-hero');
+    await page.goto('/registration');
+    const reg = await measureEdgePattern(page, '.ob-reg');
+    const where = `/registration vs / @${width}`;
+
+    expect(home.shapes.length, `${where}: the home hero must carry the pattern`).toBe(2);
+    expect(reg.shapes.length, `${where}: shape count`).toBe(home.shapes.length);
+    home.shapes.forEach((h, i) => {
+      const r = reg.shapes[i];
+      const shape = `${where} #${i}`;
+      expect([r.cls, r.ariaHidden, r.color, r.fill, r.opacity, r.transform], shape).toEqual([
+        h.cls,
+        h.ariaHidden,
+        h.color,
+        h.fill,
+        h.opacity,
+        h.transform,
+      ]);
+      // A hangs from the band's top, B from its bottom.
+      const vertical = i === 0 ? 'top' : 'bottom';
+      for (const key of ['right', vertical, 'width', 'height'] as const) {
+        expect(Math.abs(r[key] - h[key]), `${shape}.${key}: ${r[key]} vs ${h[key]}`).toBeLessThanOrEqual(0.5);
+      }
+    });
+  }
+});

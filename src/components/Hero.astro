@@ -2,17 +2,12 @@
 /**
  * Hero — home page header (bundle components/hero/Hero).
  *
- * The metaball element is the brand's background motif: inline SVG (no CDN),
- * decorative, and rendered from lg upwards only — on a phone there is no white
- * air to place it in, and the design forbids laying it under dense text.
- * It MUST stay inlined through this import. The asset ships `fill="currentColor"`
- * so its colour is a token (`.ob-hero__pattern`), and the design bundle renders
- * it as `<img src=…>` — porting that verbatim would paint a silent BLACK
- * metaball, because `currentColor` in a referenced SVG never sees this page.
+ * The metaball motif at the right edge is `EdgePattern`, shared with
+ * /registration so both pages carry the same element (Issue #90).
  * Slots: default = lead paragraphs, `cta`, `stats`, `statsNote` (the caption
  * that keeps the figures readable as PAST results, not 2027 promises).
  */
-import Metaball from '@/assets/metaball-element.svg';
+import EdgePattern from '@/components/EdgePattern.astro';
 
 interface Props {
   overline?: string | null;
@@ -25,8 +20,7 @@ const { overline = null, title, dates = null, venue = null } = Astro.props;
 ---
 
 <header class="ob-hero">
-  <Metaball class="ob-hero__pattern ob-hero__pattern--a" aria-hidden="true" />
-  <Metaball class="ob-hero__pattern ob-hero__pattern--b" aria-hidden="true" />
+  <EdgePattern />
   <div class="ob-container ob-hero__in">
     {overline && <p class="ob-hero__overline">{overline}</p>}
     <h1 class="ob-hero__title">{title}</h1>

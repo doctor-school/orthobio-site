@@ -225,7 +225,7 @@ for (const width of [360, 390, 1280]) {
  * and vertically from the edge each instance is anchored to (A: top, B:
  * bottom), so bands of different heights still compare equal.
  */
-const EDGE_PATTERN_WIDTHS = [1280, 1440] as const;
+const EDGE_PATTERN_WIDTHS = [1024, 1280, 1440, 1920] as const;
 /** rotate(150deg) as `getComputedStyle` serialises it. */
 const MATRIX_150DEG = 'matrix(-0.866025, 0.5, -0.5, -0.866025, 0, 0)';
 

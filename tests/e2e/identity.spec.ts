@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { waitForWebfonts } from './_fonts';
 import { TIER_DOT } from '../tier-dot';
 
 /**
@@ -131,7 +132,7 @@ for (const width of [360, 390, 1280]) {
     // wider than the fallback: measured before the font swaps, «Стратегические
     // партнёры · 2026» reads 295.8px instead of 316.6px — enough to fit a row
     // that does not fit in the shipped page.
-    await page.evaluate(() => document.fonts.ready.then(() => {}));
+    await waitForWebfonts(page);
 
     const columnX = await page
       .locator('h1')
@@ -230,6 +231,9 @@ const EDGE_PATTERN_WIDTHS = [1024, 1280, 1440, 1920] as const;
 const MATRIX_150DEG = 'matrix(-0.866025, 0.5, -0.5, -0.866025, 0, 0)';
 
 async function measureEdgePattern(page: Page, host: string) {
+  // The band's height is its copy's height, so the shapes' placement against
+  // it is only final once Inter has replaced the fallback.
+  await waitForWebfonts(page);
   return page.evaluate((host) => {
     const band = document.querySelector(host)!;
     const cs = getComputedStyle(band);

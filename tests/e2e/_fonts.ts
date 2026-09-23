@@ -20,8 +20,17 @@ import { expect, type Page } from '@playwright/test';
  * 404) fails here with a message naming it, instead of a geometry assertion
  * failing three steps later with a number that points nowhere.
  */
-export async function waitForWebfonts(page: Page): Promise<void> {
-  const report = await page.evaluate(async () => {
+export async function waitForWebfonts(page: Page, timeoutMs = 10_000): Promise<void> {
+  const report = await page.evaluate(async (timeoutMs) => {
+    // A stalled font request never settles; bounded, so the failure names the
+    // face instead of surfacing as a bare test timeout.
+    const within = <T,>(promise: Promise<T>, what: string): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`${what} still pending after ${timeoutMs}ms`)), timeoutMs),
+        ),
+      ]);
     const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
     const used = new Map<string, Set<string>>();
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -38,23 +47,26 @@ export async function waitForWebfonts(page: Page): Promise<void> {
     }
 
     const failed: string[] = [];
-    for (const [font, chars] of used) {
-      const sample = [...chars].join('');
-      // `load` REJECTS when a face's fetch fails; caught so the report names
-      // the face instead of surfacing a bare NetworkError.
-      const faces = await document.fonts.load(font, sample).catch((e: Error) => e);
-      if (faces instanceof Error) {
-        failed.push(`${font}: ${faces.message}`);
-        continue;
-      }
-      const notLoaded = faces.filter((f) => f.status !== 'loaded');
-      if (faces.length === 0 || notLoaded.length > 0 || !document.fonts.check(font, sample)) {
-        failed.push(`${font} (${faces.length} faces, ${notLoaded.length} not loaded)`);
-      }
-    }
-    await document.fonts.ready;
+    // In parallel, so the bound is one timeout for the whole page, not one per face.
+    await Promise.all(
+      [...used].map(async ([font, chars]) => {
+        const sample = [...chars].join('');
+        // `load` REJECTS when a face's fetch fails; caught so the report names
+        // the face instead of surfacing a bare NetworkError.
+        const faces = await within(document.fonts.load(font, sample), 'load').catch((e: Error) => e);
+        if (faces instanceof Error) {
+          failed.push(`${font}: ${faces.message}`);
+          return;
+        }
+        const notLoaded = faces.filter((f) => f.status !== 'loaded');
+        if (faces.length === 0 || notLoaded.length > 0 || !document.fonts.check(font, sample)) {
+          failed.push(`${font} (${faces.length} faces, ${notLoaded.length} not loaded)`);
+        }
+      }),
+    );
+    await within(document.fonts.ready, 'document.fonts.ready').catch((e: Error) => failed.push(e.message));
     return { status: document.fonts.status, used: [...used.keys()], failed };
-  });
+  }, timeoutMs);
 
   expect(report.used.length, 'the page renders no text in Inter — nothing to wait for').toBeGreaterThan(0);
   expect(report.failed, `Inter faces the page renders did not load: ${report.failed.join('; ')}`).toEqual([]);

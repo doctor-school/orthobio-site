@@ -3008,7 +3008,6 @@ details[open] > .ob-faq__q::after {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  column-gap: var(--sp-1);
   min-height: var(--ob-combo-opt-height);
   padding: var(--ob-combo-opt-pad);
   border-radius: var(--r-sm);
@@ -3038,7 +3037,8 @@ details[open] > .ob-faq__q::after {
   background: color-mix(in oklab, var(--ob-green-tint) 65%, var(--ob-green) 35%);
 }
 
-.ob-signup__opt[aria-selected='true'] {
+/* The committed value; `aria-selected` follows the active row (APG). */
+.ob-signup__opt.is-selected {
   font-weight: var(--fw-semibold);
 }
 

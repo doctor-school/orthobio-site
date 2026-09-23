@@ -9,6 +9,12 @@
  * tabs away gets exactly the behaviour the form had before; picking an option
  * is a shortcut to the same result, reported through `onPick`.
  *
+ * A typed text that is exactly one option's whole name commits that option
+ * and closes the list at once (`soleExactMatch`): a list left open under a
+ * finished entry covers the fields below it, and the next click aimed at one
+ * of them would land on an option. Several same-named options («Кировск» ×3)
+ * keep the list open — the participant still has to choose.
+ *
  * Keyboard (WAI-ARIA combobox, list autocomplete): typing filters and makes
  * the first option active; ArrowDown opens / moves, Alt+ArrowDown opens,
  * ArrowUp moves, Enter picks the active option, Escape closes, Tab closes and
@@ -19,7 +25,7 @@
  * The filtering, highlight split and index maths are `lib/combobox.ts`, where
  * they are unit-tested.
  */
-import { filterOptions, moveActive, splitHighlight } from '@/lib/combobox';
+import { filterOptions, moveActive, soleExactMatch, splitHighlight } from '@/lib/combobox';
 
 export interface ComboboxConfig<T> {
   input: HTMLInputElement;
@@ -83,15 +89,23 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
     if (tail) {
       const muted = document.createElement('span');
       muted.className = 'ob-signup__opt-sub';
-      muted.textContent = `— ${tail}`;
+      // A no-break space, not a layout gap: the accessible name and the text
+      // read «Кировск — Ленинградская область», and a wrapped tail keeps its dash.
+      muted.textContent = `\u00a0— ${tail}`;
       fragment.append(muted);
     }
     return fragment;
   };
 
   const paintActive = (): void => {
+    // APG list autocomplete: `aria-selected` marks the active option only, so
+    // a screen reader does not say «not selected» on every arrow step. The
+    // committed value keeps its own look through `is-selected`.
     list.querySelectorAll<HTMLElement>('[role="option"]').forEach((el, index) => {
-      el.classList.toggle('is-active', index === active);
+      const on = expanded && index === active;
+      el.classList.toggle('is-active', on);
+      if (on) el.setAttribute('aria-selected', 'true');
+      else el.removeAttribute('aria-selected');
     });
     if (expanded && active >= 0) {
       input.setAttribute('aria-activedescendant', optionId(active));
@@ -117,8 +131,11 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
     items = pinned ? [...matches, pinned] : matches;
     if (items.length === 0 || (matches.length === 0 && !pinned && !emptyText)) return false;
 
+    // «Друг» finds nothing among the rest but IS the pinned «Другое»: no
+    // «Ничего не найдено» above the one option that answers it.
+    const pinnedAnswers = pinned !== null && splitHighlight(text(pinned), query(), normalise) !== null;
     const rows: HTMLElement[] = [];
-    if (matches.length === 0 && emptyText) {
+    if (matches.length === 0 && emptyText && !pinnedAnswers) {
       const empty = document.createElement('li');
       empty.className = 'ob-signup__opt-empty';
       empty.setAttribute('role', 'presentation');
@@ -130,7 +147,7 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
       row.id = optionId(index);
       row.setAttribute('role', 'option');
       row.className = option === pinned ? 'ob-signup__opt ob-signup__opt--pinned' : 'ob-signup__opt';
-      row.setAttribute('aria-selected', String(isSelected?.(option) ?? false));
+      row.classList.toggle('is-selected', isSelected?.(option) ?? false);
       row.append(labelled(option));
       rows.push(row);
     });
@@ -164,18 +181,43 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
     setExpanded(false);
   };
 
-  const pick = (index: number): void => {
-    const option = items[index];
-    if (option === undefined) return;
+  const commit = (option: T): void => {
     dismiss();
     typed = false;
     onPick(option);
   };
 
+  const pick = (index: number): void => {
+    const option = items[index];
+    if (option !== undefined) commit(option);
+  };
+
+  /** The option the typed text names exactly and alone, if any. */
+  const exactOption = (): T | null => {
+    if (!typed) return null;
+    const pinned = config.pinned?.() ?? null;
+    const all = pinned ? [...config.options(), pinned] : config.options();
+    return soleExactMatch(all, input.value, { text, normalise });
+  };
+
+  /** Typed text: commits an exact single match, otherwise lists what fits. */
+  const settleOrOpen = (): void => {
+    const exact = exactOption();
+    if (exact !== null) commit(exact);
+    else open(0);
+  };
+
+  /** Closing without a pick still takes a full, unambiguous name as one. */
+  const leave = (): void => {
+    const exact = exactOption();
+    if (exact !== null) commit(exact);
+    else dismiss();
+  };
+
   input.addEventListener('input', () => {
     typed = true;
     wanted = true;
-    open(0);
+    settleOrOpen();
   });
 
   input.addEventListener('click', () => {
@@ -215,30 +257,43 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
         dismiss();
         return;
       case 'Tab':
-        dismiss();
+        leave();
         return;
       default:
     }
   });
 
   input.addEventListener('blur', () => {
-    dismiss();
+    leave();
     typed = false;
   });
 
+  /** The option row under an event's target, as an index into `items`; -1 off a row. */
+  const rowIndex = (target: EventTarget | null): number => {
+    if (!(target instanceof Element) || !list.contains(target)) return -1;
+    const row = target.closest<HTMLElement>('[role="option"]');
+    return row ? Array.prototype.indexOf.call(list.querySelectorAll('[role="option"]'), row) : -1;
+  };
+
   // An option press must not blur the input: the pick happens on click, and a
-  // blur in between would run the field's own blur resolution first.
-  list.addEventListener('mousedown', (event) => event.preventDefault());
+  // blur in between would run the field's own blur resolution first. A pick
+  // needs the press AND the release on the same row of the list as shown — a
+  // click whose press began elsewhere, or on a list re-rendered since, picks
+  // nothing.
+  let pressed = -1;
+  list.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    pressed = rowIndex(event.target);
+  });
   list.addEventListener('click', (event) => {
-    const row = (event.target as Element).closest<HTMLElement>('[role="option"]');
-    if (!row) return;
-    pick(Array.prototype.indexOf.call(list.querySelectorAll('[role="option"]'), row));
+    const index = rowIndex(event.target);
+    const held = pressed;
+    pressed = -1;
+    if (index >= 0 && index === held) pick(index);
   });
   list.addEventListener('mousemove', (event) => {
-    const row = (event.target as Element).closest<HTMLElement>('[role="option"]');
-    if (!row) return;
-    const index = Array.prototype.indexOf.call(list.querySelectorAll('[role="option"]'), row);
-    if (index !== active) {
+    const index = rowIndex(event.target);
+    if (index >= 0 && index !== active) {
       active = index;
       paintActive();
     }
@@ -258,14 +313,14 @@ export function createCombobox<T>(config: ComboboxConfig<T>): Combobox {
   // A press anywhere else closes the list, focus or not (the input may keep
   // the focus through a press on a non-focusable part of the page).
   document.addEventListener('pointerdown', (event) => {
-    if (expanded && !shell.contains(event.target as Node)) dismiss();
+    if (expanded && !shell.contains(event.target as Node)) leave();
   });
 
   return {
     refresh() {
       if (!wanted || document.activeElement !== input) return;
       if (expanded) open(active);
-      else if (typed) open(0);
+      else if (typed) settleOrOpen();
       else openAtSelection();
     },
     close: dismiss,

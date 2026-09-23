@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Request } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Request } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
@@ -83,16 +83,28 @@ async function fillValid(page: Page, { patronymic = '', city = true } = {}): Pro
   if (patronymic) await page.getByLabel(/Отчество/).fill(patronymic);
   await page.getByLabel('E-mail').fill('ivanov@example.com');
   await page.getByLabel('Телефон').fill('+7 (999) 123-45-67');
-  // Typed, not picked, and the list dismissed with Escape: the form's own
-  // resolution is what these fixtures exercise; picking has its own tests.
+  // Typed in full, not picked: a full, unambiguous name commits itself and
+  // closes its list, so the next field is reached as a mouse user would — no
+  // Escape. The list assertions keep this helper honest about that.
   await page.getByLabel('Специальность').fill(ORTHOPEDICS.name);
-  await page.keyboard.press('Escape');
+  await expect(page.locator('#signup-specialty-list')).toBeHidden();
   await page.getByLabel('Место работы').fill('ГКБ № 1');
   if (city) {
     await page.getByLabel('Населённый пункт').fill('Москва');
-    await page.keyboard.press('Escape');
+    await expect(page.locator('#signup-city-list')).toBeHidden();
   }
   await page.getByLabel(/согласен/).check();
+}
+
+/**
+ * Scrolls into view, then a real mouse press and release at the centre: the
+ * pointer lands on whatever is on top there, as a person's would (a locator
+ * click refuses an element another one covers).
+ */
+async function clickAt(page: Page, target: Locator): Promise<void> {
+  await target.scrollIntoViewIfNeeded();
+  const box = (await target.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 }
 
 /** Focuses «Населённый пункт» and waits for the directory it loads. */
@@ -723,6 +735,117 @@ test.describe('sign-up list fields', () => {
     await expect(specialtyOptions(page)).toHaveText([OTHER.name]);
   });
 
+  test('does not say «nothing found» above «Другое» when «Другое» is what was typed', async ({ page }) => {
+    await open(page);
+    await page.getByRole('combobox', { name: 'Специальность' }).pressSequentially('Друг');
+    await expect(specialtyOptions(page)).toHaveText([OTHER.name]);
+    await expect(page.locator('#signup-specialty-list')).not.toContainText('Ничего не найдено');
+  });
+
+  test('marks only the active option as aria-selected', async ({ page }) => {
+    await open(page);
+    await page.getByRole('combobox', { name: 'Специальность' }).pressSequentially('орт');
+    const selected = () =>
+      specialtyOptions(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-selected')));
+    expect(await selected()).toEqual(['true', null, null]);
+    await page.keyboard.press('ArrowDown');
+    expect(await selected()).toEqual([null, 'true', null]);
+  });
+
+  // PR #89 review: an open list hangs over the fields below it, so a click
+  // aimed at the next field landed on an option and picked it. A full name
+  // now commits itself and closes the list as it is typed.
+  test('a full specialty name commits itself, and a click on the next field keeps it', async ({ page }) => {
+    await open(page);
+    const input = page.getByRole('combobox', { name: 'Специальность' });
+    // Case and spacing as a person might type them.
+    await input.pressSequentially('травматология и  ортопедия');
+    await expect(page.getByRole('listbox', { name: 'Список специальностей' })).toBeHidden();
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+    await expect(input).toHaveValue(ORTHOPEDICS.name);
+    await expect(page.locator('[data-specialty-id]')).toHaveValue(ORTHOPEDICS.id);
+
+    const city = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await clickAt(page, city);
+    await expect(city).toBeFocused();
+    await expect(input).toHaveValue(ORTHOPEDICS.name);
+    await expect(page.locator('[data-specialty-id]')).toHaveValue(ORTHOPEDICS.id);
+  });
+
+  test('a full, unambiguous place commits itself, and a click on consent ticks it', async ({ page }) => {
+    await open(page);
+    await focusCity(page);
+    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await input.pressSequentially('химки');
+    await expect(page.getByRole('listbox', { name: 'Список населённых пунктов' })).toBeHidden();
+    await expect(input).toHaveValue('Химки');
+    await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
+
+    const consent = page.getByLabel(/согласен/);
+    await clickAt(page, consent);
+    await expect(consent).toBeChecked();
+    await expect(input).toHaveValue('Химки');
+    await expect(page.locator('#signup-city-hint')).toHaveText('Московская область');
+  });
+
+  test('a name found in several regions keeps the list open, and a click on a row applies it', async ({ page }) => {
+    await open(page);
+    await focusCity(page);
+    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await input.pressSequentially('Кировск');
+    const list = page.getByRole('listbox', { name: 'Список населённых пунктов' });
+    await expect(list).toBeVisible();
+    await expect(page.getByLabel('Регион')).toBeVisible();
+    // The exact name ranks before the longer ones it begins («Кировское»).
+    await expect(cityOptions(page).first().locator('span').first()).toHaveText('Кировск');
+    const sub = cityOptions(page).first().locator('.ob-signup__opt-sub');
+    // Its tail is spaced off the name in the text itself, not by the layout.
+    expect(await sub.evaluate((el) => el.textContent)).toMatch(/^\u00a0— /);
+
+    const option = cityOptions(page)
+      .filter({ hasText: 'Ленинградская область' })
+      .filter({ has: page.getByText('Кировск', { exact: true }) });
+    await clickAt(page, option);
+    await expect(list).toBeHidden();
+    await expect(input).toHaveValue('Кировск');
+    await expect(page.locator('#signup-city-hint')).toHaveText('Ленинградская область');
+    await expect(page.locator('#signup-city-hint')).toBeVisible();
+    await expect(page.getByLabel('Регион')).toBeHidden();
+  });
+
+  // A press outside the list is not swallowed: it closes the list, reaches
+  // its own target, and commits nothing for a place still being typed. (A
+  // list this long covers the consent box, as any open dropdown covers what
+  // is under it; the press goes to a field the list leaves visible.)
+  test('a partial place, then a click elsewhere: the list closes and nothing is picked', async ({ page }) => {
+    const requests = await mockSignUp(page, 200);
+    await open(page);
+    await fillValid(page, { city: false });
+    await page.getByLabel(/согласен/).uncheck();
+    await focusCity(page);
+    const input = page.getByRole('combobox', { name: 'Населённый пункт' });
+    await input.pressSequentially('Кировс');
+    const list = page.getByRole('listbox', { name: 'Список населённых пунктов' });
+    await expect(list).toBeVisible();
+
+    const workplace = page.getByLabel('Место работы');
+    await clickAt(page, workplace);
+    await expect(list).toBeHidden();
+    await expect(workplace).toBeFocused();
+    await expect(input).toHaveValue('Кировс');
+    await expect(page.locator('#signup-city-hint')).toBeHidden();
+
+    const consent = page.getByLabel(/согласен/);
+    await clickAt(page, consent);
+    await expect(consent).toBeChecked();
+
+    // Still no place from the list: the region is asked for, nothing is sent.
+    await submit(page);
+    await expect(page.getByLabel('Регион')).toBeVisible();
+    await expect(page.locator('#signup-region-error')).toHaveText('Заполните это поле.');
+    expect(requests).toHaveLength(0);
+  });
+
   test('Tab closes the list without picking', async ({ page }) => {
     await open(page);
     const input = page.getByRole('combobox', { name: 'Специальность' });
@@ -761,7 +884,9 @@ test.describe('sign-up list fields', () => {
     const option = cityOptions(page).filter({ hasText: 'Московская область' }).filter({ hasText: /^Химки/ });
     await expect(option.locator('span').first()).toHaveText('Химки');
     await expect(option.locator('b')).toHaveText('Химк');
-    await expect(option.locator('.ob-signup__opt-sub')).toHaveText('— Московская область');
+    expect(await option.locator('.ob-signup__opt-sub').evaluate((el) => el.textContent)).toBe(
+      '\u00a0— Московская область',
+    );
 
     await option.click();
     await expect(input).toHaveValue('Химки');

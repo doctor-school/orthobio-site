@@ -41,9 +41,11 @@ export interface FilterOptions<T> {
 }
 
 /**
- * Options whose text contains the query; those that START with it come first
- * (typing «бор» wants «Бор» before «Выборг»). Stable inside both groups, so
- * the source order — alphabetical in both lists — survives.
+ * Options whose text contains the query, ranked in three tiers: the text IS
+ * the query, then it STARTS with it, then it holds it elsewhere (typing
+ * «кировск» wants «Кировск» before «Кировское», «бор» wants «Бор» before
+ * «Выборг»). Stable inside every tier, so the source order — alphabetical in
+ * both lists — survives.
  */
 export function filterOptions<T>(
   options: readonly T[],
@@ -52,14 +54,40 @@ export function filterOptions<T>(
 ): T[] {
   const needle = normalise(foldQuery(query));
   if (needle === '') return options.slice(0, limit);
+  const exact: T[] = [];
   const starts: T[] = [];
   const contains: T[] = [];
   for (const option of options) {
-    const at = foldCase(text(option)).indexOf(needle);
-    if (at === 0) starts.push(option);
+    const folded = foldCase(text(option));
+    const at = folded.indexOf(needle);
+    if (at === 0 && folded === needle) exact.push(option);
+    else if (at === 0) starts.push(option);
     else if (at > 0 && !prefixOnly) contains.push(option);
   }
-  return [...starts, ...contains].slice(0, limit);
+  return [...exact, ...starts, ...contains].slice(0, limit);
+}
+
+/**
+ * The one option whose whole text is what was typed (case, ё and spacing
+ * aside), or null when none or several are. Typing a full name is a choice
+ * already made: the combobox commits it and closes, so no list is left
+ * hanging over the next field for the following click to land on. Several
+ * same-named places («Кировск» ×3) are no choice yet — the region is missing.
+ */
+export function soleExactMatch<T>(
+  options: readonly T[],
+  query: string,
+  { text, normalise = (q) => q }: Pick<FilterOptions<T>, 'text' | 'normalise'>,
+): T | null {
+  const needle = normalise(foldQuery(query));
+  if (needle === '') return null;
+  let found: T | null = null;
+  for (const option of options) {
+    if (foldQuery(text(option)) !== needle) continue;
+    if (found !== null) return null;
+    found = option;
+  }
+  return found;
 }
 
 export interface Highlight {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { filterOptions, foldCase, moveActive, splitHighlight } from '../../src/lib/combobox';
+import { filterOptions, foldCase, moveActive, soleExactMatch, splitHighlight } from '../../src/lib/combobox';
 
 const SPECIALTIES = ['Травматология и ортопедия', 'Ортодонтия', 'Спортивная медицина', 'Детская хирургия'];
 const byName = { text: (s: string) => s };
@@ -57,6 +57,55 @@ describe('filterOptions', () => {
 
   it('returns nothing when no option contains the query', () => {
     expect(filterOptions(SPECIALTIES, 'хирург-волшебник', byName)).toEqual([]);
+  });
+  it('lists an option named exactly as typed before the longer names it begins', () => {
+    const places = ['Кировград', 'Кировское', 'Кировск', 'Кировск'];
+    expect(filterOptions(places, 'кировск', { ...byName, prefixOnly: true })).toEqual([
+      'Кировск',
+      'Кировск',
+      'Кировское',
+    ]);
+  });
+});
+
+interface Place {
+  name: string;
+  region: string;
+}
+const KIROVSK_LO: Place = { name: 'Кировск', region: 'Ленинградская область' };
+const KIROVSK_MO: Place = { name: 'Кировск', region: 'Мурманская область' };
+const KIROVSKOE: Place = { name: 'Кировское', region: 'Донецкая Народная Республика' };
+const KHIMKI: Place = { name: 'Химки', region: 'Московская область' };
+const byPlaceName = { text: (p: Place) => p.name };
+
+describe('soleExactMatch', () => {
+  it('returns the one option whose whole name is the query', () => {
+    expect(soleExactMatch(SPECIALTIES, 'Травматология и ортопедия', byName)).toBe('Травматология и ортопедия');
+    expect(soleExactMatch([KIROVSKOE, KHIMKI], 'Химки', byPlaceName)).toBe(KHIMKI);
+  });
+
+  it('returns null when several same-named options match: the region is still to choose', () => {
+    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE, KIROVSK_MO], 'Кировск', byPlaceName)).toBeNull();
+  });
+
+  it('does not take a prefix or a fragment for a match', () => {
+    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE], 'Кировс', byPlaceName)).toBeNull();
+    expect(soleExactMatch(SPECIALTIES, 'ортопедия', byName)).toBeNull();
+    expect(soleExactMatch(SPECIALTIES, '   ', byName)).toBeNull();
+  });
+
+  it('picks the exact name even where it also begins a longer one', () => {
+    expect(soleExactMatch([KIROVSK_LO, KIROVSKOE], 'кировск', byPlaceName)).toBe(KIROVSK_LO);
+  });
+
+  it('ignores case, ё and surrounding or doubled spaces', () => {
+    expect(soleExactMatch(SPECIALTIES, '  травматология   И ОРТОПЕДИЯ ', byName)).toBe('Травматология и ортопедия');
+    expect(soleExactMatch(['Щёлково'], 'щелково', byName)).toBe('Щёлково');
+  });
+
+  it('matches through a caller-supplied normaliser', () => {
+    const normalise = (q: string) => q.replace(/^г\.\s*/, '');
+    expect(soleExactMatch([KHIMKI], 'г. Химки', { ...byPlaceName, normalise })).toBe(KHIMKI);
   });
 });
 

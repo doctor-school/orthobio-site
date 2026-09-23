@@ -3,6 +3,10 @@ import AxeBuilder from '@axe-core/playwright';
 
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
 import { measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+import { registrationState, type RegistrationWindow } from '../../src/lib/registration';
 
 /**
  * The congress sign-up form (Issue #78) against a MOCKED platform: the preview
@@ -82,6 +86,43 @@ async function focusCity(page: Page): Promise<void> {
   await page.getByLabel('Населённый пункт').focus();
   await expect(page.locator('#signup-settlements option')).not.toHaveCount(0);
 }
+
+/**
+ * The window as configured. `src/config/site.ts` reads `import.meta.env` (a
+ * Vite-only object), so it cannot be imported under Playwright; the two
+ * instants are read from its source instead, which keeps this suite on the
+ * configured values without a second copy.
+ */
+const REGISTRATION_WINDOW: RegistrationWindow = (() => {
+  const source = readFileSync(fileURLToPath(new URL('../../src/config/site.ts', import.meta.url)), 'utf8');
+  const block = /export const REGISTRATION_WINDOW = \{([^}]*)\}/.exec(source)![1];
+  const read = (key: string) => new RegExp(`${key}: '([^']+)'`).exec(block)![1];
+  return { opensAt: read('opensAt'), closesAt: read('closesAt') };
+})();
+
+/**
+ * A host that is NOT force-open, so the dated states can be seen: the page is
+ * served as orthobio.test by proxying to the preview server, with the device
+ * clock and the HEAD `Date` header (the module's server-clock re-judge) both
+ * set to `at`.
+ */
+const PROD_LIKE = 'http://orthobio.test';
+async function serveAsProduction(page: Page, baseURL: string, at: Date): Promise<void> {
+  await page.clock.setFixedTime(at);
+  await page.route(`${PROD_LIKE}/**`, async (route) => {
+    const url = new URL(route.request().url());
+    if (route.request().method() === 'HEAD') {
+      await route.fulfill({ status: 200, headers: { Date: at.toUTCString() }, body: '' });
+      return;
+    }
+    const response = await route.fetch({ url: `${baseURL}${url.pathname}${url.search}` });
+    await route.fulfill({ response });
+  });
+}
+
+/** Blocks the form's module, leaving only the markup and the pre-paint snippet. */
+const blockSignupModule = (page: Page) =>
+  page.route('**/_astro/SignupForm*.js', (route) => route.abort());
 
 const submit = (page: Page) => page.getByRole('button', { name: 'Зарегистрироваться' }).click();
 
@@ -718,7 +759,7 @@ test.describe('registration page design', () => {
 test.describe('registration page after the PR #87 audit', () => {
   test('draws a visible focus ring over the map, not under its image', async ({ page }) => {
     await open(page);
-    const map = page.locator('.ob-reg__map');
+    const map = page.locator('.ob-reg__map-link');
     await map.scrollIntoViewIfNeeded();
     // Keyboard modality first, so the programmatic focus counts as :focus-visible.
     await page.keyboard.press('Shift');
@@ -731,11 +772,11 @@ test.describe('registration page after the PR #87 audit', () => {
     expect(overlay.position).toBe('absolute');
     expect(overlay.events).toBe('none');
     expect(overlay.shadow).toContain('inset');
-    // Painted above the image: 3px inside the bottom edge (past the 1px card
-    // border and the 2px halo) the pixel is the ring (--focus-ring), not the map.
+    // Painted above the image: 3px inside the link's bottom edge (past the
+    // 2px halo) the pixel is the ring (--focus-ring), not the map.
     const box = (await map.boundingBox())!;
     const shot = await page.screenshot({
-      clip: { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height) - 4, width: 1, height: 1 },
+      clip: { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height) - 3, width: 1, height: 1 },
     });
     const ring = await page.evaluate(async (png) => {
       const img = new Image();
@@ -758,31 +799,118 @@ test.describe('registration page after the PR #87 audit', () => {
     ring.forEach((v, i) => expect(Math.abs(v - expected[i])).toBeLessThanOrEqual(8));
   });
 
+  // PR #87 review [BLOCKER]: the pre-paint snippet shows the form before the
+  // module attaches its submit handler. Without the belts a native submit went
+  // out as GET /registration?surname=…&email=… — personal data in URLs and logs.
+  test('a form whose module never ran cannot submit, natively or otherwise', async ({ page }) => {
+    await blockSignupModule(page);
+    const navigations: string[] = [];
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) navigations.push(frame.url());
+    });
+    await page.goto('/registration');
+    await expect(page.locator('[data-signup-form]')).toBeVisible();
+    await expect(page.locator('[data-signup-form]')).toHaveAttribute('method', 'post');
+    const button = page.getByRole('button', { name: 'Зарегистрироваться' });
+    await expect(button).toBeDisabled();
+
+    await page.getByLabel('Фамилия').fill('Иванов');
+    await page.getByLabel('E-mail').fill('ivanov@example.com');
+    await page.getByLabel('E-mail').press('Enter');
+    await button.click({ force: true });
+    await page.waitForTimeout(500);
+
+    expect(navigations, 'no navigation after the first load').toHaveLength(1);
+    expect(page.url()).not.toContain('?');
+    expect(page.url()).not.toContain('email=');
+  });
+
+  test('the submit button works once the module has attached its handler', async ({ page }) => {
+    await open(page);
+    await expect(page.getByRole('button', { name: 'Зарегистрироваться' })).toBeEnabled();
+  });
+
+  // The pre-paint snippet restates `registrationState` (unit-tested); this pins
+  // the restatement to the same answers at the boundaries, with the module
+  // blocked so that only the snippet decides which card is visible.
+  const OPENS = Date.parse(REGISTRATION_WINDOW.opensAt);
+  const CLOSES = Date.parse(REGISTRATION_WINDOW.closesAt!);
+  const BOUNDARIES = [
+    { label: '1 ms before opening', at: OPENS - 1 },
+    { label: 'the opening instant', at: OPENS },
+    { label: '1 ms before closing', at: CLOSES - 1 },
+    { label: 'the closing instant', at: CLOSES },
+  ];
+  for (const { label, at } of BOUNDARIES) {
+    test(`the pre-paint card agrees with registrationState at ${label}`, async ({ page, baseURL }) => {
+      await blockSignupModule(page);
+      await serveAsProduction(page, baseURL!, new Date(at));
+      await page.goto(`${PROD_LIKE}/registration`);
+      const expected = registrationState(REGISTRATION_WINDOW, new Date(at), 'orthobio.test');
+      await expect(page.locator('[data-signup-state]:visible')).toHaveCount(1);
+      await expect(page.locator('[data-signup-state]:visible')).toHaveAttribute('data-signup-state', expected);
+    });
+  }
+
+  test('the pre-paint card is the form on a force-open host, whatever the date', async ({ page }) => {
+    await blockSignupModule(page);
+    await page.clock.setFixedTime(new Date(OPENS - 86_400_000));
+    await page.goto('/registration');
+    expect(registrationState(REGISTRATION_WINDOW, new Date(OPENS - 86_400_000), 'localhost')).toBe('open');
+    await expect(page.locator('[data-signup-state]:visible')).toHaveAttribute('data-signup-state', 'open');
+  });
+
+  test('credits OpenStreetMap on the map, as real text that opens the licence', async ({ page }) => {
+    await open(page);
+    const credit = page.getByRole('link', { name: /© участники OpenStreetMap/ });
+    await expect(credit).toBeVisible();
+    await expect(credit).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');
+    await expect(credit).toHaveAttribute('target', '_blank');
+    await expect(credit).toHaveAccessibleName(/открывается в новой вкладке/);
+    // Inside the map frame, in its corner — not somewhere else on the page.
+    const [map, box] = await Promise.all([page.locator('.ob-reg__map').boundingBox(), credit.boundingBox()]);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(map!.x + map!.width + 1);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(map!.y + map!.height + 1);
+    expect(box!.y).toBeGreaterThan(map!.y + map!.height / 2);
+  });
+
+  // Chrome's own datalist arrow is hidden for the design's chevron, so the
+  // chevron has to do its job: open the list on a click.
+  for (const label of ['Специальность', 'Населённый пункт']) {
+    test(`a click on the «${label}» chevron focuses the field and opens its list`, async ({ page }) => {
+      await page.addInitScript(() => {
+        const calls: string[] = [];
+        (window as unknown as { __pickers: string[] }).__pickers = calls;
+        HTMLInputElement.prototype.showPicker = function (this: HTMLInputElement) {
+          calls.push(this.id);
+        };
+      });
+      await open(page);
+      const input = page.getByLabel(label, { exact: true });
+      await input.locator('xpath=following-sibling::*[@data-combo-open]').click();
+      await expect(input).toBeFocused();
+      const calls = await page.evaluate(() => (window as unknown as { __pickers: string[] }).__pickers);
+      expect(calls).toEqual([await input.getAttribute('id')]);
+    });
+  }
+
   // Every state card used to be revealed after the first paint, so the form
   // column opened from zero height and shoved the venue card down (CLS up to
-  // 0.28). A non-force-open host is needed to see the dated states: the page is
-  // served as orthobio.test by proxying to the preview server, with the device
-  // clock and the HEAD `Date` header both set to the instant under test.
+  // 0.28). A non-force-open host is needed to see the dated states
+  // (`serveAsProduction`).
   const CLS_STATES = [
     { name: 'not-yet-open', at: '2026-09-25T12:00:00+03:00' },
     { name: 'open', at: '2026-10-15T12:00:00+03:00' },
     { name: 'closed', at: '2027-01-15T12:00:00+03:00' },
   ] as const;
   for (const state of CLS_STATES) {
-    for (const width of [360, 390, 768, 1024]) {
+    // 1280 too: from lg the form sits beside the intro, so a late card cannot
+    // push the venue down there — but the ladder is the ladder.
+    for (const width of OVERFLOW_WIDTHS) {
       test(`the ${state.name} state lays out without a shift at ${width}px`, async ({ page, baseURL }) => {
         const at = new Date(state.at);
-        await page.clock.setFixedTime(at);
         await mockSpecialties(page);
-        await page.route('http://orthobio.test/**', async (route) => {
-          const url = new URL(route.request().url());
-          if (route.request().method() === 'HEAD') {
-            await route.fulfill({ status: 200, headers: { Date: at.toUTCString() }, body: '' });
-            return;
-          }
-          const response = await route.fetch({ url: `${baseURL}${url.pathname}${url.search}` });
-          await route.fulfill({ response });
-        });
+        await serveAsProduction(page, baseURL!, at);
         await page.addInitScript(() => {
           (window as unknown as { __cls: number }).__cls = 0;
           new PerformanceObserver((list) => {
@@ -792,7 +920,7 @@ test.describe('registration page after the PR #87 audit', () => {
           }).observe({ type: 'layout-shift', buffered: true });
         });
         await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
-        await page.goto('http://orthobio.test/registration', { waitUntil: 'networkidle' });
+        await page.goto(`${PROD_LIKE}/registration`, { waitUntil: 'networkidle' });
         await expect(page.locator(`[data-signup-state="${state.name}"]`)).toBeVisible();
         // The server-clock re-judge has answered (networkidle); give the
         // observer a frame to report whatever it caused.

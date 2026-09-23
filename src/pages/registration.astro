@@ -13,11 +13,14 @@
  * `UPCOMING_CONGRESS_VENUE`); the form, its labels and its states are
  * interface and live in `SignupForm`.
  *
- * The map is a static raster, self-hosted (docs/assets-manifest.yaml
- * `venue-map`): the page never loads a map service, only links to one. It is
+ * The map is a static raster composed once from OpenStreetMap tiles and
+ * self-hosted (docs/assets-manifest.yaml `venue-map`): the page never loads a
+ * map service, only links to one. ODbL requires the visible «© участники
+ * OpenStreetMap» credit, so it is real text in the map's corner — a sibling of
+ * the map link, not inside it, because links cannot nest. The raster is
  * centred on the venue, so the pin overlay marks the spot; the image itself is
- * decorative (`alt=""`) because the link carries the name. Both map links
- * leave the site, so they open a new tab and say so, like every outbound link.
+ * decorative (`alt=""`) because the link carries the name. Every map link
+ * leaves the site, so it opens a new tab and says so, like every outbound link.
  */
 import { Image } from 'astro:assets';
 
@@ -26,6 +29,7 @@ import venueMap from '@/assets/venue-map.png';
 import NewTabHint from '@/components/NewTabHint.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import SignupForm from '@/components/SignupForm.astro';
+import StrokeIcon from '@/components/StrokeIcon.astro';
 import { REGISTRATION_WINDOW, UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import { getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
@@ -62,19 +66,7 @@ const dates = [
             dates.map(({ term, value }) => (
               <div class="ob-reg__date">
                 <dt>
-                  <svg
-                    class="ob-reg__date-icon"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="3" y="4.5" width="14" height="12.5" rx="2" />
-                    <path d="M3 8.5h14M7 2.5v3.5M13 2.5v3.5" />
-                  </svg>
+                  <StrokeIcon class="ob-reg__date-icon" name="calendar" />
                   {term}
                 </dt>
                 <dd>{value}</dd>
@@ -90,19 +82,26 @@ const dates = [
 
       <div class="ob-reg__aside">
         <div class="ob-reg__venue">
-          <a class="ob-reg__map" href={venue.mapUrl} target="_blank" rel="noopener">
-            <span class="ob-sr-only">{venue.card.name} на карте</span>
-            <NewTabHint />
-            <Image
-              class="ob-reg__map-img"
-              src={venueMap}
-              alt=""
-              widths={[360, 650]}
-              sizes="(min-width: 1024px) 560px, 100vw"
-              loading="lazy"
-            />
-            <span class="ob-reg__pin" aria-hidden="true"></span>
-          </a>
+          <div class="ob-reg__map">
+            <a class="ob-reg__map-link" href={venue.mapUrl} target="_blank" rel="noopener">
+              <span class="ob-sr-only">{venue.card.name} на карте</span>
+              <NewTabHint />
+              <Image
+                class="ob-reg__map-img"
+                src={venueMap}
+                alt=""
+                widths={[360, 650, 1300]}
+                sizes="(min-width: 1024px) 560px, 100vw"
+                loading="lazy"
+              />
+              <span class="ob-reg__pin" aria-hidden="true"></span>
+            </a>
+            <p class="ob-reg__attr">
+              <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">
+                © участники OpenStreetMap<NewTabHint />
+              </a>
+            </p>
+          </div>
           <div class="ob-reg__vbody">
             <p class="ob-reg__vover">Место проведения</p>
             <p class="ob-reg__vname">{venue.card.name}</p>

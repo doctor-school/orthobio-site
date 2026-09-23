@@ -1761,17 +1761,31 @@ site_assets:
   # Images committed under src/assets/ and optimised at build time by
   # astro:assets. They are not in the S3 bucket and not in s3_objects_total.
   items:
-    # The Issue #78 venue photo (venue-hotel-milan, src/assets/hotel-milan.webp)
-    # was retired with the Issue #82 redesign: the approved venue card shows a
-    # map instead, and nothing else imported the photo.
+    - id: venue-hotel-milan
+      issue: 78
+      description: 'Photo of ГК «Милан» (Москва, ул. Шипиловская, д. 28А), the venue of the 2027 congress; /registration until Issue #82'
+      source: owner # supplied by Anton in the Issue #78 working chat
+      supplied_at: '2026-09-23'
+      type: photo
+      status: retired # replaced by the venue-map card in Issue #82
+      retired_by: 82
+      # Never uploaded to S3, so git is its only copy: recover with
+      # `git show 2151724:src/assets/hotel-milan.webp > hotel-milan.webp`.
+      last_commit: '2151724'
+      local: null # was 'src/assets/hotel-milan.webp'
+      s3_key: null
+      object: { w: 1448, h: 1086, bytes: 153636, sha256: 'c18882581e3d2b9fce91e09776607d1513193d8f039f24acfd530a299ac9768d' }
     - id: venue-map
       issue: 82
-      description: 'Static map centred on ГК «Милан» (Москва, ул. Шипиловская, д. 28А) for the venue card on /registration; the pin is a CSS overlay at the centre'
-      source: 'https://static-maps.yandex.ru/1.x/?l=map&ll=37.714713,55.618792&z=15&size=650,325&lang=ru_RU'
+      description: 'Static map centred on ГК «Милан» (Москва, ул. Шипиловская, д. 28А) for the venue card on /registration; the pin is a CSS overlay at the centre, the ODbL credit a text caption'
+      source: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' # OSM standard tiles, fetched once with a named User-Agent
+      licence: 'ODbL 1.0 (data) / CC BY-SA 2.0 (tiles); attribution «© участники OpenStreetMap» linked to https://www.openstreetmap.org/copyright'
       coordinates: { lon: 37.714713, lat: 55.618792 } # from the Yandex Maps org page https://yandex.ru/maps/org/milan/1088776161/
+      tiles: { zoom: 16, x: [39631, 39636], y: [20529, 20532] } # 6×4 tiles stitched, then cropped
+      crop: { left: 55, top: 179, width: 1300, height: 650 } # in the stitched 1536×1024 canvas; centre = the coordinates
       fetched_at: '2026-09-23'
       type: map
       status: committed
       local: 'src/assets/venue-map.png'
       s3_key: null # shipped from the build as /_astro/*, not from the bucket
-      object: { w: 650, h: 325, bytes: 44756, sha256: '57918ff467e374af01be40f5baacc7ca0d2798596b7b252e2cbebdd00db1758b' }
+      object: { w: 1300, h: 650, bytes: 250212, sha256: 'cb4b41e54ecaaa7cac71040e210eec69ef93ba94c41b4d9f407b9a04fc1e878c' }

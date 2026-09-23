@@ -32,6 +32,7 @@
  * selectors the script and the e2e suite rely on stay as they were.
  */
 import SignupPattern from '@/components/SignupPattern.astro';
+import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
   CONTACT_EMAIL,
   REGISTRATION_WINDOW,
@@ -67,7 +68,20 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
       <p class="ob-signup__sub">{UPCOMING_CONGRESS_DATES.display} года, Москва</p>
     </div>
 
-    <form class="ob-signup__form" data-signup-form novalidate aria-labelledby="signup-title">
+    <!-- `method="post"` and the disabled button are a pair of belts for the
+         moments before the module has attached its submit handler (the card
+         is revealed before first paint, the module runs later — or never, if
+         it fails to load). A disabled default button makes implicit
+         submission (Enter) a no-op; POST keeps a native submit, should one
+         ever happen, out of URLs, history and access logs. openForm() enables
+         the button once the handler is in place. -->
+    <form
+      class="ob-signup__form"
+      method="post"
+      data-signup-form
+      novalidate
+      aria-labelledby="signup-title"
+    >
       <div class="ob-signup__row ob-signup__row--3">
         <div class="ob-signup__field">
           <label class="ob-signup__label" for="signup-surname">Фамилия</label>
@@ -206,18 +220,9 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
               aria-required="true"
               aria-describedby="signup-specialty-hint signup-specialty-error"
             />
-            <svg
-              class="ob-signup__chev"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M5.5 8l4.5 4.5L14.5 8"></path>
-            </svg>
+            <span class="ob-signup__chev" data-combo-open aria-hidden="true">
+              <StrokeIcon name="chevron" />
+            </span>
           </div>
           <datalist id="signup-specialties"></datalist>
           <input type="hidden" name="specialtyId" data-specialty-id />
@@ -248,18 +253,9 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
               aria-describedby="signup-city-error"
               data-settlement
             />
-            <svg
-              class="ob-signup__chev"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M5.5 8l4.5 4.5L14.5 8"></path>
-            </svg>
+            <span class="ob-signup__chev" data-combo-open aria-hidden="true">
+              <StrokeIcon name="chevron" />
+            </span>
           </div>
           <datalist id="signup-settlements"></datalist>
           <div class="ob-signup__msgs">
@@ -317,7 +313,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
 
       <div class="ob-signup__actions">
         <p class="ob-signup__alert" data-signup-alert role="alert"></p>
-        <button class="ob-btn ob-btn--accent ob-btn--lg ob-btn--block" type="submit" data-signup-submit>
+        <button class="ob-btn ob-btn--accent ob-btn--lg ob-btn--block" type="submit" data-signup-submit disabled>
           Зарегистрироваться
         </button>
         {
@@ -335,16 +331,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
          address, so one announcement holds both. -->
     <div class="ob-signup__success ob-signup__status" data-signup-success role="status" hidden>
       <span class="ob-signup__badge ob-signup__badge--ok" aria-hidden="true">
-        <svg
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M4.5 10.5l3.5 3.5 7.5-8"></path>
-        </svg>
+        <StrokeIcon name="check" />
       </span>
       <h2
         class="ob-signup__stitle"
@@ -373,17 +360,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
   >
     <SignupPattern />
     <span class="ob-signup__badge" aria-hidden="true">
-      <svg
-        viewBox="0 0 20 20"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect x="3" y="4.5" width="14" height="12.5" rx="2"></rect>
-        <path d="M3 8.5h14M7 2.5v3.5M13 2.5v3.5"></path>
-      </svg>
+      <StrokeIcon name="calendar" />
     </span>
     <h2 class="ob-signup__stitle" tabindex="-1">
       Регистрация откроется <span data-signup-opens-at>{opensLabel}</span>
@@ -398,17 +375,7 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
   <div class="ob-signup__card ob-signup__card--status ob-signup__status" data-signup-state="closed" hidden>
     <SignupPattern />
     <span class="ob-signup__badge ob-signup__badge--neutral" aria-hidden="true">
-      <svg
-        viewBox="0 0 20 20"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.75"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <rect x="4" y="9" width="12" height="8.5" rx="2"></rect>
-        <path d="M7 9V6.5a3 3 0 0 1 6 0V9"></path>
-      </svg>
+      <StrokeIcon name="lock" />
     </span>
     <h2 class="ob-signup__stitle" tabindex="-1">Регистрация на конгресс закрыта</h2>
     <p class="ob-signup__stext">
@@ -434,7 +401,8 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
   switches only if the answer differs. The rule is `registrationState` of
   lib/registration.ts restated in plain JS — an inline script cannot import —
   and its inputs come from the same constants, so only the three comparisons
-  are duplicated; the e2e first-paint test holds the two to the same answer.
+  are duplicated; an e2e test runs this snippet alone (module blocked) at the
+  boundary instants and holds it to `registrationState`'s answers.
   Without scripting nothing runs and only the <noscript> card shows, as before.
 -->
 <script
@@ -995,6 +963,26 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         }
         attempt();
       });
+      // The handler is in place: the button the markup ships disabled may work.
+      submit.disabled = false;
+
+      // ── Chevron: opens the list on a click, as Chrome's own datalist arrow
+      // (hidden in favour of the design's chevron) did. Mouse-only by nature;
+      // the keyboard has ArrowDown / Alt+ArrowDown on the field itself.
+      for (const chevron of form.querySelectorAll<HTMLElement>('[data-combo-open]')) {
+        chevron.addEventListener('mousedown', (event) => {
+          const input = chevron.parentElement?.querySelector('input');
+          if (!input) return;
+          event.preventDefault();
+          input.focus();
+          try {
+            input.showPicker();
+          } catch {
+            // No picker for a datalist in this engine: the focused field still
+            // offers its list as the participant types.
+          }
+        });
+      }
 
       // ── Captcha widget ────────────────────────────────────────────────────
       const renderCaptcha = (): void => {

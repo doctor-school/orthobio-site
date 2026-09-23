@@ -2552,19 +2552,24 @@ details[open] > .ob-faq__q::after {
 
 .ob-reg__map {
   position: relative;
-  display: block;
   aspect-ratio: 2 / 1;
   border-bottom: var(--border-thin) solid var(--hairline);
   overflow: hidden;
   background: var(--ob-green-tint);
+}
+
+.ob-reg__map-link {
+  position: absolute;
+  inset: 0;
+  display: block;
   transition: opacity var(--t-state);
 }
 
-.ob-reg__map:hover {
+.ob-reg__map-link:hover {
   opacity: 0.92;
 }
 
-.ob-reg__map:active {
+.ob-reg__map-link:active {
   opacity: 0.85;
 }
 
@@ -2572,19 +2577,47 @@ details[open] > .ob-faq__q::after {
    on the link itself, which the map image — filling the link — paints over,
    and the card clips any outer ring at its edges; so the link's own shadow is
    switched off and the same two-colour ring is drawn inward on ::after. */
-.ob-reg__map:focus-visible {
+.ob-reg__map-link:focus-visible {
   --focus-shadow: var(--shadow-none);
+  border-radius: 0;
 }
 
-.ob-reg__map::after {
+.ob-reg__map-link::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.ob-reg__map:focus-visible::after {
+.ob-reg__map-link:focus-visible::after {
   box-shadow: var(--focus-shadow-inset);
+}
+
+/* ODbL attribution: real text on an opaque plate, so its contrast does not
+   depend on the tile underneath. It sits above the map link (a sibling —
+   links cannot nest) in the corner, clear of the centred pin. */
+.ob-reg__attr {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: var(--gap-micro) var(--gap-tight);
+  border-top-left-radius: var(--r-sm);
+  background: var(--bg);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+}
+
+.ob-reg__attr a {
+  color: var(--text-body);
+}
+
+.ob-reg__attr a:hover {
+  color: var(--ob-green-text);
+}
+
+.ob-reg__attr a:active {
+  color: var(--ob-sky-text);
 }
 
 .ob-reg__map-img {
@@ -2906,15 +2939,32 @@ details[open] > .ob-faq__q::after {
   display: none;
 }
 
+/* The chevron opens the list on a click (the script calls showPicker()), as
+   the hidden native arrow did — so it is a mouse target with states. */
 .ob-signup__chev {
   position: absolute;
   right: var(--ob-input-chevron-inset);
   top: 50%;
   translate: 0 -50%;
+  display: flex;
   width: var(--ob-input-chevron);
   height: var(--ob-input-chevron);
   color: var(--ob-green-text);
-  pointer-events: none;
+  cursor: pointer;
+  transition: color var(--t-state);
+}
+
+.ob-signup__chev svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ob-signup__chev:hover {
+  color: var(--ink);
+}
+
+.ob-signup__chev:active {
+  color: var(--ob-sky-text);
 }
 
 /* Quiet hint line with a green dot (design `.ob-sf__hint`). */

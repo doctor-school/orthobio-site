@@ -56,7 +56,12 @@ export const UPCOMING_CONGRESS_VENUE = {
   name: 'ГК «Милан»',
   /**
    * The venue card on /registration (Issue #82, approved design): the hotel
-   * name, the address on its own line and how to get there. The address keeps
+   * name, the address on its own line and how to get there. The name and the
+   * walking time come from the owner-approved #82 design mock, not from
+   * docs/recon; not independently verified.
+   * TODO(Антон): «Отель «Милан»» here vs «ГК «Милан»» elsewhere on the site —
+   * одно и то же место; оставить оба написания или привести к одному?
+   * TODO(Антон): сверить «15 минут пешком» от м. «Домодедовская» до 1 октября. The address keeps
    * the design's short form («28А», no «д.»). Typography by hand, as above:
    * no-break spaces after «ул.»/«м.», before the dash and inside «15 минут».
    */

@@ -200,9 +200,15 @@ test.describe('sign-up form', () => {
     await fillValid(page);
     await submit(page);
 
-    await expect(page.getByText('Заявка принята — письмо с подтверждением придёт на ivanov@example.com.')).toBeVisible();
+    const title = page.getByRole('heading', { level: 2, name: 'Заявка принята' });
+    await expect(title).toBeVisible();
+    await expect(title).toBeFocused();
+    await expect(title).toHaveAccessibleDescription(
+      'Письмо-подтверждение придёт на ivanov@example.com в\u00a0течение нескольких минут. Если его нет\u00a0— проверьте папку «Спам».',
+    );
     await expect(page.locator('[data-signup-form]')).toBeHidden();
-    await expect(page.locator('[data-signup-success-text]')).toBeFocused();
+    // The form's own heading leaves with the form: the card now says one thing.
+    await expect(page.getByRole('heading', { name: 'Регистрация на конгресс', exact: true })).toBeHidden();
 
     expect(requests).toHaveLength(1);
     const request = requests[0];
@@ -368,8 +374,8 @@ test.describe('sign-up form', () => {
     await typeAndTab('');
     await typeAndTab('petrov@example.com');
     await typeAndTab('8 999 765-43-21');
-    await typeAndTab(SPORTS.name);
     await typeAndTab('Клиника');
+    await typeAndTab(SPORTS.name);
     await typeAndTab('Тверь');
 
     await expect(page.getByLabel(/согласен/)).toBeFocused();
@@ -550,7 +556,7 @@ test.describe('sign-up form', () => {
     });
   }
 
-  test('keeps the three name fields on one row from md, and their inputs aligned', async ({ page }) => {
+  test('keeps the three name fields on one row from sm, and their inputs aligned', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
     await open(page);
     const tops = await Promise.all(
@@ -561,6 +567,150 @@ test.describe('sign-up form', () => {
       ),
     );
     expect(new Set(tops).size, `input tops ${tops.join(', ')}`).toBe(1);
+  });
+});
+
+// ── Page design (Issue #82) ────────────────────────────────────────────────
+// The responsive and a11y ladders (responsive.spec.ts, a11y.spec.ts) already
+// walk /registration at every width; these pin what they cannot see — the
+// VALUES the page prints, the column order, and the states they never render.
+test.describe('registration page design', () => {
+  test('prints the registration window and the venue from config', async ({ page }) => {
+    await open(page);
+    await expect(page.getByRole('heading', { level: 1, name: 'Регистрация участников' })).toBeVisible();
+    await expect(page.locator('.ob-reg__intro .ob-sh__overline')).toHaveText('VIII конгресс · 2027');
+
+    const dates = page.locator('.ob-reg__dates');
+    await expect(dates.locator('dt')).toHaveText(['Открытие регистрации', 'Закрытие регистрации']);
+    await expect(dates.locator('dd')).toHaveText([
+      '1 октября 2026 года, 00:00 (мск)',
+      '1 января 2027 года, 00:00 (мск)',
+    ]);
+
+    const venue = page.locator('.ob-reg__venue');
+    await expect(venue.locator('.ob-reg__vname')).toHaveText('Отель «Милан»');
+    await expect(venue.locator('.ob-reg__vaddr')).toHaveText('Москва, ул. Шипиловская, 28А');
+    await expect(venue.locator('.ob-reg__vnote')).toHaveText('м. «Домодедовская» — 15 минут пешком');
+    const mapUrl = 'https://yandex.ru/maps/org/milan/1088776161/';
+    await expect(
+      page.getByRole('link', { name: 'Отель «Милан» на карте (открывается в новой вкладке)' }),
+    ).toHaveAttribute('href', mapUrl);
+    await expect(page.getByRole('link', { name: /Открыть в Яндекс Картах/ })).toHaveAttribute('href', mapUrl);
+  });
+
+  test('serves the static map from the site itself, with its dimensions declared', async ({ page }) => {
+    await open(page);
+    const map = page.locator('.ob-reg__map-img');
+    await map.scrollIntoViewIfNeeded();
+    await expect(map).toHaveAttribute('alt', '');
+    await expect(map).toHaveAttribute('width', /^\d+$/);
+    await expect(map).toHaveAttribute('height', /^\d+$/);
+    const src = await map.evaluate((img: HTMLImageElement) => img.currentSrc || img.src);
+    expect(new URL(src).origin).toBe(new URL(page.url()).origin);
+    expect(new URL(src).pathname).toMatch(/^\/_astro\/venue-map\./);
+    await expect.poll(() => map.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    // The map is 2:1 and the pin sits on its centre, where the venue is.
+    const [box, pin] = await Promise.all([
+      page.locator('.ob-reg__map').boundingBox(),
+      page.locator('.ob-reg__pin').boundingBox(),
+    ]);
+    expect(Math.abs(box!.width / box!.height - 2)).toBeLessThan(0.02);
+    expect(Math.abs(pin!.x + pin!.width / 2 - (box!.x + box!.width / 2))).toBeLessThanOrEqual(1);
+    expect(Math.abs(pin!.y + pin!.height / 2 - (box!.y + box!.height / 2))).toBeLessThanOrEqual(1);
+  });
+
+  test('stacks intro → form → venue below lg', async ({ page }) => {
+    await page.setViewportSize({ width: 768 - SCROLLBAR_GUTTER, height: 900 });
+    await open(page);
+    const [intro, form, venue] = await Promise.all(
+      ['.ob-reg__intro', '.ob-reg__form', '.ob-reg__aside'].map((sel) => page.locator(sel).boundingBox()),
+    );
+    expect(form!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height);
+    expect(venue!.y).toBeGreaterThanOrEqual(form!.y + form!.height);
+  });
+
+  test('puts the form beside the intro and the venue under the intro from lg', async ({ page }) => {
+    // Headless scrollbars overlay, so a 1024 viewport IS the lg layout here.
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await open(page);
+    const [intro, form, venue] = await Promise.all(
+      ['.ob-reg__intro', '.ob-reg__form', '.ob-reg__aside'].map((sel) => page.locator(sel).boundingBox()),
+    );
+    expect(form!.x).toBeGreaterThanOrEqual(intro!.x + intro!.width);
+    expect(Math.round(form!.y)).toBe(Math.round(intro!.y));
+    expect(Math.round(venue!.x)).toBe(Math.round(intro!.x));
+    expect(venue!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height);
+  });
+
+  test('shows the edge pattern only where the margins can hold it, and never widens the page', async ({
+    page,
+  }) => {
+    const edges = page.locator('.ob-reg__edge');
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await open(page);
+    await expect(edges).toHaveCount(3);
+    for (const edge of await edges.all()) {
+      await expect(edge).toBeHidden();
+      await expect(edge).toHaveAttribute('aria-hidden', 'true');
+    }
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    for (const edge of await edges.all()) await expect(edge).toBeVisible();
+    expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+    // Painted in the brand green through `currentColor`, not the black an
+    // <img> of the same SVG would paint.
+    const fill = await edges.first().evaluate((el) => getComputedStyle(el).color);
+    expect(fill).not.toBe('rgb(0, 0, 0)');
+  });
+
+  test('draws the consent tick on the checkbox itself', async ({ page }) => {
+    await open(page);
+    const box = page.getByLabel(/согласен/);
+    expect(await box.evaluate((el) => getComputedStyle(el).backgroundImage)).toBe('none');
+    await box.check();
+    expect(await box.evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('data:image/svg+xml');
+  });
+
+  // The status cards replace the form, so the ladders above never render them.
+  const STATES = [
+    { name: 'not-yet-open', status: 422, json: { code: 'not-yet-open' }, heading: /Регистрация откроется/ },
+    { name: 'closed', status: 422, json: { code: 'closed' }, heading: /Регистрация на конгресс закрыта/ },
+    { name: 'success', status: 200, json: { status: 'accepted' }, heading: /Заявка принята/ },
+  ] as const;
+  for (const state of STATES) {
+    for (const width of OVERFLOW_WIDTHS) {
+      test(`the ${state.name} card holds at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+        await mockSignUp(page, state.status, state.json);
+        await open(page);
+        await fillValid(page);
+        await submit(page);
+        await expect(page.getByRole('heading', { level: 2, name: state.heading })).toBeVisible();
+
+        expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+        await expectNoHeadingSpill(page, `/registration ${state.name} @${width}`);
+        await expectNoColumnOverlap(page, `/registration ${state.name} @${width}`);
+        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+        const blocking = results.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
+        expect(blocking, JSON.stringify(blocking.map((v) => v.id))).toEqual([]);
+      });
+    }
+  }
+
+  test('shows the form-level alert with its icon above the button', async ({ page }) => {
+    await mockSignUp(page, 503);
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText('Регистрация временно недоступна');
+    const icon = await alert.evaluate((el) => getComputedStyle(el, '::before').maskImage);
+    expect(icon).toContain('data:image/svg+xml');
+    const [alertBox, button] = await Promise.all([
+      alert.boundingBox(),
+      page.getByRole('button', { name: 'Зарегистрироваться' }).boundingBox(),
+    ]);
+    expect(button!.y).toBeGreaterThanOrEqual(alertBox!.y + alertBox!.height);
   });
 });
 
@@ -591,7 +741,7 @@ test.describe('sign-up form without JavaScript', () => {
     await page.goto('/registration');
     await expect(page.getByRole('heading', { name: 'Регистрация на конгресс', exact: true })).toBeVisible();
     // Playwright's text engine skips <noscript>, so the line is read by selector.
-    const line = page.locator('noscript .ob-signup__text');
+    const line = page.locator('noscript .ob-signup__stext');
     await expect(line).toBeVisible();
     await expect(line).toHaveText('Для регистрации включите JavaScript в браузере.');
     await expect(page.getByRole('heading', { name: /Регистрация откроется/ })).toBeHidden();

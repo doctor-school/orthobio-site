@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
 import { measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
+import { waitForWebfonts } from './_fonts';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -671,6 +672,7 @@ test.describe('sign-up form', () => {
   test('keeps the three name fields on one row from sm, and their inputs aligned', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
     await open(page);
+    await waitForWebfonts(page);
     const tops = await Promise.all(
       ['Фамилия', 'Имя', 'Отчество'].map((label) =>
         page
@@ -1127,6 +1129,7 @@ test.describe('registration page design', () => {
   test('stacks intro → form → venue below lg', async ({ page }) => {
     await page.setViewportSize({ width: 768 - SCROLLBAR_GUTTER, height: 900 });
     await open(page);
+    await waitForWebfonts(page);
     const [intro, form, venue] = await Promise.all(
       ['.ob-reg__intro', '.ob-reg__form', '.ob-reg__aside'].map((sel) => page.locator(sel).boundingBox()),
     );
@@ -1138,6 +1141,7 @@ test.describe('registration page design', () => {
     // Headless scrollbars overlay, so a 1024 viewport IS the lg layout here.
     await page.setViewportSize({ width: 1024, height: 900 });
     await open(page);
+    await waitForWebfonts(page);
     const [intro, form, venue] = await Promise.all(
       ['.ob-reg__intro', '.ob-reg__form', '.ob-reg__aside'].map((sel) => page.locator(sel).boundingBox()),
     );
@@ -1159,6 +1163,7 @@ test.describe('registration page design', () => {
 
     for (const width of [1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 900 });
+      // measureOverflow also waits for Inter, so the text boxes below are final.
       expect(await measureOverflow(page), `overflow @${width}`).toBeLessThanOrEqual(0);
       const [intro, venue] = await Promise.all(
         ['.ob-reg__intro', '.ob-reg__venue'].map((sel) => page.locator(sel).boundingBox()),
@@ -1223,6 +1228,8 @@ test.describe('registration page design', () => {
         await page.setViewportSize({ width, height });
         await page.goto(`${PROD_LIKE}/registration`, { waitUntil: 'networkidle' });
         await expect(page.locator(`[data-signup-state="${state.name}"]`)).toBeVisible();
+        // The band ends where its text ends: measure it in Inter, not the fallback.
+        await waitForWebfonts(page);
         const edges = await page.evaluate(() => {
           const bottom = (sel: string) => document.querySelector(sel)!.getBoundingClientRect().bottom + scrollY;
           const foot = document.querySelector('.ob-foot')!.getBoundingClientRect().top + scrollY;
@@ -1413,6 +1420,7 @@ test.describe('registration page after the PR #87 audit', () => {
     await expect(credit).toHaveAttribute('target', '_blank');
     await expect(credit).toHaveAccessibleName(/открывается в новой вкладке/);
     // Inside the map frame, in its corner — not somewhere else on the page.
+    await waitForWebfonts(page);
     const [map, box] = await Promise.all([page.locator('.ob-reg__map').boundingBox(), credit.boundingBox()]);
     expect(box!.x + box!.width).toBeLessThanOrEqual(map!.x + map!.width + 1);
     expect(box!.y + box!.height).toBeLessThanOrEqual(map!.y + map!.height + 1);

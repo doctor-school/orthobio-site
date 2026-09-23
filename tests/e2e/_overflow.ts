@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { waitForWebfonts } from './_fonts';
 
 /**
  * Shared horizontal-overflow guard. Ported from
@@ -26,8 +27,12 @@ export const SCROLLBAR_GUTTER = 17;
  */
 export const OVERFLOW_WIDTHS = [360, 390, 768, 1024, 1280] as const;
 
-/** CSS px by which the document exceeds the viewport; ≤ 0 means no overflow. */
+/**
+ * CSS px by which the document exceeds the viewport; ≤ 0 means no overflow.
+ * Measured in Inter only: a long word overflows or not by its webfont width.
+ */
 export async function measureOverflow(page: Page): Promise<number> {
+  await waitForWebfonts(page);
   return page.evaluate(() => {
     const de = document.documentElement;
     return de.scrollWidth - de.clientWidth;

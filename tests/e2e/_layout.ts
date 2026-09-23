@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { waitForWebfonts } from './_fonts';
 
 /**
  * Layout-integrity probes that the overflow guard structurally CANNOT see.
@@ -13,6 +14,7 @@ import { expect, type Page } from '@playwright/test';
 
 /** Headings must not spill, and no single word may be wider than its column. */
 export async function expectNoHeadingSpill(page: Page, path: string): Promise<void> {
+  await waitForWebfonts(page);
   const offenders = await page.evaluate(() => {
     const bad: { tag: string; text: string; word: string; wordWidth: number; box: number }[] = [];
     for (const el of document.querySelectorAll<HTMLElement>('h1, h2, h3')) {
@@ -78,6 +80,7 @@ export async function expectNoHeadingSpill(page: Page, path: string): Promise<vo
  * design as a defect.
  */
 export async function expectNoColumnOverlap(page: Page, path: string): Promise<void> {
+  await waitForWebfonts(page);
   const overlaps = await page.evaluate(() => {
     const isLayout = (el: Element) => {
       const display = getComputedStyle(el).display;

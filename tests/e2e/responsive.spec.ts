@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { ROUTES, YEAR_ROUTES } from './_routes';
 import { expectNoOverflow, measureOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow';
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
+import { waitForWebfonts } from './_fonts';
 
 /**
  * Parametrised responsive regression over EVERY route × EVERY canonical width,
@@ -38,6 +39,7 @@ test.describe('responsive', () => {
     test(`the hero reads dates and venue as one pair at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
       await page.goto('/');
+      await waitForWebfonts(page);
 
       const gaps = await page.evaluate(() => {
         const box = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
@@ -60,6 +62,7 @@ test.describe('responsive', () => {
     const viewport = { width: 1280, height: 1400 };
     await page.setViewportSize(viewport);
     await page.goto('/program');
+    await waitForWebfonts(page);
 
     const footerBottom = await page.locator('footer.ob-foot').evaluate((footer) => {
       return footer.getBoundingClientRect().bottom;
@@ -141,6 +144,9 @@ test.describe('responsive', () => {
     // breakpoint, where the layer is not painted at all.
     await page.setViewportSize({ width, height: 900 });
     await page.goto(path);
+    // Line boxes are text widths: measured before Inter swaps in, they are the
+    // fallback's, which is wider on the Linux runner (#94).
+    await waitForWebfonts(page);
 
     return page.evaluate(({ band, selectors }) => {
       // EVERY text node of the band, not a hand-listed set of tags: the `stats`

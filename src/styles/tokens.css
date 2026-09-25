@@ -183,7 +183,7 @@
   --lightbox-control-hover: oklch(0.21 0.02 250 / 0.85);
 
   /* --- Typography — Inter only, self-hosted (see base.css @font-face) ------- */
-  --font-sans: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Inter', 'Inter Fallback', -apple-system, 'Segoe UI', system-ui, sans-serif;
   /* Display / h1 / h2 are FLUID (design v2): the size follows the viewport
      instead of stepping at 1024px, so the 640–1023px band — tablets and split
      windows, previously stuck at the phone size — no longer reads as a blown-up
@@ -432,4 +432,57 @@
   :root {
     --page-min-height: 100dvh;
   }
+}
+
+/* --- «Inter Fallback» — the stand-in painted until Inter arrives -----------
+   Inter loads with `font-display: swap`, so every first paint is set in the
+   fallback and reflows when the webfont lands. With the plain system stack that
+   reflow was large: on Linux the stack resolves to DejaVu Sans, far wider than
+   Inter, so headings and the `ch`-sized measures wrapped differently and the
+   /registration columns jumped at the swap (CLS 0.10 at 1280px on CI, Issue
+   #97 / PR #102). These faces scale Arial — or its metric clones Liberation
+   Sans / Arimo on Linux — to Inter's advance widths, per weight, and pin
+   Inter's vertical metrics, so the swap changes glyph shapes, not line breaks.
+   Arial has no 500/600: regular stands in for 500 and bold for 600, each
+   scaled to that Inter weight. Ratios measured from the shipped
+   @fontsource/inter woff2 files (fontTools, advance widths over Cyrillic-heavy
+   page copy); re-measure if the Inter version changes. */
+@font-face {
+  font-family: 'Inter Fallback';
+  font-weight: 400;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
+  size-adjust: 106.09%;
+  ascent-override: 91.31%;
+  descent-override: 22.74%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  font-weight: 500;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
+  size-adjust: 107.32%;
+  ascent-override: 90.26%;
+  descent-override: 22.48%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  font-weight: 600;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Arimo Bold');
+  size-adjust: 101.97%;
+  ascent-override: 95.01%;
+  descent-override: 23.66%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  font-weight: 700;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Arimo Bold');
+  size-adjust: 103.13%;
+  ascent-override: 93.93%;
+  descent-override: 23.39%;
+  line-gap-override: 0%;
 }

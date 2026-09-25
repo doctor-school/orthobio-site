@@ -356,7 +356,7 @@ test.describe('sign-up form', () => {
     await fillValid(page);
     await submit(page);
 
-    const heading = page.getByRole('heading', { name: 'Регистрация откроется 1 октября 2026 года, 00:00 (мск)' });
+    const heading = page.getByRole('heading', { name: 'Регистрация откроется 1 октября 2026 года, 00:00 (МСК)' });
     await expect(heading).toBeVisible();
     await expect(heading).toBeFocused();
     await expect(page.locator('[data-signup-form]')).toBeHidden();
@@ -1090,8 +1090,8 @@ test.describe('registration page design', () => {
     const dates = page.locator('.ob-reg__dates');
     await expect(dates.locator('dt')).toHaveText(['Открытие регистрации', 'Закрытие регистрации']);
     await expect(dates.locator('dd')).toHaveText([
-      '1 октября 2026 года, 00:00 (мск)',
-      '1 января 2027 года, 00:00 (мск)',
+      '1 октября 2026 года, 00:00 (МСК)',
+      '1 января 2027 года, 00:00 (МСК)',
     ]);
 
     const venue = page.locator('.ob-reg__venue');

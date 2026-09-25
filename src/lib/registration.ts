@@ -53,13 +53,13 @@ export function registrationState(
 }
 
 /**
- * «1 октября 2026 года, 00:00 (мск)» — the opening instant as the state card
+ * «1 октября 2026 года, 00:00 (МСК)» — the opening instant as the state card
  * prints it. Moscow time explicitly, because the API's instant carries its own
  * offset and a participant in another zone must read the same clock the
  * organiser set.
  *
  * Typeset with no-break spaces where Russian typography binds the words: the
- * day to its month, «года» to the year and «(мск)» to the time — so a heading
+ * day to its month, «года» to the year and «(МСК)» to the time — so a heading
  * never breaks as «1 / октября» (PR #87 audit, at 1440px). Built from parts,
  * not by patching Intl's string, whose own spacing differs between ICU builds.
  */
@@ -80,7 +80,7 @@ export function formatMoscowInstant(iso: string): string {
     hourCycle: 'h23',
   }).format(date);
   // Intl says «2026 г.»; the site's own convention is «года».
-  return `${part('day')}\u00a0${part('month')} ${part('year')}\u00a0года, ${time}\u00a0(мск)`;
+  return `${part('day')}\u00a0${part('month')} ${part('year')}\u00a0года, ${time}\u00a0(МСК)`;
 }
 
 /**

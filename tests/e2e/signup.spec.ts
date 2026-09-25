@@ -169,11 +169,17 @@ async function serveAsProduction(page: Page, baseURL: string, at: Date): Promise
   });
 }
 
-/** The three dated states, each at an instant inside it (`serveAsProduction`). */
+/**
+ * The three dated states, each at an instant inside it (`serveAsProduction`),
+ * derived from the window so moving a bound in config cannot strand a fixture
+ * in the wrong state: a day before opening, a day after, a day after closing.
+ */
+const DAY_MS = 86_400_000;
+const atOffset = (iso: string, ms: number): string => new Date(Date.parse(iso) + ms).toISOString();
 const DATED_STATES = [
-  { name: 'not-yet-open', at: '2026-09-25T12:00:00+03:00' },
-  { name: 'open', at: '2026-10-15T12:00:00+03:00' },
-  { name: 'closed', at: '2027-01-15T12:00:00+03:00' },
+  { name: 'not-yet-open', at: atOffset(REGISTRATION_WINDOW.opensAt, -DAY_MS) },
+  { name: 'open', at: atOffset(REGISTRATION_WINDOW.opensAt, DAY_MS) },
+  { name: 'closed', at: atOffset(REGISTRATION_WINDOW.closesAt!, DAY_MS) },
 ] as const;
 
 /** Blocks the form's module, leaving only the markup and the pre-paint snippet. */

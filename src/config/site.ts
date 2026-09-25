@@ -133,9 +133,10 @@ export const REGISTRATION_OPENS = {
  * page follows an edit here. The copy states it in a sentence WITHOUT the word
  * «регистрация» (see `tests/unit/content-dates.test.ts`).
  *
- * `closesAt` is the LAST accepted moment, not the first refused one: «по
- * 1 декабря» is inclusive, and the formatter prints the Moscow calendar day
- * each instant falls on.
+ * `closesAt` convention, shared by EVERY `closesAt` in this file, its env
+ * override and the platform API: the FIRST moment no longer accepted
+ * (exclusive). «по 1 декабря» is therefore stored as `2026-12-02T00:00:00+03:00`;
+ * the formatter prints the last Moscow calendar day before that instant.
  *
  * Build-time overrides, blank = default: `PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT`
  * / `PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT` (fed in CI from the repository
@@ -150,14 +151,21 @@ const submissionOpensAt = instantFromEnv(
 const submissionClosesAt = instantFromEnv(
   'PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT',
   import.meta.env.PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT,
-  '2026-12-01T23:59:59+03:00',
+  '2026-12-02T00:00:00+03:00',
 );
 
 export const SUBMISSION_WINDOW = {
   opensAt: submissionOpensAt,
   closesAt: submissionClosesAt,
-  /** «с 1 октября по 1 декабря 2026 года», typeset by hand (nbsp) like every config string. */
-  display: formatMoscowDateRange(submissionOpensAt, submissionClosesAt),
+  /**
+   * «с 1 октября по 1 декабря 2026 года», typeset by hand (nbsp) like every
+   * config string. A getter, like `CONTENT_TOKENS` below: SignupForm's browser
+   * script imports this module for `REGISTRATION_WINDOW`, and an eager value
+   * here would run Intl formatting on load in the only PII form's client script.
+   */
+  get display(): string {
+    return formatMoscowDateRange(submissionOpensAt, submissionClosesAt);
+  },
 } as const;
 
 /**
@@ -168,7 +176,9 @@ export const SUBMISSION_WINDOW = {
  * Values arrive already typeset: the page's Typograf pass ran before the fill.
  */
 export const CONTENT_TOKENS: Readonly<Record<string, string>> = {
-  submissionWindow: SUBMISSION_WINDOW.display,
+  get submissionWindow(): string {
+    return SUBMISSION_WINDOW.display;
+  },
 };
 
 /**

@@ -2493,7 +2493,7 @@ body > main:has(> .ob-reg) {
   }
 }
 
-/* Registration window: two dated facts between hairlines. */
+/* Registration and submission dates: three dated facts between hairlines. */
 .ob-reg__dates {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(var(--reg-dates-floor), 100%), 1fr));

@@ -71,7 +71,9 @@ jobs:
       # offset. Unset Variables arrive as '' and the defaults in
       # src/config/site.ts apply; a malformed value fails the build. The
       # sign-up close uses the platform API's own variable name, since the two
-      # must carry the same instant (ds-platform#2292).
+      # must carry the same instant (ds-platform#2292). Every *_CLOSES_AT is
+      # the FIRST moment no longer accepted: «по 1 декабря» is
+      # 2026-12-02T00:00:00+03:00.
       PUBLIC_CONGRESS_SIGNUP_WINDOW_CLOSES_AT: ${{ vars.CONGRESS_SIGNUP_WINDOW_CLOSES_AT }}
       PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT: ${{ vars.CONGRESS_SUBMISSION_WINDOW_OPENS_AT }}
       PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT: ${{ vars.CONGRESS_SUBMISSION_WINDOW_CLOSES_AT }}

@@ -60,7 +60,7 @@ describe('owner-approved pre-registration launch content', () => {
     expect(SUBMISSION_WINDOW.opensAt).toBe('2026-10-01T00:00:00+03:00');
     expect(SUBMISSION_WINDOW.opensAt.slice(0, 10)).toBe(REGISTRATION_OPENS.date);
     // Inclusive «по 1 декабря»: the last accepted moment of that Moscow day.
-    expect(SUBMISSION_WINDOW.closesAt).toBe('2026-12-01T23:59:59+03:00');
+    expect(SUBMISSION_WINDOW.closesAt).toBe('2026-12-02T00:00:00+03:00');
     expect(SUBMISSION_WINDOW.display).toBe('с\u00a01\u00a0октября по\u00a01\u00a0декабря 2026\u00a0года');
   });
 

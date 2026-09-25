@@ -54,15 +54,21 @@ const withYear = (d: MoscowDay): string => `${dayMonth(d)} ${d.year}\u00a0год
 /**
  * «с 1 октября по 1 декабря 2026 года» — an inclusive range of Moscow calendar
  * days. The year is written once when both bounds share it, on each bound
- * otherwise. «по» is inclusive, so the closing instant is the last accepted
- * moment and the day printed is the one it falls on in Moscow.
+ * otherwise.
+ *
+ * `closesAt` is EXCLUSIVE — the first moment no longer accepted, the same
+ * convention as every `closesAt` in `src/config/site.ts` and the platform API.
+ * «по» is inclusive, so the day printed is the last Moscow calendar day before
+ * that instant: `2026-12-02T00:00:00+03:00` reads «по 1 декабря».
  */
+/*#__NO_SIDE_EFFECTS__*/
 export function formatMoscowDateRange(opensAt: string, closesAt: string): string {
-  if (instant(closesAt) < instant(opensAt)) {
+  const closes = instant(closesAt);
+  if (closes <= instant(opensAt)) {
     throw new Error(`dates: range closes (${closesAt}) before it opens (${opensAt})`);
   }
   const from = moscowDay(opensAt);
-  const to = moscowDay(closesAt);
+  const to = moscowDay(new Date(closes - 1).toISOString());
   // «с»/«по» are bound to the day as Typograf binds short prepositions, so the
   // config-printed range reads exactly like the same range typeset from YAML.
   return from.year === to.year
@@ -80,7 +86,15 @@ const ISO_WITH_OFFSET =
  * set value must be an instant with an explicit offset, or the BUILD fails
  * naming the variable: a bare «2027-04-22» parses as UTC midnight, three hours
  * off the Moscow midnight the organiser means, and would ship silently.
+ *
+ * `#__NO_SIDE_EFFECTS__` on this and `formatMoscowDateRange`: SignupForm's
+ * browser script imports `src/config/site.ts` for `REGISTRATION_WINDOW`, and
+ * without the annotation the bundler keeps every top-level call there — the
+ * submission window and its Intl formatting would run in the only PII form's
+ * client script. The throw is a build-time guard; the browser sees values the
+ * build already accepted.
  */
+/*#__NO_SIDE_EFFECTS__*/
 export function instantFromEnv(name: string, raw: unknown, fallback: string): string {
   const value = String(raw ?? '').trim();
   if (value === '') return fallback;

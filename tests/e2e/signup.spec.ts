@@ -136,12 +136,16 @@ async function focusCity(page: Page): Promise<void> {
  * The window as configured. `src/config/site.ts` reads `import.meta.env` (a
  * Vite-only object), so it cannot be imported under Playwright; the two
  * instants are read from its source instead, which keeps this suite on the
- * configured values without a second copy.
+ * configured values without a second copy. A key may wrap its default in an
+ * env override (`closesAt: instantFromEnv('…', import.meta.env.…, '<iso>')`,
+ * Issue #98), so the reader takes the first ISO instant after the key — the
+ * default the e2e build runs with, since it sets no override.
  */
 const REGISTRATION_WINDOW: RegistrationWindow = (() => {
   const source = readFileSync(fileURLToPath(new URL('../../src/config/site.ts', import.meta.url)), 'utf8');
   const block = /export const REGISTRATION_WINDOW = \{([^}]*)\}/.exec(source)![1];
-  const read = (key: string) => new RegExp(`${key}: '([^']+)'`).exec(block)![1];
+  const read = (key: string) =>
+    new RegExp(`${key}:[\\s\\S]*?'(\\d{4}-\\d{2}-\\d{2}T[^']+)'`).exec(block)![1];
   return { opensAt: read('opensAt'), closesAt: read('closesAt') };
 })();
 
@@ -1088,10 +1092,15 @@ test.describe('registration page design', () => {
     await expect(page.locator('.ob-reg__intro .ob-sh__overline')).toHaveText('VIII конгресс · 2027');
 
     const dates = page.locator('.ob-reg__dates');
-    await expect(dates.locator('dt')).toHaveText(['Открытие регистрации', 'Закрытие регистрации']);
+    await expect(dates.locator('dt')).toHaveText([
+      'Открытие регистрации',
+      'Закрытие регистрации',
+      'Приём докладов и тезисов',
+    ]);
     await expect(dates.locator('dd')).toHaveText([
       '1 октября 2026 года, 00:00 (МСК)',
-      '1 января 2027 года, 00:00 (МСК)',
+      '22 апреля 2027 года, 00:00 (МСК)',
+      'с 1 октября по 1 декабря 2026 года',
     ]);
 
     const venue = page.locator('.ob-reg__venue');

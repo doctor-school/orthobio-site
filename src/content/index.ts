@@ -12,6 +12,9 @@
 
 import { getCollection, getEntry, type CollectionEntry } from 'astro:content';
 
+import { CONTENT_TOKENS } from '@/config/site';
+import { fillContentTokensDeep } from '@/lib/dates';
+
 export type CongressEntry = CollectionEntry<'congress'>;
 export type PageEntry = CollectionEntry<'page'>;
 
@@ -65,11 +68,15 @@ export const getCongressYear = async (
  *
  * Throws when the file is missing: a page whose copy vanished must fail the
  * BUILD, not render an empty shell in production.
+ *
+ * `{{token}}`s in the copy are filled from `CONTENT_TOKENS` here, after the
+ * Content Layer cache (Issue #98 — `src/lib/dates.ts` explains why not in the
+ * schema), so no page component ever sees a token.
  */
 export const getPage = async (slug: string): Promise<PageEntry> => {
   const entry = await getEntry('page', slug);
   if (entry === undefined) {
     throw new Error(`Content Layer: missing src/content/pages/${slug}.yaml`);
   }
-  return entry;
+  return { ...entry, data: fillContentTokensDeep(entry.data, CONTENT_TOKENS) };
 };

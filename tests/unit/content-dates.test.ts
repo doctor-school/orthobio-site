@@ -3,10 +3,10 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import {
+  CONTENT_TOKENS,
   FOOTER,
   REGISTRATION_OPENS,
   REGISTRATION_WINDOW,
-  SUBMISSION_WINDOW,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 
@@ -138,19 +138,10 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
     const strays = body
       .split('\n')
       .filter((line) => ABOUT_REGISTRATION.test(line))
-      // A sentence may legitimately name both events («приём открывается вместе
-      // с регистрацией — с 1 октября по 1 декабря 2026 года»): the closing bound
-      // is then a submission date, not a second opening date, and reporting it
-      // here would send the author to edit correct copy (PR #72 review). The
-      // submission guard below still holds such a line to SUBMISSION_WINDOW, so
-      // the exemption is a handoff between the two halves, not a hole.
-      //
-      // The WINDOW is cut out of the line, not the line out of the check: an
-      // exemption that drops the whole line swallows every other date on it,
-      // and «Регистрация откроется в ноябре 2026 года, материалы принимаются
-      // с 1 октября по 1 декабря 2026 года» would then be checked by nobody
-      // (PR #72 re-review).
-      .map((line) => line.replaceAll(SUBMISSION_WINDOW.display, ''))
+      // A sentence may name both events («приём открывается вместе с
+      // регистрацией — {{submissionWindow}}»): since Issue #98 the window is a
+      // token, not dates, so such a line needs no exemption here and every
+      // literal date left on it is still checked (PR #72 re-review).
       .flatMap((line) => [...line.matchAll(DATE_IN_PROSE)].map((m) => m[0].toLowerCase().trim()))
       .filter((m) => !allowed.has(m));
     expect(
@@ -176,51 +167,46 @@ const RANGE_IN_PROSE = new RegExp(
   'gi',
 );
 
+/**
+ * Issue #98 made the window a setting: page copy writes the token
+ * `{{submissionWindow}}` and the schema fills it from `SUBMISSION_WINDOW`, so a
+ * date change is one edit in `src/config/site.ts`. The guard is therefore
+ * stricter than it was: a page may not spell ANY such range out, because a
+ * literal copy — even of today's correct window — is exactly the copy that
+ * stays behind when the setting moves.
+ */
+const SUBMISSION_TOKEN = '{{submissionWindow}}';
+const TOKEN_IN_COPY = /\{\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}\}/g;
+
 describe('SUBMISSION_WINDOW is the only submission window on the site', () => {
-  it('keeps the display range and the ISO twins in agreement', () => {
-    const parsed = SUBMISSION_WINDOW.display.match(
-      /^с (\d{1,2}) (\S+) по (\d{1,2}) (\S+) (\d{4})$/,
-    );
-    expect(parsed, `«${SUBMISSION_WINDOW.display}» is not a «с <дата> по <дата> <год>» range`)
-      .not.toBeNull();
-    const [, fromDay, fromMonth, toDay, toMonth, year] = parsed!;
-
-    const iso = (day: string, month: string) => {
-      const monthIndex = GENITIVE_MONTHS.indexOf(month.toLowerCase());
-      expect(monthIndex, `«${month}» is not a genitive Russian month`).toBeGreaterThanOrEqual(0);
-      return [year, String(monthIndex + 1).padStart(2, '0'), day.padStart(2, '0')].join('-');
-    };
-
-    // The year is written once, at the end of the range: both bounds carry it.
-    expect(SUBMISSION_WINDOW.startDate).toBe(iso(fromDay, fromMonth));
-    expect(SUBMISSION_WINDOW.endDate).toBe(iso(toDay, toMonth));
-    expect(SUBMISSION_WINDOW.endDate > SUBMISSION_WINDOW.startDate).toBe(true);
-  });
-
-  it.each(pageFiles)('%s states any date range as SUBMISSION_WINDOW', (file) => {
+  it.each(pageFiles)('%s spells no date range out — it uses the token', (file) => {
     const body = readFileSync(`${PAGES_DIR}/${file}`, 'utf8');
     // Whole ranges, not the dates inside them: «с 1 сентября по 1 декабря 2026»
-    // yields only ONE full date to a per-date check («1 декабря 2026», the
-    // opening bound carries no year of its own), so a wrong opening bound would
-    // pass. The window is the only range these pages publish.
-    const strays = [...body.matchAll(RANGE_IN_PROSE)]
-      .map((m) => m[0])
-      .filter((range) => range !== SUBMISSION_WINDOW.display);
+    // yields only ONE full date to a per-date check (the opening bound carries
+    // no year of its own), so a stale opening bound would pass.
+    const ranges = [...body.matchAll(RANGE_IN_PROSE)].map((m) => m[0]);
     expect(
-      [...new Set(strays)],
-      `${file} states a date range other than SUBMISSION_WINDOW`,
+      [...new Set(ranges)],
+      `${file} spells a date range out; write ${SUBMISSION_TOKEN} instead`,
     ).toEqual([]);
   });
 
+  it.each(pageFiles)('%s uses only tokens the config defines', (file) => {
+    const body = readFileSync(`${PAGES_DIR}/${file}`, 'utf8');
+    const unknown = [...body.matchAll(TOKEN_IN_COPY)]
+      .map((m) => m[1])
+      .filter((name) => !Object.hasOwn(CONTENT_TOKENS, name));
+    expect(unknown, `${file} uses tokens CONTENT_TOKENS does not define`).toEqual([]);
+  });
+
   it('is actually published, so the guard above is not green on nothing', () => {
-    // Without this the whole check passes trivially the day someone deletes the
-    // copy: no range in the file, no stray. Asserting WHICH files carry it would
-    // fail the day a third page legitimately states the window, so this only
-    // demands that the copy exists somewhere and on the page that owns the topic.
+    // Without this the range check passes trivially the day someone deletes
+    // the copy. Participants owns the topic and the FAQ answers it (Issue #98
+    // names both); /registration prints the constant from its template.
     const carriers = pageFiles.filter((file) =>
-      readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(SUBMISSION_WINDOW.display),
+      readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(SUBMISSION_TOKEN),
     );
-    expect(carriers).toContain('participants.yaml');
+    expect(carriers).toEqual(expect.arrayContaining(['participants.yaml', 'faq.yaml']));
   });
 });
 

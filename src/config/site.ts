@@ -11,6 +11,8 @@
  *   wrong link can never ship silently.
  */
 
+import { formatMoscowDateRange, instantFromEnv } from '@/lib/dates';
+
 /** Public site metadata. */
 export const SITE = {
   /** Wordmark in the header. */
@@ -120,18 +122,54 @@ export const REGISTRATION_OPENS = {
 
 /**
  * Submission window for talks, abstracts and posters — owner-confirmed
- * 2026-08-05 (Issue #71). It opens together with registration and closes two
- * months later; page copy states it in a sentence of its own, deliberately
- * WITHOUT the word «регистрация», so the registration half of
- * `tests/unit/content-dates.test.ts` does not read «1 декабря 2026» as a
- * second, contradictory registration date. The submission half of that file
- * holds the copy to THIS constant in return.
+ * 2026-08-05 (Issue #71); a setting since Issue #98 («вынести эту дату в
+ * настройки, чтобы можно было легко менять»). It opens together with
+ * registration and closes two months later.
+ *
+ * ONE place to change it: the two instants below, Moscow time. `display` is
+ * derived, and page copy never spells the range out — it writes the token
+ * `{{submissionWindow}}` (see `CONTENT_TOKENS`), which `getPage()` fills;
+ * /registration prints `display` directly. So every
+ * page follows an edit here. The copy states it in a sentence WITHOUT the word
+ * «регистрация» (see `tests/unit/content-dates.test.ts`).
+ *
+ * `closesAt` is the LAST accepted moment, not the first refused one: «по
+ * 1 декабря» is inclusive, and the formatter prints the Moscow calendar day
+ * each instant falls on.
+ *
+ * Build-time overrides, blank = default: `PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT`
+ * / `PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT` (fed in CI from the repository
+ * Variables `CONGRESS_SUBMISSION_WINDOW_OPENS_AT` / `…_CLOSES_AT`). The site is
+ * static, so an override takes effect with the next deploy.
  */
+const submissionOpensAt = instantFromEnv(
+  'PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT',
+  import.meta.env.PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT,
+  '2026-10-01T00:00:00+03:00',
+);
+const submissionClosesAt = instantFromEnv(
+  'PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT',
+  import.meta.env.PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT,
+  '2026-12-01T23:59:59+03:00',
+);
+
 export const SUBMISSION_WINDOW = {
-  display: 'с 1 октября по 1 декабря 2026',
-  startDate: '2026-10-01',
-  endDate: '2026-12-01',
+  opensAt: submissionOpensAt,
+  closesAt: submissionClosesAt,
+  /** «с 1 октября по 1 декабря 2026 года», typeset by hand (nbsp) like every config string. */
+  display: formatMoscowDateRange(submissionOpensAt, submissionClosesAt),
 } as const;
+
+/**
+ * Values page copy (`src/content/pages/*.yaml`) may reference as `{{name}}`.
+ * Filled in `getPage()` after the Content Layer cache, so components never see
+ * a token and a future CMS loader feeding the same plain text needs no
+ * component change. An unknown token fails the build (`fillContentTokens`).
+ * Values arrive already typeset: the page's Typograf pass ran before the fill.
+ */
+export const CONTENT_TOKENS: Readonly<Record<string, string>> = {
+  submissionWindow: SUBMISSION_WINDOW.display,
+};
 
 /**
  * Registration window as the site DISPLAYS it (Issue #78; platform 044
@@ -143,12 +181,24 @@ export const SUBMISSION_WINDOW = {
  * (`src/lib/registration.ts` explains why not at build time).
  *
  * `opensAt` is the same day as `REGISTRATION_OPENS` above, as an instant with an
- * explicit Moscow offset. `closesAt` was confirmed by the owner on
- * ds-platform#2292 (2026-09-22): the API runs with
- * `CONGRESS_SIGNUP_WINDOW_CLOSES_AT=2027-01-01T00:00:00.000+03:00`, and this is
- * the same instant. The owner called it a placeholder they may still replace —
- * so a change here must be mirrored in the API env (and vice versa), or the
- * page and the API disagree about whether registration is closed.
+ * explicit Moscow offset. `closesAt` is the owner's decision of 2026-09-25
+ * (Issue #98): registration closes one day before the congress, at midnight
+ * Moscow on 22 April 2027. The API env on ds-platform#2292 must carry the same
+ * instant (`CONGRESS_SIGNUP_WINDOW_CLOSES_AT=2027-04-22T00:00:00.000+03:00`) — a
+ * change here must be mirrored there (and vice versa), or the page and the API
+ * disagree about whether registration is closed.
+ *
+ * `closesAt` takes a build-time override, `PUBLIC_CONGRESS_SIGNUP_WINDOW_CLOSES_AT`
+ * (fed in CI from the repository Variable `CONGRESS_SIGNUP_WINDOW_CLOSES_AT`, the
+ * API's own variable name); blank = the default below. `PUBLIC_` because the
+ * page script imports this constant into the browser bundle, where Astro
+ * inlines only public variables — a private one would leave the server-rendered
+ * label and the in-browser judgement on two different instants. `opensAt` has
+ * no override on purpose: the opening day is also written into the copy of six
+ * pages (`REGISTRATION_OPENS`), which an env value could not move.
+ *
+ * Keep the default an inline ISO literal: the e2e suite reads it from this
+ * source (it cannot import a module that touches `import.meta.env`).
  *
  * Typed `string`, not `string | null`: nothing on the site depends on the
  * «never closes» reading any more. `RegistrationWindow` in
@@ -156,7 +206,11 @@ export const SUBMISSION_WINDOW = {
  */
 export const REGISTRATION_WINDOW = {
   opensAt: '2026-10-01T00:00:00+03:00',
-  closesAt: '2027-01-01T00:00:00+03:00',
+  closesAt: instantFromEnv(
+    'PUBLIC_CONGRESS_SIGNUP_WINDOW_CLOSES_AT',
+    import.meta.env.PUBLIC_CONGRESS_SIGNUP_WINDOW_CLOSES_AT,
+    '2027-04-22T00:00:00+03:00',
+  ),
 } as const satisfies { opensAt: string; closesAt: string };
 
 /**

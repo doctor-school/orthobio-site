@@ -183,7 +183,7 @@
   --lightbox-control-hover: oklch(0.21 0.02 250 / 0.85);
 
   /* --- Typography — Inter, self-hosted (see base.css @font-face), plus the
-     metric-matched 'Inter Fallback' declared above so the swap does not reflow. --- */
+     metric-matched 'Inter Fallback' declared further down so the swap does not reflow. --- */
   --font-sans: 'Inter', 'Inter Fallback', -apple-system, 'Segoe UI', system-ui, sans-serif;
   /* Display / h1 / h2 are FLUID (design v2): the size follows the viewport
      instead of stepping at 1024px, so the 640–1023px band — tablets and split

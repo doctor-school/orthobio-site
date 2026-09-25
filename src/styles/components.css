@@ -1488,6 +1488,26 @@ a.ob-pt__card--profile:hover .ob-pt__more::after {
   object-fit: contain;
 }
 
+/* Issue #101: marks rest in grayscale so a tier reads as one calm roster, and
+   the brand colour comes back on the card the reader is pointing at or has
+   tabbed to. Mobile-first: the base is FULL colour, and the grayscale rest is
+   layered on only where a hover can undo it — on a touch screen there is no
+   hover, so a grey rest would mean colour is never seen at all. Focus restores
+   colour too, so keyboard readers get the same signal on the linked cards.
+   Reduced motion needs no rule here: base.css already collapses every
+   transition to 0.01ms under `prefers-reduced-motion: reduce`. */
+@media (hover: hover) {
+  .ob-pt__card img {
+    filter: grayscale(1);
+    transition: filter var(--t-state);
+  }
+
+  .ob-pt__card:hover img,
+  a.ob-pt__card:focus-visible img {
+    filter: none;
+  }
+}
+
 /* ── PersonCard / CommitteeList ──────────────────────────────────────────── */
 
 .ob-pc {

@@ -11,7 +11,7 @@
  *
  * The copy of the left column is page content (`pages/registration.yaml`); the
  * dates and the venue are config facts (`REGISTRATION_WINDOW`,
- * `UPCOMING_CONGRESS_VENUE`); the form, its labels and its states are
+ * `SUBMISSION_WINDOW`, `UPCOMING_CONGRESS_VENUE`); the form, its labels and its states are
  * interface and live in `SignupForm`.
  *
  * The map is a static raster composed once from OpenStreetMap tiles and
@@ -31,7 +31,7 @@ import NewTabHint from '@/components/NewTabHint.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import SignupForm from '@/components/SignupForm.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
-import { REGISTRATION_WINDOW, UPCOMING_CONGRESS_VENUE } from '@/config/site';
+import { REGISTRATION_WINDOW, SUBMISSION_WINDOW, UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import { getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { formatMoscowInstant } from '@/lib/registration';
@@ -41,6 +41,9 @@ const venue = UPCOMING_CONGRESS_VENUE;
 const dates = [
   { term: 'Открытие регистрации', value: formatMoscowInstant(REGISTRATION_WINDOW.opensAt) },
   { term: 'Закрытие регистрации', value: formatMoscowInstant(REGISTRATION_WINDOW.closesAt) },
+  // Issue #98: the page that takes sign-ups also names the submission window,
+  // from the same setting the participants page and the FAQ render.
+  { term: 'Приём докладов и тезисов', value: SUBMISSION_WINDOW.display },
 ];
 ---
 

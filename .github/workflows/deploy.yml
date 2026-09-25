@@ -67,6 +67,16 @@ jobs:
       # builds that host's form without the widget — the intended fallback.
       PUBLIC_SMARTCAPTCHA_SITEKEY: ${{ vars.SMARTCAPTCHA_SITEKEY }}
       PUBLIC_SMARTCAPTCHA_SITEKEY_PREVIEW: ${{ vars.SMARTCAPTCHA_SITEKEY_PREVIEW }}
+      # Optional date overrides (Issue #98), ISO instants with an explicit
+      # offset. Unset Variables arrive as '' and the defaults in
+      # src/config/site.ts apply; a malformed value fails the build. The
+      # sign-up close uses the platform API's own variable name, since the two
+      # must carry the same instant (ds-platform#2292). Every *_CLOSES_AT is
+      # the FIRST moment no longer accepted: «по 1 декабря» is
+      # 2026-12-02T00:00:00+03:00.
+      PUBLIC_CONGRESS_SIGNUP_WINDOW_CLOSES_AT: ${{ vars.CONGRESS_SIGNUP_WINDOW_CLOSES_AT }}
+      PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT: ${{ vars.CONGRESS_SUBMISSION_WINDOW_OPENS_AT }}
+      PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT: ${{ vars.CONGRESS_SUBMISSION_WINDOW_CLOSES_AT }}
     # Four guards, all required (see the SECURITY note above):
     #   event == 'push'                     — a pull_request CI run never qualifies
     #   head_repository == this repository  — a fork's run never qualifies

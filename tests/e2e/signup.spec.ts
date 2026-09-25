@@ -136,12 +136,16 @@ async function focusCity(page: Page): Promise<void> {
  * The window as configured. `src/config/site.ts` reads `import.meta.env` (a
  * Vite-only object), so it cannot be imported under Playwright; the two
  * instants are read from its source instead, which keeps this suite on the
- * configured values without a second copy.
+ * configured values without a second copy. A key may wrap its default in an
+ * env override (`closesAt: instantFromEnv('…', import.meta.env.…, '<iso>')`,
+ * Issue #98), so the reader takes the first ISO instant after the key — the
+ * default the e2e build runs with, since it sets no override.
  */
 const REGISTRATION_WINDOW: RegistrationWindow = (() => {
   const source = readFileSync(fileURLToPath(new URL('../../src/config/site.ts', import.meta.url)), 'utf8');
   const block = /export const REGISTRATION_WINDOW = \{([^}]*)\}/.exec(source)![1];
-  const read = (key: string) => new RegExp(`${key}: '([^']+)'`).exec(block)![1];
+  const read = (key: string) =>
+    new RegExp(`${key}:[\\s\\S]*?'(\\d{4}-\\d{2}-\\d{2}T[^']+)'`).exec(block)![1];
   return { opensAt: read('opensAt'), closesAt: read('closesAt') };
 })();
 
@@ -165,11 +169,17 @@ async function serveAsProduction(page: Page, baseURL: string, at: Date): Promise
   });
 }
 
-/** The three dated states, each at an instant inside it (`serveAsProduction`). */
+/**
+ * The three dated states, each at an instant inside it (`serveAsProduction`),
+ * derived from the window so moving a bound in config cannot strand a fixture
+ * in the wrong state: a day before opening, a day after, a day after closing.
+ */
+const DAY_MS = 86_400_000;
+const atOffset = (iso: string, ms: number): string => new Date(Date.parse(iso) + ms).toISOString();
 const DATED_STATES = [
-  { name: 'not-yet-open', at: '2026-09-25T12:00:00+03:00' },
-  { name: 'open', at: '2026-10-15T12:00:00+03:00' },
-  { name: 'closed', at: '2027-01-15T12:00:00+03:00' },
+  { name: 'not-yet-open', at: atOffset(REGISTRATION_WINDOW.opensAt, -DAY_MS) },
+  { name: 'open', at: atOffset(REGISTRATION_WINDOW.opensAt, DAY_MS) },
+  { name: 'closed', at: atOffset(REGISTRATION_WINDOW.closesAt!, DAY_MS) },
 ] as const;
 
 /** Blocks the form's module, leaving only the markup and the pre-paint snippet. */
@@ -1088,10 +1098,15 @@ test.describe('registration page design', () => {
     await expect(page.locator('.ob-reg__intro .ob-sh__overline')).toHaveText('VIII конгресс · 2027');
 
     const dates = page.locator('.ob-reg__dates');
-    await expect(dates.locator('dt')).toHaveText(['Открытие регистрации', 'Закрытие регистрации']);
+    await expect(dates.locator('dt')).toHaveText([
+      'Открытие регистрации',
+      'Закрытие регистрации',
+      'Приём докладов и тезисов',
+    ]);
     await expect(dates.locator('dd')).toHaveText([
       '1 октября 2026 года, 00:00 (МСК)',
-      '1 января 2027 года, 00:00 (МСК)',
+      '22 апреля 2027 года, 00:00 (МСК)',
+      'с 1 октября по 1 декабря 2026 года',
     ]);
 
     const venue = page.locator('.ob-reg__venue');

@@ -94,17 +94,24 @@ describe('REGISTRATION_WINDOW', () => {
     expect(REGISTRATION_WINDOW.opensAt).toBe('2026-10-01T00:00:00+03:00');
   });
 
-  it('closes at the owner-confirmed instant, equal to the API env (ds-platform#2292)', () => {
-    expect(REGISTRATION_WINDOW.closesAt).toBe('2027-01-01T00:00:00+03:00');
+  it('closes at midnight Moscow on 22 April 2027, the day before the congress (Issue #98)', () => {
+    // Must equal the API env CONGRESS_SIGNUP_WINDOW_CLOSES_AT (ds-platform#2292).
+    expect(REGISTRATION_WINDOW.closesAt).toBe('2027-04-22T00:00:00+03:00');
   });
 
-  it('is closed from midnight Moscow on 1 January 2027 on a non-forced host', () => {
-    const now = at('2027-01-01T00:00:00+03:00');
+  it('prints the close as the «закрыта» card and the dates list show it', () => {
+    expect(formatMoscowInstant(REGISTRATION_WINDOW.closesAt)).toMatch(
+      /^22\u00a0апреля 2027\u00a0года, 00:00\u00a0/,
+    );
+  });
+
+  it('is closed from midnight Moscow on 22 April 2027 on a non-forced host', () => {
+    const now = at('2027-04-22T00:00:00+03:00');
     expect(registrationState(REGISTRATION_WINDOW, now, 'orthobio.ru')).toBe('closed');
   });
 
   it('is still open one second before the closing instant on a non-forced host', () => {
-    const now = at('2026-12-31T23:59:59+03:00');
+    const now = at('2027-04-21T23:59:59+03:00');
     expect(registrationState(REGISTRATION_WINDOW, now, 'orthobio.ru')).toBe('open');
   });
 });

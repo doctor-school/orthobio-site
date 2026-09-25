@@ -169,7 +169,7 @@ const RANGE_IN_PROSE = new RegExp(
 
 /**
  * Issue #98 made the window a setting: page copy writes the token
- * `{{submissionWindow}}` and the schema fills it from `SUBMISSION_WINDOW`, so a
+ * `{{submissionWindow}}` and `getPage()` fills it from `SUBMISSION_WINDOW`, so a
  * date change is one edit in `src/config/site.ts`. The guard is therefore
  * stricter than it was: a page may not spell ANY such range out, because a
  * literal copy — even of today's correct window — is exactly the copy that

@@ -91,6 +91,12 @@ rescued archive objects that exist nowhere else. It reads
 `TIMEWEB_S3_SECRET_KEY` from the environment (same values as the table above)
 and verifies every object by fetching it back and comparing SHA-256.
 
+A single one-off object (an owner-supplied portrait, a replacement PDF) goes
+up with `node scripts/upload-media-object.mjs <file> <key>`: the same signed
+`PUT` (shared in `scripts/lib/s3-put.mjs`), a no-op when the key already holds
+identical bytes, a refusal when it holds different ones (unless `--replace`),
+and the same read-back SHA-256 check.
+
 Public object URL (path-style; hostname output already carries `https://`):
 `<media_s3_hostname>/<media_bucket_full_name>/<key>`
 (live: `https://s3.twcstorage.ru/orthobio-media/<key>`)

@@ -236,7 +236,7 @@ test('/orgs actually renders the оргкомитет portraits, not the fallbac
   // valid DOM, valid a11y, zero overflow, zero CLS. The COUNT is the assertion.
   await page.goto('/orgs');
   const portraits = page.locator('#orgs26 img.ob-pc__photo');
-  await expect(portraits).toHaveCount(11);
+  await expect(portraits).toHaveCount(12);
 
   // Explicit intrinsic dimensions on every tag: the schema carries a portrait
   // as a bare URL, so the box is reserved only because <Image> measured the
@@ -257,9 +257,9 @@ test('/orgs actually renders the оргкомитет portraits, not the fallbac
     expect(box.src, 'portraits must be served from our own build output').toMatch(/^\/_astro\//);
   }
 
-  // The twelfth member, Загородний Н. В., has no portrait anywhere on the old
-  // site — his plate is the honest state and must NOT quietly gain a photo.
-  await expect(page.locator('#orgs26 .ob-pc__initial')).toHaveCount(1);
+  // All twelve: 11 rescued from the old /orgs (Issue #23) plus Загородний Н. В.,
+  // whose portrait the owner supplied (Issue #106) — no plate is left.
+  await expect(page.locator('#orgs26 .ob-pc__initial')).toHaveCount(0);
 });
 
 /**
@@ -272,16 +272,17 @@ test('/orgs actually renders the оргкомитет portraits, not the fallbac
  * suite notices — the cards degrade to a valid, accessible initials plate.
  *
  * `initials` is asserted alongside `photos` on purpose: it pins the people who
- * must STAY without a portrait (Загородний, Губин — no usable image exists for
- * either anywhere on the old site), so the guard fails in both directions.
+ * must STAY without a portrait (Губин — no usable image exists anywhere on the
+ * old site), so the guard fails in both directions. Загородний left that list
+ * when the owner supplied his portrait (Issue #106).
  */
 const PORTRAIT_CENSUS = [
-  { year: 2021, photos: 0, initials: 2 }, // Губин + Загородний, no portraits exist
-  { year: 2022, photos: 1, initials: 2 }, // Страхов greeting; Загородний + Губин plates
-  { year: 2023, photos: 1, initials: 2 },
-  { year: 2024, photos: 1, initials: 2 },
-  { year: 2025, photos: 10, initials: 1 }, // 9 committee + Страхов greeting; Загородний plate
-  { year: 2026, photos: 11, initials: 1 }, // committee; Загородний has no /orgs card
+  { year: 2021, photos: 1, initials: 1 }, // Загородний (owner-supplied); Губин plate
+  { year: 2022, photos: 2, initials: 1 }, // Загородний + Страхов greetings; Губин plate
+  { year: 2023, photos: 2, initials: 1 },
+  { year: 2024, photos: 2, initials: 1 },
+  { year: 2025, photos: 11, initials: 0 }, // 9 committee + Загородний + Страхов greetings
+  { year: 2026, photos: 12, initials: 0 }, // committee: 11 from /orgs + Загородний
 ] as const;
 
 for (const { year, photos, initials } of PORTRAIT_CENSUS) {

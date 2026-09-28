@@ -40,13 +40,19 @@
 # public URL = <s3_public_base_url><s3_key>.)
 #
 # Integrity: docs/assets-checksums.txt = SHA-256 of every staged file
-# (2244 lines, "hash  <relative path>", sorted). Verify tree or the future
+# (2245 lines, "hash  <relative path>", sorted). Verify tree or the future
 # S3 upload object-by-object against it.
 #
 # 2026-07-29 (Issue #23): +22 objects — the 11 оргкомитет portraits rescued
 # from the LIVE orthobio.ru/orgs (originals + 288×288 square derivatives),
 # see item 2026-committee-portraits. This is the first rescue run after the
 # 2026-07-27 sweep; every other number in this file still describes that sweep.
+#
+# 2026-09-28 (Issue #106): +1 object — the owner-supplied portrait of
+# Загородний Н.В. (2026/people/zagorodniy-288.webp), see item
+# 2026-people-zagorodniy. Its source JPEG is staged under
+# 2026/people/originals/ but NOT uploaded and not in the checksum list: it is
+# the owner's file, not a rescue, and only the derivative is served.
 #
 # 2026-07-29 (Issue #39): 47 of the 49 `logos:` objects REPLACED IN PLACE —
 # same keys, same count, new bytes (re-cropped so the mark fills the card
@@ -84,7 +90,7 @@ meta:
   # Unit: all "mb" values are MiB (1024^2 bytes, PowerShell's 1MB). Per-year
   # values sum to 8910.3 vs total 8910.4 — both are correct roundings of the
   # true total 8910.35, not a discrepancy.
-  total: { files: 2244, mb: 8910.7 }
+  total: { files: 2245, mb: 8910.7 }
   checksums: docs/assets-checksums.txt
   source_pages:
     - https://orthobio2021.creatium.site/archive/2021
@@ -424,7 +430,7 @@ years:
           - { title: 'Обращение к участникам, карточка 2', title_source: editorial, slot: 'ОБРАЩЕНИЯ К УЧАСТНИКАМ', url: 'https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/' }
 
   2026:
-    counters: { files: 24, mb: 1.9 }
+    counters: { files: 25, mb: 1.9 }
     items:
       - id: 2026-committee-portraits
         source: https://orthobio.ru/orgs
@@ -456,11 +462,12 @@ years:
           near-white background (white coat / bright studio) it ate into the
           circle and shifted the face off centre.
 
-          NO portrait exists for Загородний Н.В. — he has no card on /orgs. The
-          only person-shaped file left on the old site is the homepage
+          The old site had NO portrait of Загородний Н.В. — he has no card on
+          /orgs. The only person-shaped file left there is the homepage
           `261/images/human.jpg`, which is the ОРТО wordmark over «2026», not a
           person; it was downloaded, identified, and discarded (not staged, not
-          uploaded).
+          uploaded). His portrait arrived later from the owner — see item
+          2026-people-zagorodniy.
 
           Consumers: 2026.yaml committee[].photo (11 members), the 2025.yaml
           committee (9 of the same people) and the Страхов М.А. greeting cards
@@ -484,6 +491,41 @@ years:
         s3_key: '2026/people/'
         s3_status: uploaded
         files: 22
+      - id: 2026-people-zagorodniy
+        source: owner-supplied via Telegram, 2026-09-28 (Issue #106)
+        source_urls: []
+        description: >-
+          Portrait of Загородний Николай Васильевич, sent by the owner as
+          `photo_2026-09-28_15-09-43.jpg`: 300×300 colour JPEG, head and
+          shoulders on white, 10031 B, sha256
+          9004d75d238cb1f9bde4ed76b3d820317b90cc9ca10842086a8d33234e851ab1
+          (staged as 2026/people/originals/zagorodniy.jpg, not uploaded).
+
+          Derivative: 288×288 webp q88 (sharp 0.35.3 / libvips 8.18.3, libwebp
+          1.6.0), a plain resize — the source is already a square
+          head-and-shoulders frame, so the fixed 400×400 circle crop of the
+          /orgs set does not apply. 8294 B, sha256
+          7260c8a2aeccd86a5b134215d9c5c4356ec19bd1740e51047b719bf2a15f4177.
+          Undated likeness, reused across years like Страхов's (rationale in
+          2022.yaml). Filed under `2026/people/` for the prefix reason given in
+          2026-committee-portraits.
+
+          Consumers: greetings in 2021/2022/2023/2024/2025.yaml and the
+          2026.yaml committee entry (6 cards).
+
+          Upload: `node scripts/upload-media-object.mjs <staged file>
+          2026/people/zagorodniy-288.webp` (additive single PUT + read-back
+          sha256 check).
+        actual_year: 2026
+        type: photos
+        status: downloaded
+        local: '2026/people/zagorodniy-288.webp'
+        s3_key: '2026/people/zagorodniy-288.webp'
+        # TODO(Антон): not in the bucket yet — on 2026-09-28 S3 answered
+        # InvalidAccessKeyId to the keys in the local terraform state (rotated or
+        # revoked). Flip to `uploaded` once the upload command above succeeds.
+        s3_status: pending
+        files: 1
       - id: 2026-program-pdf
         source: https://cdn.congress-ph.online/261/prog.pdf
         description: 'Program VII Congress 2026 (47 pages)'

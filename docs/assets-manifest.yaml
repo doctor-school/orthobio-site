@@ -81,8 +81,9 @@ meta:
   s3_objects: 2241
   # The live bucket is larger than this sweep: +22 оргкомитет portraits
   # (Issue #23), +49 partner logos (Issue #22, `logos:` below) and +23 video
-  # posters (Issue #33, `video_posters:` below).
-  s3_objects_total: 2335 # 2241 sweep + 22 portraits + 49 logos + 23 posters
+  # posters (Issue #33, `video_posters:` below), +1 owner-supplied portrait
+  # (Issue #106, item 2026-people-zagorodniy).
+  s3_objects_total: 2336 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -521,10 +522,9 @@ years:
         status: downloaded
         local: '2026/people/zagorodniy-288.webp'
         s3_key: '2026/people/zagorodniy-288.webp'
-        # TODO(Антон): not in the bucket yet — on 2026-09-28 S3 answered
-        # InvalidAccessKeyId to the keys in the local terraform state (rotated or
-        # revoked). Flip to `uploaded` once the upload command above succeeds.
-        s3_status: pending
+        # Uploaded 2026-09-28: read-back sha256 matched; served as image/webp,
+        # 8294 B, Cache-Control immutable.
+        s3_status: uploaded
         files: 1
       - id: 2026-program-pdf
         source: https://cdn.congress-ph.online/261/prog.pdf

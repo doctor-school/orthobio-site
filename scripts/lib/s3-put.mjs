@@ -58,16 +58,20 @@ export function s3FromEnv(env = process.env) {
   return s3;
 }
 
-export async function putObject({
+/**
+ * One SigV4-signed request for one key. `extraHeaders` are signed too (lower-case
+ * names). The payload hash is the body's, or the empty string's for a GET.
+ */
+async function signedRequest({
   endpoint,
   bucket,
   region,
   accessKey,
   secretKey,
+  method,
   key,
   body,
-  contentType,
-  cacheControl,
+  extraHeaders = {},
   timeoutMs = DEFAULT_TIMEOUT_MS,
   now = new Date(),
   fetchImpl = fetch,
@@ -76,18 +80,17 @@ export async function putObject({
   const canonicalUri = `/${[bucket, ...key.split('/')].map(rfc3986).join('/')}`;
   const amzDate = now.toISOString().replace(/[-:]|\.\d{3}/g, '');
   const date = amzDate.slice(0, 8);
-  const payloadHash = sha256hex(body);
+  const payloadHash = sha256hex(body ?? '');
 
   const headers = {
-    'cache-control': cacheControl,
-    'content-type': contentType,
+    ...extraHeaders,
     host,
     'x-amz-content-sha256': payloadHash,
     'x-amz-date': amzDate,
   };
   const signed = Object.keys(headers).sort();
   const canonicalRequest = [
-    'PUT',
+    method,
     canonicalUri,
     '',
     `${signed.map((h) => `${h}:${headers[h]}`).join('\n')}\n`,
@@ -104,12 +107,27 @@ export async function putObject({
   const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
 
   return fetchImpl(`${endpoint}${canonicalUri}`, {
-    method: 'PUT',
+    method,
     headers: {
       ...headers,
       authorization: `AWS4-HMAC-SHA256 Credential=${accessKey}/${scope}, SignedHeaders=${signed.join(';')}, Signature=${signature}`,
     },
-    body,
+    ...(body === undefined ? {} : { body }),
     signal: AbortSignal.timeout(timeoutMs),
   });
 }
+
+export const putObject = ({ contentType, cacheControl, ...rest }) =>
+  signedRequest({
+    ...rest,
+    method: 'PUT',
+    extraHeaders: { 'cache-control': cacheControl, 'content-type': contentType },
+  });
+
+/**
+ * Signed GET. Not the public URL: this bucket answers an ANONYMOUS read of a
+ * missing key with 403 AccessDenied (no public list permission), which is
+ * indistinguishable from «exists but forbidden». Only the owner's signed read
+ * gets a definite 404 NoSuchKey for a free key.
+ */
+export const getObject = (args) => signedRequest({ ...args, method: 'GET', body: undefined });

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { objectUrl, putObject, rfc3986, s3FromEnv } from '../../scripts/lib/s3-put.mjs';
+import { getObject, objectUrl, putObject, rfc3986, s3FromEnv } from '../../scripts/lib/s3-put.mjs';
 
 /**
  * The shared signer behind scripts/rescue-video-posters.mjs and
@@ -83,6 +83,32 @@ describe('putObject', () => {
     const c = await capture({ secretKey: 'another-secret' });
     expect(sig(a)).toBe(sig(b));
     expect(sig(c)).not.toBe(sig(a));
+  });
+});
+
+describe('signature golden values', () => {
+  // Frozen clock + fixed inputs: any change to the canonical request, the
+  // string to sign or the key derivation moves these, even when the request
+  // SHAPE assertions above still pass. Recorded from the signer that uploaded
+  // 2026/people/zagorodniy-288.webp to the live bucket (HTTP 200).
+  it('PUT', async () => {
+    const { init } = await capture();
+    expect(init.headers.authorization.split('Signature=')[1]).toBe('1474c9892fe7668467625b97b9c0e4d28750e882e2f58d9f29b9b32809090c7d');
+  });
+
+  it('GET', async () => {
+    const calls: Captured[] = [];
+    const fetchImpl: typeof fetch = async (url, init) => {
+      calls.push({ url: String(url), init: init as Captured['init'] });
+      return new Response(null, { status: 404 });
+    };
+    await getObject({ ...S3, key: '2026/people/zagorodniy-288.webp', now: new Date('2026-09-28T12:34:56.789Z'), fetchImpl });
+    const { url, init } = calls[0]!;
+    expect(init.method).toBe('GET');
+    expect(url).toBe('https://s3.example.test/orthobio-media/2026/people/zagorodniy-288.webp');
+    expect(init.headers['x-amz-content-sha256']).toBe(createHash('sha256').update('').digest('hex'));
+    expect(init.headers.authorization).toMatch(/SignedHeaders=host;x-amz-content-sha256;x-amz-date, /);
+    expect(init.headers.authorization.split('Signature=')[1]).toBe('cdf8e3411bbdefd99b2240befef9cb02e95211404448f20f625ee0c9418df60b');
   });
 });
 

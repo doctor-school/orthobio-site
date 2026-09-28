@@ -95,7 +95,10 @@ A single one-off object (an owner-supplied portrait, a replacement PDF) goes
 up with `node scripts/upload-media-object.mjs <file> <key>`: the same signed
 `PUT` (shared in `scripts/lib/s3-put.mjs`), a no-op when the key already holds
 identical bytes, a refusal when it holds different ones (unless `--replace`),
-and the same read-back SHA-256 check.
+and the same read-back SHA-256 check. Its pre-read is a signed `GET`: anonymously
+the bucket answers a missing key with 403 (the same as a forbidden one), while a
+signed read gets 404 `NoSuchKey`. Only that 404 lets the upload proceed; any other
+non-200 aborts before the `PUT`.
 
 Public object URL (path-style; hostname output already carries `https://`):
 `<media_s3_hostname>/<media_bucket_full_name>/<key>`

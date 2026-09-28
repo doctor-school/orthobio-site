@@ -16,13 +16,14 @@
  * URL with no dimensions, and `<Image>` writes the measured width/height onto
  * the tag, so the circle reserves its box before the file arrives (no CLS).
  *
- * State of the portrait set (Issue #23): the оргкомитет ships 11 real square
- * derivatives (288×288 webp, `2026/people/`). The обращения cards still show
- * the initial plate for Загородний and Губин — the only files that survive for
- * them are 16:9 title cards of the greeting videos, where a branded plate fills
- * half the frame and a 72px circle showed a green wedge instead of a face
- * (Issue #16). That plate is the design's own state for a person without a
- * usable photo (PersonCard.prompt.md), not a degraded fallback.
+ * State of the portrait set: square 288×288 webp derivatives under
+ * `2026/people/` — 11 rescued from the old /orgs (Issue #23) plus Загородний,
+ * owner-supplied (Issue #106). The обращения cards still show the initial plate
+ * for Губин — the only files that survive for him are 16:9 title cards of the
+ * greeting videos, where a branded plate fills half the frame and a 72px circle
+ * showed a green wedge instead of a face (Issue #16). That plate is the
+ * design's own state for a person without a usable photo (PersonCard.prompt.md),
+ * not a degraded fallback.
  */
 import { Image } from 'astro:assets';
 

@@ -20,10 +20,12 @@ place: null
 # «ОБРАЩЕНИЯ К УЧАСТНИКАМ» — 3 unique persons (recon: 5 cards with duplicates,
 # a Creatium markup artifact). Photos on the cards are placeholders — none
 # published; greeting texts not published (video addresses — see videos[]).
+# Загородний Н.В. carries the owner-supplied portrait (Issue #106) — an undated
+# likeness reused across years, see the rationale in 2022.yaml.
 greetings:
   - name: Загородний Н.В.
     role: Президент конгресса
-    photo: null
+    photo: /media/2026/people/zagorodniy-288.webp
     text: null
   - name: Губин А.В.
     role: Сопрезидент

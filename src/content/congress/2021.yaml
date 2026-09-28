@@ -24,6 +24,8 @@ place: null
 
 # «ОБРАЩЕНИЕ К УЧАСТНИКАМ» — two co-president cards, page order. The greeting
 # texts were not extractable (graphics/JS); no portraits were published.
+# Загородний Н.В. carries the owner-supplied portrait (Issue #106) — an undated
+# likeness reused across years, see the rationale in 2022.yaml.
 greetings:
   - name: Губин А.В.
     role: Сопрезидент Конгресса
@@ -31,7 +33,7 @@ greetings:
     text: null
   - name: Загородний Н.В.
     role: Сопрезидент Конгресса
-    photo: null
+    photo: /media/2026/people/zagorodniy-288.webp
     text: null
 
 committee: []

@@ -15,7 +15,7 @@
  * Without `--upload` the script only downloads and stages (safe to re-run
  * anywhere). With `--upload` it PUTs each derivative to S3 under a prefix of
  * its own — one explicit key at a time, NOT the AWS CLI and not `aws s3 sync`
- * (see `putObject` below for why), never a delete and never a rewrite of
+ * (see scripts/lib/s3-put.mjs for why), never a delete and never a rewrite of
  * anything else, since the bucket is live paid infra holding 2.3k rescued
  * archive objects. An object already in the bucket with the right bytes is
  * left alone, so a second `--upload` run is a no-op. Credentials come from the
@@ -29,12 +29,14 @@
  * docs/assets-manifest.yaml and the `poster:` blocks in
  * src/content/congress/*.yaml are written from.
  */
-import { createHash, createHmac } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import sharp from 'sharp';
 import { parse } from 'yaml';
+
+import { IMMUTABLE_CACHE_CONTROL, putObject, s3FromEnv, sha256hex } from './lib/s3-put.mjs';
 
 const CONGRESS_DIR = path.resolve('src/content/congress');
 
@@ -238,90 +240,10 @@ for (const video of videos) {
 await writeFile(path.join(outDir, 'index.json'), `${JSON.stringify(index, null, 2)}\n`);
 console.log(`\n${index.length}/${videos.length} posters staged in ${outDir}`);
 
-/**
- * Single-object PUT, SigV4-signed by hand.
- *
- * Not the AWS CLI, which the runbook uses for the one-shot archive sync: the
- * CLI on this estate is a Python entry point that Node cannot spawn portably
- * (`aws` vs `aws.cmd`), and shelling out to it would make the script's most
- * dangerous step the one that depends on a shell. A PUT of a known key is ~30
- * lines of `node:crypto` and no dependency at all.
- *
- * PUT of one explicit key, never `sync`: sync reasons about a whole prefix and
- * may decide to delete or replace, and this is live paid infra holding 2.3k
- * rescued archive objects.
- */
-const sha256hex = (data) => createHash('sha256').update(data).digest('hex');
-const hmac = (key, data) => createHmac('sha256', key).update(data).digest();
-
-/**
- * SigV4 wants RFC 3986 percent-encoding in the canonical URI, and
- * `encodeURIComponent` leaves `!*'()` alone. Today's keys are
- * `posters/(yt|rt)-<id>.webp` — YouTube ids are `[A-Za-z0-9_-]`, Rutube ids are
- * hex — so nothing here needs it. It is written down anyway because the failure
- * mode is a signature that quietly disagrees with the server: `SignatureDoes
- * NotMatch` on a key with a bracket in it is a miserable thing to diagnose.
- */
-const rfc3986 = (segment) =>
-  encodeURIComponent(segment).replace(/[!*'()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
-
-async function putObject({ endpoint, bucket, region, accessKey, secretKey, key, body, contentType, cacheControl }) {
-  const host = new URL(endpoint).host;
-  const canonicalUri = `/${[bucket, ...key.split('/')].map(rfc3986).join('/')}`;
-  const amzDate = new Date().toISOString().replace(/[-:]|\.\d{3}/g, '');
-  const date = amzDate.slice(0, 8);
-  const payloadHash = sha256hex(body);
-
-  const headers = {
-    'cache-control': cacheControl,
-    'content-type': contentType,
-    host,
-    'x-amz-content-sha256': payloadHash,
-    'x-amz-date': amzDate,
-  };
-  const signed = Object.keys(headers).sort();
-  const canonicalRequest = [
-    'PUT',
-    canonicalUri,
-    '',
-    `${signed.map((h) => `${h}:${headers[h]}`).join('\n')}\n`,
-    signed.join(';'),
-    payloadHash,
-  ].join('\n');
-
-  const scope = `${date}/${region}/s3/aws4_request`;
-  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256hex(canonicalRequest)].join('\n');
-  const signingKey = ['aws4_request'].reduce(
-    (k, part) => hmac(k, part),
-    [region, 's3'].reduce((k, part) => hmac(k, part), hmac(`AWS4${secretKey}`, date)),
-  );
-  const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
-
-  return fetch(`${endpoint}${canonicalUri}`, {
-    method: 'PUT',
-    headers: {
-      ...headers,
-      authorization: `AWS4-HMAC-SHA256 Credential=${accessKey}/${scope}, SignedHeaders=${signed.join(';')}, Signature=${signature}`,
-    },
-    body,
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
-}
-
 if (doUpload) {
-  const s3 = {
-    endpoint: process.env.TIMEWEB_S3_ENDPOINT,
-    bucket: process.env.TIMEWEB_S3_BUCKET,
-    region: process.env.TIMEWEB_S3_REGION ?? 'ru-1',
-    accessKey: process.env.TIMEWEB_S3_ACCESS_KEY,
-    secretKey: process.env.TIMEWEB_S3_SECRET_KEY,
-  };
-  if (!s3.endpoint || !s3.bucket || !s3.accessKey || !s3.secretKey) {
-    throw new Error(
-      'set TIMEWEB_S3_ENDPOINT, TIMEWEB_S3_BUCKET, TIMEWEB_S3_ACCESS_KEY and TIMEWEB_S3_SECRET_KEY ' +
-        '— values come from `terraform output` (infra/terraform/README.md), never from this repo',
-    );
-  }
+  // Throws with the list of missing env var names — same contract as before
+  // the signer moved to scripts/lib/s3-put.mjs.
+  const s3 = s3FromEnv();
 
   /** What the bucket already serves at this key, or null. */
   const fetched = async (entry) => {
@@ -349,8 +271,9 @@ if (doUpload) {
         key: entry.object.s3_key,
         body,
         contentType: 'image/webp',
+        timeoutMs: TIMEOUT_MS,
         // Immutable derivative, like every other object in this bucket (issue #5).
-        cacheControl: 'public, max-age=31536000, immutable',
+        cacheControl: IMMUTABLE_CACHE_CONTROL,
       });
       if (!res.ok) failures.push(`PUT ${entry.object.s3_key}: HTTP ${res.status} ${await res.text()}`);
       else uploaded++;

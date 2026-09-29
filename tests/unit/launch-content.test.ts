@@ -13,7 +13,7 @@ import {
   NAV,
   REGISTRATION_CTA_LABEL,
   REGISTRATION_URL,
-  SUBMISSION_WINDOW,
+  SUBMISSION_DEADLINES,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 import { typographize } from '../../src/content/typographize';
@@ -55,17 +55,19 @@ describe('owner-approved pre-registration launch content', () => {
     expect(UPCOMING_CONGRESS_VENUE.name).toBe('ГК «Милан»');
   });
 
-  it('opens the submission window with registration and closes it two months later', () => {
-    // Issue #98: a setting of two Moscow instants; the display is derived.
-    expect(SUBMISSION_WINDOW.opensAt).toBe('2026-10-01T00:00:00+03:00');
-    expect(SUBMISSION_WINDOW.opensAt.slice(0, 10)).toBe(REGISTRATION_OPENS.date);
-    // Inclusive «по 1 декабря»: the last accepted moment of that Moscow day.
-    expect(SUBMISSION_WINDOW.closesAt).toBe('2026-12-02T00:00:00+03:00');
-    expect(SUBMISSION_WINDOW.display).toBe('с\u00a01\u00a0октября по\u00a01\u00a0декабря 2026\u00a0года');
-  });
-
-  it('offers the submission window to page copy as the {{submissionWindow}} token', () => {
-    expect(CONTENT_TOKENS.submissionWindow).toBe(SUBMISSION_WINDOW.display);
+  it('publishes the organisers’ 2027 submission deadlines (Issue #108)', () => {
+    // ТЗ «подача материалов на Конгресс 2027», п. 4: oral talks until
+    // 15 January, posters and abstracts until 29 January 2027.
+    const NB = ' ';
+    expect(SUBMISSION_DEADLINES.oralTalk.date).toBe('2027-01-15');
+    expect(SUBMISSION_DEADLINES.oralTalk.display).toBe(`15${NB}января 2027${NB}года`);
+    expect(SUBMISSION_DEADLINES.posterAbstract.date).toBe('2027-01-29');
+    expect(SUBMISSION_DEADLINES.posterAbstract.display).toBe(`29${NB}января 2027${NB}года`);
+    // Page copy sees exactly these two values, under these two names.
+    expect(CONTENT_TOKENS).toEqual({
+      oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
+      posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
+    });
   });
 
   // getPage() fills tokens AFTER the schema's Typograf pass (src/lib/dates.ts
@@ -75,7 +77,7 @@ describe('owner-approved pre-registration launch content', () => {
     const strings: string[] = [];
     const walk = (v: unknown): void => {
       if (typeof v === 'string') {
-        if (v.includes('{{submissionWindow}}')) strings.push(v);
+        if (/\{\{(oralTalkDeadline|posterAbstractDeadline)\}\}/.test(v)) strings.push(v);
       } else if (v && typeof v === 'object') Object.values(v).forEach(walk);
     };
     walk(parse(readFileSync(fileURLToPath(new URL(`../../src/content/pages/${file}`, import.meta.url)), 'utf8')));

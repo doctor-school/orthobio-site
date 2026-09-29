@@ -1,5 +1,5 @@
 /**
- * Date facts the site prints from config (Issue #98).
+ * Date facts the site prints from config (Issues #98, #108).
  *
  * The site is static: every date it shows is a build-time config value
  * (`src/config/site.ts`), never fetched. Page copy lives in YAML, which cannot
@@ -14,67 +14,9 @@
  * then one without, still printed the override. `getPage()` runs after the
  * cache on every build. The token is therefore filled AFTER Typograf, so the
  * value arrives already typeset (no-break spaces placed by hand, matching what
- * Typograf emits for the same range — a unit test holds the two equal).
+ * Typograf emits for the same sentence spelled out — a unit test holds the two
+ * equal).
  */
-
-const MOSCOW = 'Europe/Moscow';
-
-const instant = (iso: string): number => {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) throw new Error(`dates: unparseable instant "${iso}"`);
-  return ms;
-};
-
-interface MoscowDay {
-  day: string;
-  /** Genitive month name, as a date is written in running Russian text. */
-  month: string;
-  year: string;
-}
-
-const moscowDay = (iso: string): MoscowDay => {
-  const parts = new Intl.DateTimeFormat('ru-RU', {
-    timeZone: MOSCOW,
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).formatToParts(new Date(instant(iso)));
-  const part = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? '';
-  return { day: part('day'), month: part('month'), year: part('year') };
-};
-
-// No-break spaces bind the day to its month and «года» to the year, as
-// `formatMoscowInstant` does: the result is printed both through `prose()`
-// (Typograf is idempotent on it) and straight from config, which bypasses it.
-// The one ordinary space left per bound is where the line may break.
-const dayMonth = (d: MoscowDay): string => `${d.day}\u00a0${d.month}`;
-const withYear = (d: MoscowDay): string => `${dayMonth(d)} ${d.year}\u00a0года`;
-
-/**
- * «с 1 октября по 1 декабря 2026 года» — an inclusive range of Moscow calendar
- * days. The year is written once when both bounds share it, on each bound
- * otherwise.
- *
- * `closesAt` is EXCLUSIVE — the first moment no longer accepted, the same
- * convention as every `closesAt` in `src/config/site.ts` and the platform API.
- * «по» is inclusive, so the day printed is the last Moscow calendar day before
- * that instant: `2026-12-02T00:00:00+03:00` reads «по 1 декабря».
- */
-/*#__NO_SIDE_EFFECTS__*/
-export function formatMoscowDateRange(opensAt: string, closesAt: string): string {
-  const closes = instant(closesAt);
-  if (closes <= instant(opensAt)) {
-    throw new Error(`dates: range closes (${closesAt}) before it opens (${opensAt})`);
-  }
-  const from = moscowDay(opensAt);
-  const to = moscowDay(new Date(closes - 1).toISOString());
-  // «с»/«по» are bound to the day as Typograf binds short prepositions, so the
-  // config-printed range reads exactly like the same range typeset from YAML.
-  return from.year === to.year
-    ? `с\u00a0${dayMonth(from)} по\u00a0${withYear(to)}`
-    : `с\u00a0${withYear(from)} по\u00a0${withYear(to)}`;
-}
 
 /** ISO-8601 date-time with an EXPLICIT offset (or Z): no bare dates, no local times. */
 const ISO_WITH_OFFSET =
@@ -87,11 +29,10 @@ const ISO_WITH_OFFSET =
  * naming the variable: a bare «2027-04-22» parses as UTC midnight, three hours
  * off the Moscow midnight the organiser means, and would ship silently.
  *
- * `#__NO_SIDE_EFFECTS__` on this and `formatMoscowDateRange`: SignupForm's
- * browser script imports `src/config/site.ts` for `REGISTRATION_WINDOW`, and
- * without the annotation the bundler keeps every top-level call there — the
- * submission window and its Intl formatting would run in the only PII form's
- * client script. The throw is a build-time guard; the browser sees values the
+ * `#__NO_SIDE_EFFECTS__`: SignupForm's browser script imports
+ * `src/config/site.ts` for `REGISTRATION_WINDOW`, and without the annotation
+ * the bundler keeps every top-level call there in the only PII form's client
+ * script. The throw is a build-time guard; the browser sees values the
  * build already accepted.
  */
 /*#__NO_SIDE_EFFECTS__*/

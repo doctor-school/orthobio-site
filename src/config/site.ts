@@ -114,7 +114,7 @@ export const mediaUrl = (path: string): string =>
  * dates registration differently (content audit М2).
  */
 export const REGISTRATION_OPENS = {
-  /** «Регистрация откроется 1 октября 2026 года», «…к открытию — 1 октября 2026». */
+  /** «Регистрация откроется 1 октября 2026 года», «Регистрация — с 1 октября 2026 года». */
   display: '1 октября 2026',
   /** Machine-readable twin, kept for regression checks. */
   date: '2026-10-01',

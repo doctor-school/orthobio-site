@@ -73,14 +73,13 @@ const DATE_IN_PROSE = new RegExp(String.raw`(\d{1,2}\s+)?(${MONTH_STEMS})[а-я�
  * The scope is the sentence, not the file, because YAML puts one editorial
  * sentence per line.
  *
- * The narrowness is load-bearing and has a cost, paid once: `partners.yaml`
- * used to date the same event as «…будут опубликованы в ноябре 2026 года»,
- * without the word, and was invisible here (Issue #71). The fix was to write
- * those sentences as what they are — «к открытию регистрации 1 октября 2026» —
- * rather than to widen this pattern, which would have started failing on the
- * legitimate past-congress dates the narrowness exists to permit. New copy that
- * dates registration must contain the word; a submission deadline on the same
- * line must be a token, not a literal date.
+ * The narrowness is load-bearing and has a cost: a line that dates registration
+ * without the word is invisible here (Issue #71 found two in `partners.yaml`).
+ * Widening this pattern would start failing on the legitimate past-congress
+ * dates the narrowness exists to permit. New copy that dates registration must
+ * contain the word; a submission deadline on the same line must be a token, not
+ * a literal date. Copy that promises something BY the opening of registration
+ * is a separate failure, guarded below (Issue #110).
  */
 const ABOUT_REGISTRATION = /регистрац/i;
 
@@ -124,8 +123,7 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
     expect(REGISTRATION_OPENS.date).toBe(iso);
   });
 
-  it('is what the chrome prints and the day the sign-up window opens', () => {
-    expect(FOOTER.contactsPending).toContain(REGISTRATION_OPENS.display);
+  it('is the day the sign-up window opens', () => {
     // The window the /registration page evaluates must open on the same day
     // the copy announces — two constants, one fact.
     expect(REGISTRATION_WINDOW.opensAt.slice(0, 10)).toBe(REGISTRATION_OPENS.date);
@@ -148,6 +146,101 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
       [...new Set(strays)],
       `${file} dates registration other than REGISTRATION_OPENS`,
     ).toEqual([]);
+  });
+});
+
+/**
+ * Issue #110: copy may not pin a promise to the opening of registration
+ * («…опубликуем к открытию регистрации», «…вместе с регистрацией»). Registration
+ * opens on 1 October 2026 without the organising committee, partner terms or
+ * the 2027 НМО accreditation, so every such sentence turns false on that day.
+ * Pending facts are «…дополнительно», as in the FAQ (Issue #109).
+ *
+ * Scope: page YAML, the footer placeholder and the templates — one of the
+ * retired sentences lived in `partners.astro`. Comments are the authors' notes
+ * and may name the retired wording to explain it, so they are skipped.
+ *
+ * The matcher needs the preposition that makes a deadline out of the opening
+ * («к / до / с открытием, началом, стартом регистрации»): the bare noun is a
+ * legitimate label — /registration prints «Открытие регистрации: 1 октября…».
+ */
+const PROMISE_BY_REGISTRATION =
+  /(?:^|[^а-яё])(?:к|до|со?)\s+(?:открыти|начал|старт)[а-яё]*\s+регистрации|(?:вместе|одновременно)\s+с\s+регистрацией/i;
+const isYamlComment = (line: string) => line.trimStart().startsWith('#');
+
+const SRC_DIR = fileURLToPath(new URL('../../src', import.meta.url));
+
+/**
+ * SignupForm's pre-open state card («…в момент открытия регистрации») is
+ * switched at runtime by the live registration window (src/lib/registration.ts),
+ * so it is true by construction and out of scope of Issue #110. It is exempted
+ * by name, so a promise added to any other template still fails.
+ */
+const EXEMPT_TEMPLATES = new Set(['components/SignupForm.astro']);
+
+const templateFiles = ['pages', 'components']
+  .flatMap((dir) =>
+    readdirSync(`${SRC_DIR}/${dir}`, { recursive: true, encoding: 'utf8' })
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => `${dir}/${f.replaceAll('\\', '/')}`),
+  )
+  .filter((f) => !EXEMPT_TEMPLATES.has(f));
+
+/** Drops JS/JSX block comments, HTML comments and `//` line comments. */
+const stripTemplateComments = (source: string) =>
+  source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('//'));
+
+describe('no copy promises anything by the opening of registration', () => {
+  it.each(pageFiles)('%s pins nothing to the opening of registration', (file) => {
+    const promises = readFileSync(`${PAGES_DIR}/${file}`, 'utf8')
+      .split('\n')
+      .filter((line) => !isYamlComment(line) && PROMISE_BY_REGISTRATION.test(line))
+      .map((line) => line.trim());
+    expect(promises, `${file} promises something by the opening of registration`).toEqual([]);
+  });
+
+  it('scans the templates, so the guard over them is not green on nothing', () => {
+    expect(templateFiles).toEqual(expect.arrayContaining(['pages/partners.astro']));
+    expect(templateFiles).not.toContain('components/SignupForm.astro');
+  });
+
+  it.each(templateFiles)('src/%s pins nothing to the opening of registration', (file) => {
+    const promises = stripTemplateComments(readFileSync(`${SRC_DIR}/${file}`, 'utf8'))
+      .filter((line) => PROMISE_BY_REGISTRATION.test(line))
+      .map((line) => line.trim());
+    expect(promises, `${file} promises something by the opening of registration`).toEqual([]);
+  });
+
+  it('the footer placeholder pins nothing to it either', () => {
+    expect(FOOTER.contactsPending).not.toMatch(PROMISE_BY_REGISTRATION);
+  });
+
+  it.each([
+    'состав опубликуем к открытию регистрации 1 октября 2026 года.',
+    'будут подтверждены до открытия регистрации 1 октября 2026 года.',
+    'адрес появится здесь вместе с открытием регистрации 1 октября 2026 года.',
+    'условия участия откроются вместе с регистрацией 1 октября 2026 года.',
+    'будет опубликован к открытию регистрации — {REGISTRATION_OPENS.display}.',
+    'условия будут объявлены к началу регистрации.',
+    'состав подтвердим до начала регистрации.',
+    'программа появится к старту регистрации.',
+    'условия откроются одновременно с регистрацией.',
+    'адрес появится со стартом регистрации.',
+  ])('the matcher recognises «%s»', (promise) => {
+    expect(promise).toMatch(PROMISE_BY_REGISTRATION);
+  });
+
+  it.each([
+    'Открытие регистрации: 1 октября 2026 года, 00:00 (МСК)',
+    'Регистрация — с 1 октября 2026 года.',
+    'после регистрации на конгресс загрузите тезисы',
+    'Условия участия будут опубликованы дополнительно.',
+  ])('the matcher leaves the statement of fact «%s» alone', (fact) => {
+    expect(fact).not.toMatch(PROMISE_BY_REGISTRATION);
   });
 });
 

@@ -18,7 +18,7 @@
 import PartnerTier from '@/components/PartnerTier.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Button from '@/components/Button.astro';
-import { CONTACT_EMAIL, REGISTRATION_OPENS } from '@/config/site';
+import { CONTACT_EMAIL } from '@/config/site';
 import { getCongressYear, getPage } from '@/content';
 import SectionLayout from '@/layouts/SectionLayout.astro';
 import { groupPartners, nbsp, plural } from '@/lib/congress';
@@ -45,9 +45,7 @@ const sponsorCount = sponsorTiers.reduce((sum, g) => sum + g.items.length, 0);
         </Button>
       ) : (
         <p class="ob-note">
-          Адрес оргкомитета для партнёрских запросов будет опубликован к открытию регистрации — {
-            REGISTRATION_OPENS.display
-          }.
+          Адрес оргкомитета для партнёрских запросов будет опубликован дополнительно.
         </p>
       )
     }

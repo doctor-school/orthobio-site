@@ -327,7 +327,11 @@ export const FOOTER = {
   slogan: 'Объединяем знания — даём движение вперёд!',
   about:
     'Конгресс по регенеративной травматологии и ортопедии. Организатор — МОО «Общество регенеративной травматологии и ортопедии» (ОРТО). Материалы конгрессов 2021–2026 — в архиве сайта.',
-  /** Shown while CONTACT_EMAIL is null. */
-  contactsPending: `Контакты оргкомитета будут опубликованы к открытию регистрации — ${REGISTRATION_OPENS.display}.`,
+  /**
+   * Shown while CONTACT_EMAIL is null. Deliberately not tied to a date: it
+   * once promised the contacts by the opening of registration, which would
+   * turn false the day registration opens without them (Issue #110).
+   */
+  contactsPending: 'Контакты оргкомитета будут опубликованы дополнительно.',
   copyright: `© 2021–${SITE.upcomingYear} · Конгресс ОРТОБИОЛОГИЯ`,
 } as const;

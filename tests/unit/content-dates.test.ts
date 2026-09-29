@@ -7,16 +7,16 @@ import {
   FOOTER,
   REGISTRATION_OPENS,
   REGISTRATION_WINDOW,
+  SUBMISSION_DEADLINES,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 
 /**
- * Two owner-confirmed dates live in this file, and they guard each other's
- * blind spot. Registration opens on a day; the submission window is a range
- * that STARTS on that same day and ends two months later. Page copy states them
- * in separate sentences on purpose — see the registration matcher below — so
- * each needs its own guard, or the sentence excluded from one check would be
- * covered by nothing at all.
+ * Two kinds of owner-confirmed date live in this file, and they guard each
+ * other's blind spot. Registration opens on a day; submissions close on two
+ * deadlines (Issue #108). The registration matcher below only checks lines that
+ * mention registration, so page copy that names a deadline on such a line
+ * writes it as a token — and the deadline guard covers every line.
  *
  * The opening of registration is repeated across a dozen strings: config,
  * templates and the copy of six pages. The audit found nine hardcoded copies —
@@ -79,8 +79,8 @@ const DATE_IN_PROSE = new RegExp(String.raw`(\d{1,2}\s+)?(${MONTH_STEMS})[а-я�
  * those sentences as what they are — «к открытию регистрации 1 октября 2026» —
  * rather than to widen this pattern, which would have started failing on the
  * legitimate past-congress dates the narrowness exists to permit. New copy that
- * dates registration must contain the word; copy about the SUBMISSION WINDOW
- * («с 1 октября по 1 декабря 2026») deliberately must not.
+ * dates registration must contain the word; a submission deadline on the same
+ * line must be a token, not a literal date.
  */
 const ABOUT_REGISTRATION = /регистрац/i;
 
@@ -138,10 +138,10 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
     const strays = body
       .split('\n')
       .filter((line) => ABOUT_REGISTRATION.test(line))
-      // A sentence may name both events («приём открывается вместе с
-      // регистрацией — {{submissionWindow}}»): since Issue #98 the window is a
-      // token, not dates, so such a line needs no exemption here and every
-      // literal date left on it is still checked (PR #72 re-review).
+      // A sentence may name both events («…после регистрации на конгресс…
+      // до {{oralTalkDeadline}}»): deadlines are tokens, not dates, so such a
+      // line needs no exemption here and every literal date left on it is
+      // still checked (PR #72 re-review).
       .flatMap((line) => [...line.matchAll(DATE_IN_PROSE)].map((m) => m[0].toLowerCase().trim()))
       .filter((m) => !allowed.has(m));
     expect(
@@ -152,42 +152,37 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
 });
 
 /**
- * A «с <дата> по <дата> <год>» range, matched by SHAPE rather than by topic.
+ * Issue #108 made the submission deadlines a setting: page copy writes the
+ * tokens `{{oralTalkDeadline}}` / `{{posterAbstractDeadline}}` and `getPage()`
+ * fills them from `SUBMISSION_DEADLINES`, so a date change is one edit in
+ * `src/config/site.ts`. A page may not spell either deadline out: a literal
+ * copy — even of today's correct date — is exactly the copy that stays behind
+ * when the setting moves.
  *
- * Topic was the first attempt and it was wrong (PR #72 review): a filter on
- * «приём/подача» cannot tell the future window from an archive fact, because
- * unlike «регистрация» — which on this site is always the 2027 event — accepting
- * materials is equally something the 2026 congress did. «На конгрессе 2026 года
- * тезисы принимались до 25 февраля 2026 года» is legitimate copy that a topical
- * filter flags. The range shape is what the published window actually looks
- * like, and archive sentences do not wear it.
+ * Matched by the value, not by topic: a filter on «приём/подача» cannot tell
+ * the 2027 deadlines from an archive fact (PR #72 review), because accepting
+ * materials is equally something the 2026 congress did. Comparison is
+ * nbsp-insensitive and ignores «года»: the constant carries hand-authored
+ * U+00A0, the YAML is plain text, and «2027 г.» is the same stray copy.
  */
-const RANGE_IN_PROSE = new RegExp(
-  String.raw`с \d{1,2} (?:${MONTH_STEMS})[а-яё]* по \d{1,2} (?:${MONTH_STEMS})[а-яё]*\s+20\d{2}`,
-  'gi',
+const DEADLINE_TOKENS = ['{{oralTalkDeadline}}', '{{posterAbstractDeadline}}'];
+const TOKEN_IN_COPY = /\{\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}\}/g;
+const plainSpaces = (s: string) => s.replace(/ /g, ' ');
+const spelledDeadlines = Object.values(SUBMISSION_DEADLINES).map((d) =>
+  plainSpaces(d.display).replace(/ года$/, ''),
 );
 
-/**
- * Issue #98 made the window a setting: page copy writes the token
- * `{{submissionWindow}}` and `getPage()` fills it from `SUBMISSION_WINDOW`, so a
- * date change is one edit in `src/config/site.ts`. The guard is therefore
- * stricter than it was: a page may not spell ANY such range out, because a
- * literal copy — even of today's correct window — is exactly the copy that
- * stays behind when the setting moves.
- */
-const SUBMISSION_TOKEN = '{{submissionWindow}}';
-const TOKEN_IN_COPY = /\{\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}\}/g;
+describe('SUBMISSION_DEADLINES are the only submission deadlines on the site', () => {
+  it('reduces each deadline to the bare «day month year» the check looks for', () => {
+    expect(spelledDeadlines).toEqual(['15 января 2027', '29 января 2027']);
+  });
 
-describe('SUBMISSION_WINDOW is the only submission window on the site', () => {
-  it.each(pageFiles)('%s spells no date range out — it uses the token', (file) => {
-    const body = readFileSync(`${PAGES_DIR}/${file}`, 'utf8');
-    // Whole ranges, not the dates inside them: «с 1 сентября по 1 декабря 2026»
-    // yields only ONE full date to a per-date check (the opening bound carries
-    // no year of its own), so a stale opening bound would pass.
-    const ranges = [...body.matchAll(RANGE_IN_PROSE)].map((m) => m[0]);
+  it.each(pageFiles)('%s spells no deadline out — it uses the tokens', (file) => {
+    const body = plainSpaces(readFileSync(`${PAGES_DIR}/${file}`, 'utf8'));
+    const strays = spelledDeadlines.filter((d) => body.includes(d));
     expect(
-      [...new Set(ranges)],
-      `${file} spells a date range out; write ${SUBMISSION_TOKEN} instead`,
+      strays,
+      `${file} spells a deadline out; write ${DEADLINE_TOKENS.join(' / ')} instead`,
     ).toEqual([]);
   });
 
@@ -199,12 +194,12 @@ describe('SUBMISSION_WINDOW is the only submission window on the site', () => {
     expect(unknown, `${file} uses tokens CONTENT_TOKENS does not define`).toEqual([]);
   });
 
-  it('is actually published, so the guard above is not green on nothing', () => {
-    // Without this the range check passes trivially the day someone deletes
-    // the copy. Participants owns the topic and the FAQ answers it (Issue #98
-    // names both); /registration prints the constant from its template.
+  it.each(DEADLINE_TOKENS)('%s is actually published, so the guard above is not green on nothing', (token) => {
+    // Without this the stray check passes trivially the day someone deletes
+    // the copy. Participants owns the topic and the FAQ answers it (Issue #108
+    // names both); /registration prints the constants from its template.
     const carriers = pageFiles.filter((file) =>
-      readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(SUBMISSION_TOKEN),
+      readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(token),
     );
     expect(carriers).toEqual(expect.arrayContaining(['participants.yaml', 'faq.yaml']));
   });

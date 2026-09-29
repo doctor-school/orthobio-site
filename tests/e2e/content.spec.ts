@@ -49,7 +49,7 @@ test('the home page leads to registration without a subscription CTA', async ({ 
     'href',
     '/registration',
   );
-  await expect(page.getByText('Регистрация откроется 1 октября 2026 года')).toBeVisible();
+  await expect(page.getByText('Регистрация — с 1 октября 2026 года')).toBeVisible();
   await expect(page.getByRole('link', { name: /узнать первым/i })).toHaveCount(0);
   await expect(page.getByText(/канал.*будет объявлен/i)).toHaveCount(0);
 });

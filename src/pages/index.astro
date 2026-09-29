@@ -27,6 +27,10 @@ const { data: programPage } = await getPage('program');
 const programStub = programPage.blocks.find((b) => b.kind === 'stub');
 
 // Teaser: the three most recent congresses; the hub has them all.
+// «1 октября 2026» with the day bound to its month, as Typograf binds dates
+// in YAML copy; `REGISTRATION_OPENS.display` stays plain for the date guard.
+const heroOpensDate = REGISTRATION_OPENS.display.replace(/^(\d+) /, '$1 ');
+
 const recentYears = (await getCongressYears()).slice(0, 3);
 
 ---
@@ -41,14 +45,14 @@ const recentYears = (await getCongressYears()).slice(0, 3);
     {page.lead.map((p) => <p>{p}</p>)}
 
     {/* Issue #78: the primary CTA leads to the on-site form. The opening
-        sentence stays beside it — before 1 October the form page shows the
-        same «откроется» state, and the reader should not have to click to
-        learn it. */}
+        date stays beside it, so the reader need not click to learn it.
+        Worded to stay true on both sides of the opening day (Issue #108):
+        the page is static and may be deployed before or after it. */}
     <div slot="cta" class="ob-hero__cta">
       <Button size="lg" href={REGISTRATION_URL}>
         {REGISTRATION_CTA_LABEL}
       </Button>
-      <p class="ob-hero__cta-when">Регистрация откроется {REGISTRATION_OPENS.display} года</p>
+      <p class="ob-hero__cta-when">Регистрация&nbsp;— с&nbsp;{heroOpensDate}&nbsp;года</p>
     </div>
 
     <Fragment slot="stats">

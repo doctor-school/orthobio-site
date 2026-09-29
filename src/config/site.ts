@@ -11,7 +11,7 @@
  *   wrong link can never ship silently.
  */
 
-import { formatMoscowDateRange, instantFromEnv } from '@/lib/dates';
+import { instantFromEnv } from '@/lib/dates';
 
 /** Public site metadata. */
 export const SITE = {
@@ -121,51 +121,28 @@ export const REGISTRATION_OPENS = {
 } as const;
 
 /**
- * Submission window for talks, abstracts and posters — owner-confirmed
- * 2026-08-05 (Issue #71); a setting since Issue #98 («вынести эту дату в
- * настройки, чтобы можно было легко менять»). It opens together with
- * registration and closes two months later.
+ * Submission deadlines of the VIII congress — the organisers' spec for 2027
+ * (ТЗ «регистрация участников и подача материалов на Конгресс 2027», п. 4),
+ * owner-approved in Issue #108. They replace the single submission window of
+ * Issue #98: the opening of submissions is deliberately not dated («откроется
+ * в ближайшее время»), and the two kinds of material close on different days.
  *
- * ONE place to change it: the two instants below, Moscow time. `display` is
- * derived, and page copy never spells the range out — it writes the token
- * `{{submissionWindow}}` (see `CONTENT_TOKENS`), which `getPage()` fills;
- * /registration prints `display` directly. So every
- * page follows an edit here. The copy states it in a sentence WITHOUT the word
- * «регистрация» (see `tests/unit/content-dates.test.ts`).
+ * ONE place to change them. Page copy never spells a deadline out — it writes
+ * the tokens `{{oralTalkDeadline}}` / `{{posterAbstractDeadline}}` (see
+ * `CONTENT_TOKENS`), which `getPage()` fills; /registration prints `display`
+ * directly. `tests/unit/content-dates.test.ts` fails if a page carries a
+ * literal copy of either date.
  *
- * `closesAt` convention, shared by EVERY `closesAt` in this file, its env
- * override and the platform API: the FIRST moment no longer accepted
- * (exclusive). «по 1 декабря» is therefore stored as `2026-12-02T00:00:00+03:00`;
- * the formatter prints the last Moscow calendar day before that instant.
- *
- * Build-time overrides, blank = default: `PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT`
- * / `PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT` (fed in CI from the repository
- * Variables `CONGRESS_SUBMISSION_WINDOW_OPENS_AT` / `…_CLOSES_AT`). The site is
- * static, so an override takes effect with the next deploy.
+ * `display` is typeset by hand (nbsp exactly where Typograf puts it in the
+ * same sentence spelled out; `tests/unit/launch-content.test.ts` holds the two
+ * equal), because tokens are filled after the Typograf pass. `date` is the
+ * machine-readable twin, kept for regression checks.
  */
-const submissionOpensAt = instantFromEnv(
-  'PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT',
-  import.meta.env.PUBLIC_CONGRESS_SUBMISSION_WINDOW_OPENS_AT,
-  '2026-10-01T00:00:00+03:00',
-);
-const submissionClosesAt = instantFromEnv(
-  'PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT',
-  import.meta.env.PUBLIC_CONGRESS_SUBMISSION_WINDOW_CLOSES_AT,
-  '2026-12-02T00:00:00+03:00',
-);
-
-export const SUBMISSION_WINDOW = {
-  opensAt: submissionOpensAt,
-  closesAt: submissionClosesAt,
-  /**
-   * «с 1 октября по 1 декабря 2026 года», typeset by hand (nbsp) like every
-   * config string. A getter, like `CONTENT_TOKENS` below: SignupForm's browser
-   * script imports this module for `REGISTRATION_WINDOW`, and an eager value
-   * here would run Intl formatting on load in the only PII form's client script.
-   */
-  get display(): string {
-    return formatMoscowDateRange(submissionOpensAt, submissionClosesAt);
-  },
+export const SUBMISSION_DEADLINES = {
+  /** Oral talks: «до 15 января 2027 года». */
+  oralTalk: { date: '2027-01-15', display: '15 января 2027 года' },
+  /** Poster talks and abstracts: «до 29 января 2027 года». */
+  posterAbstract: { date: '2027-01-29', display: '29 января 2027 года' },
 } as const;
 
 /**
@@ -176,9 +153,8 @@ export const SUBMISSION_WINDOW = {
  * Values arrive already typeset: the page's Typograf pass ran before the fill.
  */
 export const CONTENT_TOKENS: Readonly<Record<string, string>> = {
-  get submissionWindow(): string {
-    return SUBMISSION_WINDOW.display;
-  },
+  oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
+  posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
 };
 
 /**

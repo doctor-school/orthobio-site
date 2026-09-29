@@ -1101,12 +1101,14 @@ test.describe('registration page design', () => {
     await expect(dates.locator('dt')).toHaveText([
       'Открытие регистрации',
       'Закрытие регистрации',
-      'Приём докладов и тезисов',
+      'Приём устных докладов',
+      'Приём постерных докладов и тезисов',
     ]);
     await expect(dates.locator('dd')).toHaveText([
       '1 октября 2026 года, 00:00 (МСК)',
       '22 апреля 2027 года, 00:00 (МСК)',
-      'с 1 октября по 1 декабря 2026 года',
+      'до 15 января 2027 года',
+      'до 29 января 2027 года',
     ]);
 
     const venue = page.locator('.ob-reg__venue');
@@ -1570,5 +1572,5 @@ test('the home page leads to the registration form and still states the opening 
     'href',
     '/registration',
   );
-  await expect(page.getByText('Регистрация откроется 1 октября 2026 года')).toBeVisible();
+  await expect(page.getByText('Регистрация — с 1 октября 2026 года')).toBeVisible();
 });

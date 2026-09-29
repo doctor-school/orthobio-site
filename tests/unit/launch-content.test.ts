@@ -88,7 +88,7 @@ describe('owner-approved pre-registration launch content', () => {
     expect(tokenSentences.length).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(tokenSentences)('fills «%s» exactly as if the range were spelled out', (sentence) => {
+  it.each(tokenSentences)('fills «%s» exactly as if the deadline were spelled out', (sentence) => {
     expect(fillContentTokens(typographize(sentence), CONTENT_TOKENS)).toBe(
       typographize(fillContentTokens(sentence, CONTENT_TOKENS)),
     );

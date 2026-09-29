@@ -27,7 +27,11 @@ const { data: programPage } = await getPage('program');
 const programStub = programPage.blocks.find((b) => b.kind === 'stub');
 
 // Teaser: the three most recent congresses; the hub has them all.
-const recentYears = (await getCongressYears()).slice(0, 3);
+// «1 октября 2026» with the day bound to its month, as Typograf binds dates
+// in YAML copy; `REGISTRATION_OPENS.display` stays plain for the date guard.
+const heroOpensDate = REGISTRATION_OPENS.display.replace(/^(\d+) /, '$1 ');
+
+const recentYears =(await getCongressYears()).slice(0, 3);
 
 ---
 
@@ -48,7 +52,7 @@ const recentYears = (await getCongressYears()).slice(0, 3);
       <Button size="lg" href={REGISTRATION_URL}>
         {REGISTRATION_CTA_LABEL}
       </Button>
-      <p class="ob-hero__cta-when">Регистрация&nbsp;— с&nbsp;{REGISTRATION_OPENS.display} года</p>
+      <p class="ob-hero__cta-when">Регистрация&nbsp;— с&nbsp;{heroOpensDate}&nbsp;года</p>
     </div>
 
     <Fragment slot="stats">

@@ -31,7 +31,7 @@ const programStub = programPage.blocks.find((b) => b.kind === 'stub');
 // in YAML copy; `REGISTRATION_OPENS.display` stays plain for the date guard.
 const heroOpensDate = REGISTRATION_OPENS.display.replace(/^(\d+) /, '$1 ');
 
-const recentYears =(await getCongressYears()).slice(0, 3);
+const recentYears = (await getCongressYears()).slice(0, 3);
 
 ---
 

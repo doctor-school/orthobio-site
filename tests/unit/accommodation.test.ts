@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
+import { UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import { pageSchemaChecked, type AccommodationBlock } from '@/content/schemas';
 import {
   ACCOMMODATION_ANCHOR,
@@ -47,6 +48,7 @@ describe('splitLastWord', () => {
     ['115563, Москва, ул. Шипиловская, 28А', '115563, Москва, ул. Шипиловская, ', '28А'],
     ['на сайте', 'на ', 'сайте'],
     ['Одно', '', 'Одно'],
+    ['на\u00a0сайте', 'на\u00a0', 'сайте'],
   ])('splits «%s»', (text, head, last) => {
     expect(splitLastWord(text)).toEqual({ head, last });
   });
@@ -83,6 +85,25 @@ describe('segment', () => {
     expect(() => segment('Назовите код при бронировании.', ['ОРТОБИОЛОГИЯ'])).toThrow(/ОРТОБИОЛОГИЯ/);
   });
 
+  it('does not take the congress name ОРТОБИОЛОГИЯ-2027 for the promo code ОРТОБИОЛОГИЯ', () => {
+    expect(() => segment('Участник конгресса ОРТОБИОЛОГИЯ-2027.', ['ОРТОБИОЛОГИЯ'])).toThrow(/ОРТОБИОЛОГИЯ/);
+    expect(segment('Код ОРТОБИОЛОГИЯ для ОРТОБИОЛОГИЯ-2027.', ['ОРТОБИОЛОГИЯ'])).toEqual([
+      { text: 'Код ', mark: null },
+      { text: 'ОРТОБИОЛОГИЯ', mark: 'ОРТОБИОЛОГИЯ' },
+      { text: ' для ОРТОБИОЛОГИЯ-2027.', mark: null },
+    ]);
+  });
+
+  it('matches whole words only, not inside a longer word', () => {
+    expect(() => segment('ПРЕОРТОБИОЛОГИЯ', ['ОРТОБИОЛОГИЯ'])).toThrow();
+    expect(() => segment('ОРТОБИОЛОГИЯ2', ['ОРТОБИОЛОГИЯ'])).toThrow();
+  });
+
+  it('still marks a needle closed by punctuation', () => {
+    expect(segment('код «ОРТОБИОЛОГИЯ».', ['ОРТОБИОЛОГИЯ'])[1].mark).toBe('ОРТОБИОЛОГИЯ');
+    expect(segment('пишите на a@b.ru.', ['a@b.ru'])[1]).toEqual({ text: 'a@b.ru', mark: 'a@b.ru' });
+  });
+
   it('passes a sentence without the needle through when not required', () => {
     expect(segment('даты проживания', ['ОРТОБИОЛОГИЯ'], { required: false })).toEqual([
       { text: 'даты проживания', mark: null },
@@ -107,6 +128,23 @@ describe('participants.yaml → accommodation', () => {
     expect(acc!.group.text).toContain('«Доктор Скул»');
     expect(nbspless(acc!.contacts.address)).toBe('115563, Москва, ул. Шипиловская, 28А');
     expect(nbspless(acc!.promo.terms)).toContain('с 22 по 25 апреля 2027 года');
+  });
+
+  it('prints the congress venue’s own address in the lead and the contacts', () => {
+    // The address is repeated here (the contacts add a postal code, so it
+    // cannot be derived); containment makes a venue move in site.ts fail the
+    // build instead of leaving the old address on this page.
+    const address = nbspless(UPCOMING_CONGRESS_VENUE.card.address);
+    expect(nbspless(acc!.lead)).toContain(address);
+    expect(nbspless(acc!.contacts.address)).toContain(address);
+  });
+
+  it('allows one accommodation block per page — its ids are fixed', () => {
+    const raw = readPage('participants') as { blocks: Record<string, unknown>[] };
+    raw.blocks.push(structuredClone(raw.blocks.at(-1)!));
+    const r = pageSchemaChecked.safeParse(raw);
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.map((i) => i.path)).toContainEqual(['blocks', raw.blocks.length - 1, 'kind']);
   });
 
   it('serves the promo-field screenshot from our bucket with its intrinsic dimensions', () => {
@@ -153,5 +191,18 @@ describe('links into the section', () => {
     expect(answer).toContain(acc!.promo.code);
     expect(answer).toContain('«Участникам»');
     expect(answer).toContain('«Проживание»');
+  });
+});
+
+describe('promo code size', () => {
+  const css = readFileSync(fileURLToPath(new URL('../../src/styles/components.css', import.meta.url)), 'utf8');
+
+  // Two `font-size` declarations in one rule never fall back: `var()` is valid
+  // at parse time, so the second always wins, and an unsupported `cqi` then
+  // yields `unset`, not the first value (PR #113 review).
+  it('applies the fixed fallback only where container units are unsupported', () => {
+    const fallback = /@supports not \(width: 1cqi\) \{\s*\.ob-acc__code \{\s*font-size: var\(--acc-code-size-fallback\);\s*\}\s*\}/;
+    expect(css).toMatch(fallback);
+    expect(css.replace(fallback, '')).not.toContain('--acc-code-size-fallback');
   });
 });

@@ -351,12 +351,31 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
    */
   // «отел» + any ending, not an enumerated list: «в отеле» is the form copy
   // actually uses, and an ending list that misses one case is a guard that
-  // reads strict and tests nothing.
-  const NAMED_VENUE =
-    /(?<![а-яёА-ЯЁ])(?:[Оо]тел[а-яё]*|[Гг]остиниц[а-яё]*|[Кк]онгресс-центр[а-яё]*|ГК)\s+(«[^»]+»|[A-ZА-ЯЁ][\p{L}\p{N}-]*)/gu;
+  // reads strict and tests nothing. A hyphenated suffix («отеле-партнёре»)
+  // is still the kind word; `i` covers lines set in capitals.
+  const VENUE_KIND =
+    /(?<![\p{L}\p{N}])(?:отел\p{L}*|гостиниц\p{L}*|конгресс-центр\p{L}*|гк)(?:-\p{L}+)*(?![\p{L}\p{N}])/giu;
+  // What may stand between the kind and the name: star ratings («4*», «★★★★»).
+  const QUALIFIERS = /^(?:\s+[\d*★]+)*/u;
+  // The guard reads RAW YAML, before Typograf turns "…" into «…»: any opening
+  // quote counts, optionally backslash-escaped inside a double-quoted scalar.
+  const QUOTED_NAME = /^\s+\\?["“„«]([^"“”„»\\]+)\\?["”“»]/u;
+  // Case-sensitive on purpose: «Отель расположен…» names nothing, «гостиница
+  // Космос» does. A line in capitals makes every word look like a name — a
+  // loud false positive, never a silent miss.
+  const BARE_NAME = /^\s+(\p{Lu}[\p{L}\p{N}-]*)/u;
+  const bare = (name: string) => name.replace(/[«»"“”„]/g, '').toLocaleLowerCase('ru');
   const OUR_NAME = UPCOMING_CONGRESS_VENUE.name.match(/«[^»]+»/)?.[0] ?? UPCOMING_CONGRESS_VENUE.name;
-  const foreignVenues = (text: string) =>
-    [...unbreak(text).matchAll(NAMED_VENUE)].map((m) => m[1]).filter((name) => name !== OUR_NAME);
+  const foreignVenues = (text: string) => {
+    const line = unbreak(text);
+    return [...line.matchAll(VENUE_KIND)]
+      .map((m) => {
+        const rest = line.slice(m.index + m[0].length);
+        const after = rest.slice(QUALIFIERS.exec(rest)![0].length);
+        return (QUOTED_NAME.exec(after) ?? BARE_NAME.exec(after))?.[1];
+      })
+      .filter((name): name is string => name !== undefined && bare(name) !== bare(OUR_NAME));
+  };
 
   it('derives the venue name the pages may use («Милан»)', () => {
     expect(OUR_NAME).toBe('«Милан»');
@@ -366,6 +385,17 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
     'Конгресс пройдёт в отеле «Холидей Инн Сокольники».',
     'Площадка — гостиница Космос.',
     'Место проведения: ГК «Измайлово».',
+    // Raw YAML is checked, before Typograf turns straight quotes into «…».
+    'Конгресс пройдёт в отеле "Космос".',
+    'Конгресс пройдёт в отеле „Космос“.',
+    'Конгресс пройдёт в отеле “Космос”.',
+    'Конгресс пройдёт в отеле-партнёре «Космос».',
+    'Конгресс пройдёт в отеле 4* «Космос».',
+    'Конгресс пройдёт в отеле 4* Космос.',
+    'ОТЕЛЬ «КОСМОС»',
+    'КОНГРЕСС ПРОЙДЁТ В ГОСТИНИЦЕ КОСМОС',
+    'Площадка — конгресс-центр «Космос».',
+    '  - "Конгресс пройдёт в отеле \\"Космос\\"."',
   ])('the matcher recognises another venue in «%s»', (line) => {
     expect(foreignVenues(line)).not.toEqual([]);
   });
@@ -375,6 +405,11 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
     'Отель расположен между аэропортом «Домодедово» и центром Москвы.',
     'Забронировать на сайте отеля',
     'ГК «Милан», Москва, ул. Шипиловская, д. 28А.',
+    'Контакты отеля «Милан»',
+    'Конгресс проходит в отеле "Милан".',
+    'ОТЕЛЬ «МИЛАН»',
+    '    heading: "Контакты отеля"',
+    'Для участников отель предоставляет специальные условия бронирования.',
   ])('the matcher leaves the congress venue alone in «%s»', (line) => {
     expect(foreignVenues(line)).toEqual([]);
   });

@@ -647,8 +647,19 @@ export const pageSchema = z.object({
  * be a union option.
  */
 export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
+  let accommodationSeen = false;
   page.blocks.forEach((block, i) => {
     if (block.kind === 'accommodation') {
+      // The section carries fixed ids (the /registration link target and its
+      // aria-labelledby); a second copy would duplicate both.
+      if (accommodationSeen) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', i, 'kind'],
+          message: 'at most one accommodation block per page — its ids are fixed',
+        });
+      }
+      accommodationSeen = true;
       // A sentence that no longer contains the fact it marks would ship
       // without its bold or its link — silently (Issue #112).
       const mustContain: [path: string[], text: string, needle: string][] = [

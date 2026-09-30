@@ -3311,9 +3311,8 @@ body > main:has(> .ob-reg) {
   margin: 0;
   padding-bottom: var(--sp-4);
   border-bottom: var(--border-thin) dashed var(--acc-code-rule);
-  font-size: var(--acc-code-size-fallback);
   font-size: var(--acc-code-size);
-  line-height: 1.1;
+  line-height: var(--lh-display);
   font-weight: var(--fw-bold);
   letter-spacing: var(--acc-code-tracking);
   white-space: nowrap;
@@ -3321,6 +3320,15 @@ body > main:has(> .ob-reg) {
   user-select: all;
   -webkit-user-select: all;
   cursor: text;
+}
+
+/* A second `font-size` in the rule above could not serve as the fallback: the
+   `var()` parses, so it always wins, and an unsupported `cqi` then computes to
+   `unset`. The fixed size has to be chosen by feature query instead. */
+@supports not (width: 1cqi) {
+  .ob-acc__code {
+    font-size: var(--acc-code-size-fallback);
+  }
 }
 
 .ob-acc__terms {

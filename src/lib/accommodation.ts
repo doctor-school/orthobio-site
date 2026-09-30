@@ -34,7 +34,7 @@ export function telHref(printed: string): string {
  */
 export function splitLastWord(text: string): { head: string; last: string } {
   const trimmed = text.trimEnd();
-  const m = /^(.*[\s ])(\S+)$/su.exec(trimmed);
+  const m = /^(.*\s)(\S+)$/su.exec(trimmed);
   return m ? { head: m[1], last: m[2] } : { head: '', last: trimmed };
 }
 
@@ -49,9 +49,10 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /**
  * Splits `text` around every occurrence of the given needles.
  *
- * Whitespace-insensitive on purpose: the copy has been through Typograf, which
- * may have turned an ordinary space inside the needle into U+00A0 («в отеле
- * «Милан»»), while the needle itself was typeset in a different context. The
+ * Matches whole words only (see the pattern below). Whitespace-insensitive on
+ * purpose: the copy has been through Typograf, which may have turned an
+ * ordinary space inside the needle into U+00A0 («в отеле «Милан»»), while the
+ * needle itself was typeset in a different context. The
  * returned piece keeps the text as the page prints it.
  *
  * By default every needle must occur at least once. A needle that is missing
@@ -78,7 +79,13 @@ export function segment(
   const order = wanted
     .map((needle, i) => ({ needle, source: sources[i] }))
     .sort((a, b) => b.needle.length - a.needle.length);
-  const pattern = new RegExp(order.map((o) => `(${o.source})`).join('|'), 'gu');
+  // Whole words only: the promo code ОРТОБИОЛОГИЯ is also the head of the
+  // congress name ОРТОБИОЛОГИЯ-2027, which must neither satisfy the drift check
+  // nor render half-bold. A hyphen joins a compound, so it counts as a letter.
+  const pattern = new RegExp(
+    `(?<![\\p{L}\\p{N}-])(?:${order.map((o) => `(${o.source})`).join('|')})(?![\\p{L}\\p{N}-])`,
+    'gu',
+  );
 
   const out: Segment[] = [];
   const seen = new Set<string>();

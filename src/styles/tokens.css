@@ -393,6 +393,33 @@
   --reg-dates-icon: 20px;
   --reg-map-pin: 18px;
   --reg-map-pin-ring: 5px;
+  /* Accommodation section of /participants (Issue #112 design: Accommodation). */
+  --acc-promo-col: 500px;
+  --acc-pad-inline: 20px;
+  --acc-row-gap: 20px;
+  /* The promo code scales with its own card (container query units), capped
+     at the design's 48px; the fixed size is the fallback for a browser without
+     container queries. */
+  --acc-code-size-fallback: 26px;
+  --acc-code-size: min(9.5cqi, 48px);
+  --acc-code-tracking: 0.12em;
+  --acc-code-rule: oklch(0.86 0.012 250);
+  --acc-kw-tracking: 0.04em;
+  --acc-way-tile: 40px;
+  --acc-way-icon: 20px;
+  --acc-bullet: 6px;
+  --acc-bullet-nudge: 0.62em;
+  --acc-cap-icon: 16px;
+  --acc-cap-icon-nudge: 2px;
+  --acc-note-icon: 20px;
+  --acc-note-icon-nudge: 3px;
+  --acc-ext-icon: 14px;
+  --acc-ext-icon-btn: 16px;
+  --acc-ext-nudge: -1px;
+  --acc-link-thickness-active: 2px;
+  /* Pressed inline link: the same deep blue as a pressed primary button. */
+  --acc-link-pressed: var(--btn-primary-bg-active);
+  --acc-shot-shadow: 0 1px 2px oklch(0.21 0.02 250 / 0.05), var(--shadow-lift);
 
   /* --- Layout & focus ------------------------------------------------------ */
   /* `vh` keeps the shell compatible with older browsers; the feature query

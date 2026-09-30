@@ -48,6 +48,10 @@
 # see item 2026-committee-portraits. This is the first rescue run after the
 # 2026-07-27 sweep; every other number in this file still describes that sweep.
 #
+# 2026-09-30 (Issue #112): +1 object — the owner-supplied screenshot of the
+# hotel «Милан» promo-code field (2027/accommodation/hotel-promo-field.png),
+# see item 2027-accommodation-promo-field.
+#
 # 2026-09-28 (Issue #106): +1 object — the owner-supplied portrait of
 # Загородний Н.В. (2026/people/zagorodniy-288.webp), see item
 # 2026-people-zagorodniy. Its source JPEG is staged under
@@ -82,8 +86,9 @@ meta:
   # The live bucket is larger than this sweep: +22 оргкомитет portraits
   # (Issue #23), +49 partner logos (Issue #22, `logos:` below) and +23 video
   # posters (Issue #33, `video_posters:` below), +1 owner-supplied portrait
-  # (Issue #106, item 2026-people-zagorodniy).
-  s3_objects_total: 2336 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1
+  # (Issue #106, item 2026-people-zagorodniy), +1 owner-supplied screenshot
+  # (Issue #112, item 2027-accommodation-promo-field).
+  s3_objects_total: 2337 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -573,6 +578,36 @@ years:
         status: at-risk
         local: null
         s3_key: null
+
+  2027:
+    counters: { files: 1, mb: 0.02 }
+    items:
+      - id: 2027-accommodation-promo-field
+        source: owner-supplied, 2026-09-30 (Issue #112)
+        source_urls: []
+        description: >-
+          Screenshot of the promo-code popup on the hotel «Милан» booking page
+          (https://www.hotelmilan.ru/rooms/), cropped by the owner to the
+          design's asset size: 560×257 RGB PNG, 20134 B, sha256
+          5cbf1f91c9e8d3b545281864590ca35dd88febfd1f382da1fbd39b03b1e15830.
+          Served as-is (no derivative).
+
+          Consumer: participants.yaml → accommodation.online.screenshot
+          («Проживание» on /participants).
+
+          Upload: `node scripts/upload-media-object.mjs <staged file>
+          2027/accommodation/hotel-promo-field.png`. A first 330×244 crop was
+          put at the same key minutes earlier and replaced with `--replace`
+          before any page referenced it.
+        actual_year: 2027
+        type: photos
+        status: downloaded
+        local: '2027/accommodation/hotel-promo-field.png'
+        s3_key: '2027/accommodation/hotel-promo-field.png'
+        # Uploaded 2026-09-30: read-back sha256 matched; served as image/png,
+        # 20134 B, Cache-Control immutable.
+        s3_status: uploaded
+        files: 1
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Partner / organizer logos (Issue #22) — rescued 2026-07-29

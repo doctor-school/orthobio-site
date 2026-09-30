@@ -25,6 +25,8 @@
 
 import { z } from 'astro/zod';
 
+import { segment } from '../lib/accommodation';
+
 import { typographize } from './typographize';
 
 /**
@@ -520,11 +522,96 @@ const faqBlockSchema = z.object({
   items: z.array(z.object({ q: prose(), a: prose() })).default([]),
 });
 
+/**
+ * «Проживание» — the congress hotel's offer to participants (Issue #112).
+ *
+ * One block rather than a stack of text/list blocks because the parts are not
+ * independent copy: the promo code is printed in the promo card and bolded
+ * inside three sentences; the phones and the e-mail repeat in the contacts
+ * panel. Modelling them once as FACTS (`promo.code`, `phone.numbers`,
+ * `email.address`) and letting the renderer place them is what keeps the
+ * repeats equal — the same shape a platform «конструктор» block would emit.
+ *
+ * Every prose field is plain text (loader-swap invariant). Inline emphasis is
+ * NOT markup in the copy: the renderer marks whatever the sentence contains of
+ * a named fact (`segment()` in `src/lib/accommodation.ts`), and
+ * `pageSchemaChecked` fails the build when a sentence stops containing it.
+ *
+ * The hotel's map link is not here: it is the venue's
+ * (`UPCOMING_CONGRESS_VENUE.mapUrl`), and a second copy would be a second place
+ * for it to go stale.
+ */
+const accommodationBlockSchema = z.object({
+  kind: z.literal('accommodation'),
+  heading: prose(),
+  lead: prose(),
+  /** The phrase of `lead` printed in bold («отеле «Милан»»). */
+  leadEmphasis: prose(),
+  about: proseOrNull(),
+  promo: z.object({
+    label: prose(),
+    /** Verbatim — a code the hotel matches character by character. */
+    code: z.string().regex(/^\S+$/, 'a promo code is one token, no spaces'),
+    terms: prose(),
+  }),
+  waysHeading: prose(),
+  online: z.object({
+    title: prose(),
+    /** Must contain `promo.code`, which renders in bold. */
+    text: prose(),
+    /** The hotel's booking page — an outbound link, not media. */
+    url: z.url({ protocol: /^https$/ }),
+    cta: prose(),
+    screenshot: z.object({
+      url: mediaLocation(),
+      alt: prose(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    }),
+    caption: prose(),
+  }),
+  phone: z.object({
+    title: prose(),
+    /** Must contain `promo.code`, which renders in bold. */
+    text: prose(),
+    /**
+     * As printed («+7 (495) 648-93-00») — a display token, never prose-routed.
+     * The `tel:` href is derived from it (`telHref()`), so the two cannot
+     * disagree.
+     */
+    numbers: z
+      .array(z.string().regex(/^\+[\d\s()-]+$/, 'print the phone in the international form: +7 (495) …'))
+      .min(1),
+  }),
+  email: z.object({
+    title: prose(),
+    /** Must contain `address`, which renders as the mailto link. */
+    text: prose(),
+    address: z.email(),
+    /** What the request must state; an item containing `promo.code` bolds it. */
+    items: z.array(prose()).min(1),
+  }),
+  group: z.object({
+    /** Must contain `email`, which renders as the mailto link. */
+    text: prose(),
+    email: z.email(),
+  }),
+  contacts: z.object({
+    heading: prose(),
+    addressLabel: prose(),
+    address: prose(),
+    bookingLabel: prose(),
+  }),
+});
+
+export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
+
 const pageBlockSchema = z.discriminatedUnion('kind', [
   textBlockSchema,
   listBlockSchema,
   stubBlockSchema,
   faqBlockSchema,
+  accommodationBlockSchema,
 ]);
 
 export type PageBlock = z.infer<typeof pageBlockSchema>;
@@ -561,6 +648,29 @@ export const pageSchema = z.object({
  */
 export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
   page.blocks.forEach((block, i) => {
+    if (block.kind === 'accommodation') {
+      // A sentence that no longer contains the fact it marks would ship
+      // without its bold or its link — silently (Issue #112).
+      const mustContain: [path: string[], text: string, needle: string][] = [
+        [['lead'], block.lead, block.leadEmphasis],
+        [['online', 'text'], block.online.text, block.promo.code],
+        [['phone', 'text'], block.phone.text, block.promo.code],
+        [['email', 'text'], block.email.text, block.email.address],
+        [['group', 'text'], block.group.text, block.group.email],
+      ];
+      for (const [path, text, needle] of mustContain) {
+        try {
+          segment(text, [needle]);
+        } catch {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['blocks', i, ...path],
+            message: `must contain «${needle}» — the renderer marks it inside this sentence`,
+          });
+        }
+      }
+      return;
+    }
     if (block.kind !== 'stub') return;
     if ((block.linkHref === null) !== (block.linkLabel === null)) {
       ctx.addIssue({

@@ -24,6 +24,8 @@ interface Props {
    */
   external?: boolean;
   type?: 'button' | 'submit';
+  /** Placement class of the calling component (e.g. `ob-acc__cta`). */
+  class?: string;
 }
 
 const {
@@ -33,8 +35,9 @@ const {
   arrow = false,
   external = false,
   type = 'button',
+  class: extra,
 } = Astro.props;
-const cls = `ob-btn ob-btn--${variant} ob-btn--${size}`;
+const cls = `ob-btn ob-btn--${variant} ob-btn--${size}${extra ? ` ${extra}` : ''}`;
 ---
 
 {

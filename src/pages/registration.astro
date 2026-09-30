@@ -34,6 +34,7 @@ import StrokeIcon from '@/components/StrokeIcon.astro';
 import { REGISTRATION_WINDOW, SUBMISSION_DEADLINES, UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import { getPage } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import { ACCOMMODATION_HREF } from '@/lib/accommodation';
 import { formatMoscowInstant } from '@/lib/registration';
 
 const { data: page } = await getPage('registration');
@@ -115,6 +116,10 @@ const dates = [
             <p class="ob-reg__vnote">{venue.card.note}</p>
             <a class="ob-reg__vlink ob-arrow" href={venue.mapUrl} target="_blank" rel="noopener">
               Открыть в Яндекс Картах<NewTabHint />
+            </a>
+            {/* The venue hotel's promo-code offer (Issue #112) — same site, same tab. */}
+            <a class="ob-reg__vlink ob-arrow" href={ACCOMMODATION_HREF}>
+              Проживание по промокоду
             </a>
           </div>
         </div>

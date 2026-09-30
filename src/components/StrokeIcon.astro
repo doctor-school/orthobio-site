@@ -1,11 +1,25 @@
 ---
 /**
- * StrokeIcon — the 20×20 line icons of the registration design (calendar,
- * lock, tick, chevron). One place for the geometry and the stroke weight;
+ * StrokeIcon — the 20×20 line icons of the registration and accommodation
+ * designs (calendar, lock, tick, chevron; globe, phone, mail, people and the
+ * external-link arrow). One place for the geometry and the stroke weight;
  * decorative by default, because every use sits next to text that says the
  * same thing.
+ *
+ * The accommodation design draws its own lock a hair smaller (11×8 body); the
+ * registration lock is reused instead — two locks one pixel apart would be the
+ * drift this component exists to prevent.
  */
-type Name = 'calendar' | 'lock' | 'check' | 'chevron';
+type Name =
+  | 'calendar'
+  | 'lock'
+  | 'check'
+  | 'chevron'
+  | 'globe'
+  | 'phone'
+  | 'mail'
+  | 'people'
+  | 'external';
 
 interface Props {
   name: Name;
@@ -43,4 +57,39 @@ const { name, class: className } = Astro.props;
   }
   {name === 'check' && <path d="M4.5 10.5l3.5 3.5 7.5-8" />}
   {name === 'chevron' && <path d="M5.5 8l4.5 4.5L14.5 8" />}
+  {
+    name === 'globe' && (
+      <>
+        <circle cx="10" cy="10" r="7.5" />
+        <path d="M2.5 10h15M10 2.5c2.1 2.1 3 4.7 3 7.5s-.9 5.4-3 7.5c-2.1-2.1-3-4.7-3-7.5s.9-5.4 3-7.5z" />
+      </>
+    )
+  }
+  {
+    name === 'phone' && (
+      <>
+        <rect x="6" y="2.5" width="8" height="15" rx="2" />
+        <path d="M9 14.5h2" />
+      </>
+    )
+  }
+  {
+    name === 'mail' && (
+      <>
+        <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
+        <path d="M3 5.5l7 5.5 7-5.5" />
+      </>
+    )
+  }
+  {
+    name === 'people' && (
+      <>
+        <circle cx="7" cy="6.8" r="2.8" />
+        <path d="M2.5 16.5c0-2.7 2-4.4 4.5-4.4s4.5 1.7 4.5 4.4" />
+        <circle cx="14" cy="7.8" r="2.2" />
+        <path d="M13.4 12.3c2.3.2 4.1 1.7 4.1 4.2" />
+      </>
+    )
+  }
+  {name === 'external' && <path d="M8.5 4.5h-4v11h11v-4M11.5 4.5h4v4M15.5 4.5L9 11" />}
 </svg>

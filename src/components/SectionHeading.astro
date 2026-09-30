@@ -15,6 +15,8 @@ interface Props {
   linkHref?: string | null;
   /** Counter for what the section holds («80 фото», «52 партнёра»). */
   meta?: string | null;
+  /** Id of the heading element, for a section that is `aria-labelledby` it. */
+  id?: string;
 }
 
 const {
@@ -24,6 +26,7 @@ const {
   linkLabel = null,
   linkHref = null,
   meta = null,
+  id,
 } = Astro.props;
 const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
 ---
@@ -33,12 +36,12 @@ const cls = `ob-sh${level === 'h1' ? ' ob-sh--h1' : ''}`;
     {overline && <span class="ob-sh__overline">{overline}</span>}
     {
       level === 'h1' ? (
-        <h1 class="ob-sh__title">
+        <h1 class="ob-sh__title" id={id}>
           {title}
           {meta && <span class="ob-sh__meta">{meta}</span>}
         </h1>
       ) : (
-        <h2 class="ob-sh__title">
+        <h2 class="ob-sh__title" id={id}>
           {title}
           {meta && <span class="ob-sh__meta">{meta}</span>}
         </h2>

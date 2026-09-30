@@ -8,6 +8,7 @@
  * Blocks always sit under the page <h1>, so their headings are <h2> and the
  * outline stays h1 → h2 → h3 (axe `heading-order`).
  */
+import Accommodation from '@/components/Accommodation.astro';
 import Faq from '@/components/Faq.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Stub from '@/components/Stub.astro';
@@ -21,7 +22,12 @@ const { blocks } = Astro.props;
 ---
 
 {
-  blocks.map((block) => (
+  blocks.map((block) =>
+    /* A landmark section of its own (anchor target of /registration), so it
+       is not wrapped in the anonymous block div. */
+    block.kind === 'accommodation' ? (
+      <Accommodation block={block} />
+    ) : (
     <div class="ob-section">
       {block.kind === 'text' && (
         <>
@@ -64,5 +70,6 @@ const { blocks } = Astro.props;
         </>
       )}
     </div>
-  ))
+    ),
+  )
 }

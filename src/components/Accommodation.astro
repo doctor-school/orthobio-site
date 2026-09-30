@@ -1,0 +1,179 @@
+---
+/**
+ * Accommodation — the «Проживание» section of /participants (Issue #112,
+ * approved design `ui_kits/orthobio-site/Accommodation.jsx`): the promo card,
+ * three ways to book, the group note and the hotel's contacts.
+ *
+ * No client JS: the promo code is `user-select: all`, so one tap or double
+ * click selects the whole code — the design deliberately has no copy button.
+ *
+ * Inline marks (the promo code in bold, an e-mail as a link) come from
+ * `segment()`, never from markup in the copy; the schema guarantees each
+ * sentence still contains what it marks.
+ */
+import Button from '@/components/Button.astro';
+import NewTabHint from '@/components/NewTabHint.astro';
+import SectionHeading from '@/components/SectionHeading.astro';
+import StrokeIcon from '@/components/StrokeIcon.astro';
+import { mediaUrl, UPCOMING_CONGRESS_VENUE } from '@/config/site';
+import type { AccommodationBlock } from '@/content';
+import { ACCOMMODATION_ANCHOR, segment, splitLastWord, telHref } from '@/lib/accommodation';
+
+interface Props {
+  block: AccommodationBlock;
+}
+
+const { block } = Astro.props;
+const { promo, online, phone, email, group, contacts } = block;
+const code = promo.code;
+const headingId = `${ACCOMMODATION_ANCHOR}-title`;
+const phones = phone.numbers.map((printed) => ({ printed, href: telHref(printed) }));
+// The external-link icon rides on the last word (no-wrap), so it stays at the
+// end of the text on every line length instead of becoming its own flex item.
+const cta = splitLastWord(online.cta);
+const address = splitLastWord(contacts.address);
+---
+
+<section class="ob-section ob-acc" id={ACCOMMODATION_ANCHOR} aria-labelledby={headingId}>
+  <SectionHeading title={block.heading} id={headingId} />
+
+  <div class="ob-acc__intro">
+    <div>
+      <p class="ob-acc__lead">
+        {
+          segment(block.lead, [block.leadEmphasis]).map((s) =>
+            s.mark ? <strong>{s.text}</strong> : s.text,
+          )
+        }
+      </p>
+      {block.about && <p class="ob-acc__about">{block.about}</p>}
+    </div>
+    <div class="ob-acc__panel">
+      <div class="ob-acc__promo">
+        <p class="ob-acc__over">{promo.label}</p>
+        <p class="ob-acc__code">{code}</p>
+        <p class="ob-acc__terms">{promo.terms}</p>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="ob-acc__h3">{block.waysHeading}</h3>
+  <div class="ob-acc__ways">
+    <article class="ob-acc__way ob-acc__way--site">
+      <div class="ob-acc__wayhead">
+        <span class="ob-acc__ico"><StrokeIcon name="globe" /></span>
+        <h4 class="ob-acc__wayt">{online.title}</h4>
+      </div>
+      <p class="ob-acc__p">
+        {segment(online.text, [code]).map((s) => (s.mark ? <b class="ob-acc__kw">{s.text}</b> : s.text))}
+      </p>
+      <figure class="ob-acc__shot">
+        <div class="ob-acc__frame">
+          <img
+            src={mediaUrl(online.screenshot.url)}
+            alt={online.screenshot.alt}
+            width={online.screenshot.width}
+            height={online.screenshot.height}
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <figcaption class="ob-acc__cap">
+          <StrokeIcon name="lock" />
+          <span>{online.caption}</span>
+        </figcaption>
+      </figure>
+      <Button class="ob-acc__cta" size="lg" href={online.url} external>
+        <span class="ob-acc__label">{cta.head}<span class="ob-acc__tail">{cta.last}<StrokeIcon name="external" class="ob-acc__ext" /></span></span>
+      </Button>
+    </article>
+
+    <article class="ob-acc__way">
+      <div class="ob-acc__wayhead">
+        <span class="ob-acc__ico"><StrokeIcon name="phone" /></span>
+        <h4 class="ob-acc__wayt">{phone.title}</h4>
+      </div>
+      <p class="ob-acc__p">
+        {segment(phone.text, [code]).map((s) => (s.mark ? <b class="ob-acc__kw">{s.text}</b> : s.text))}
+      </p>
+      <ul class="ob-acc__tels">
+        {
+          phones.map((p) => (
+            <li>
+              <a class="ob-acc__link ob-acc__tel" href={p.href}>
+                {p.printed}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </article>
+
+    <article class="ob-acc__way">
+      <div class="ob-acc__wayhead">
+        <span class="ob-acc__ico"><StrokeIcon name="mail" /></span>
+        <h4 class="ob-acc__wayt">{email.title}</h4>
+      </div>
+      <p class="ob-acc__p">
+        {/* One line per anchor: a line break inside it would render as an
+            underlined space before «и укажите». */}
+        {
+          segment(email.text, [email.address]).map((s) =>
+            s.mark ? <a class="ob-acc__link" href={`mailto:${email.address}`}>{s.text}</a> : s.text,
+          )
+        }
+      </p>
+      <ul class="ob-acc__list">
+        {
+          email.items.map((item) => (
+            <li>
+              <span>
+                {segment(item, [code], { required: false }).map((s) =>
+                  s.mark ? <b class="ob-acc__kw">{s.text}</b> : s.text,
+                )}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+    </article>
+  </div>
+
+  <p class="ob-acc__note">
+    <StrokeIcon name="people" />
+    <span>
+      {
+        segment(group.text, [group.email]).map((s) =>
+          s.mark ? <a class="ob-acc__link" href={`mailto:${group.email}`}>{s.text}</a> : s.text,
+        )
+      }
+    </span>
+  </p>
+
+  <div class="ob-acc__contacts">
+    <p class="ob-acc__over">{contacts.heading}</p>
+    <dl>
+      <dt>{contacts.addressLabel}</dt>
+      <dd class="ob-acc__row">
+        <a class="ob-acc__link" href={UPCOMING_CONGRESS_VENUE.mapUrl} target="_blank" rel="noopener">
+          <span class="ob-acc__label">{address.head}<span class="ob-acc__tail">{address.last}<StrokeIcon name="external" class="ob-acc__ext" /></span></span><NewTabHint />
+        </a>
+      </dd>
+    </dl>
+    <dl>
+      <dt>{contacts.bookingLabel}</dt>
+      <dd class="ob-acc__row">
+        {
+          phones.map((p) => (
+            <a class="ob-acc__link" href={p.href}>
+              {p.printed}
+            </a>
+          ))
+        }
+        <a class="ob-acc__link" href={`mailto:${email.address}`}>
+          {email.address}
+        </a>
+      </dd>
+    </dl>
+  </div>
+</section>

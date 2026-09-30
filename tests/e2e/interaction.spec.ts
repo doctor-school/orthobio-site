@@ -175,7 +175,9 @@ test.describe('without JavaScript', () => {
     // 56 since Issue #82: the two Yandex Maps links of the /registration venue
     // card and the OpenStreetMap credit on its map. 57 since Issue #88: the
     // «Узнать первым» Telegram CTA on the /registration «откроется» card.
-    expect(checked, 'the sweep must reach every external link on the site').toBe(57);
+    // 59 since Issue #112: the hotel booking CTA and the hotel address (map)
+    // link of the /participants «Проживание» section.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(59);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

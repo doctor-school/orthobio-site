@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 import { pageSchemaChecked, type AccommodationBlock } from '@/content/schemas';
-import { ACCOMMODATION_ANCHOR, ACCOMMODATION_HREF, segment, telHref } from '@/lib/accommodation';
+import {
+  ACCOMMODATION_ANCHOR,
+  ACCOMMODATION_HREF,
+  segment,
+  splitLastWord,
+  telHref,
+} from '@/lib/accommodation';
 
 /**
  * «Проживание» on /participants (Issue #112) — values, not geometry. A promo
@@ -32,6 +38,23 @@ describe('telHref', () => {
   it('refuses a number without the country code — it would dial wrong from abroad', () => {
     expect(() => telHref('8 (495) 648-93-00')).toThrow(/international/);
     expect(() => telHref('648-93-00')).toThrow(/international/);
+  });
+});
+
+describe('splitLastWord', () => {
+  it.each([
+    ['Забронировать на сайте отеля', 'Забронировать на сайте ', 'отеля'],
+    ['115563, Москва, ул. Шипиловская, 28А', '115563, Москва, ул. Шипиловская, ', '28А'],
+    ['на сайте', 'на ', 'сайте'],
+    ['Одно', '', 'Одно'],
+  ])('splits «%s»', (text, head, last) => {
+    expect(splitLastWord(text)).toEqual({ head, last });
+  });
+
+  it('loses no character', () => {
+    const t = 'Забронировать на сайте отеля';
+    const { head, last } = splitLastWord(t);
+    expect(head + last).toBe(t);
   });
 });
 
@@ -80,6 +103,8 @@ describe('participants.yaml → accommodation', () => {
     expect(acc!.phone.numbers.map(telHref)).toEqual(['tel:+74956489300', 'tel:+74956489302']);
     expect(acc!.email.address).toBe('reservation@hotelmilan.ru');
     expect(acc!.group.email).toBe('manager@doctor.school');
+    // The organisation's name never parts across lines.
+    expect(acc!.group.text).toContain('«Доктор Скул»');
     expect(nbspless(acc!.contacts.address)).toBe('115563, Москва, ул. Шипиловская, 28А');
     expect(nbspless(acc!.promo.terms)).toContain('с 22 по 25 апреля 2027 года');
   });

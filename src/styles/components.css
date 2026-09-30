@@ -3549,10 +3549,26 @@ body > main:has(> .ob-reg) {
   vertical-align: var(--acc-ext-nudge);
 }
 
+/* Label + icon are ONE flex item: the icon is inline after the last word,
+   bound to it by `.ob-acc__tail`, so a wrapping label never leaves the icon
+   stranded at the far edge of a full-width button or link row. */
+.ob-acc__label {
+  min-width: 0;
+}
+
+.ob-acc__cta .ob-acc__label {
+  text-align: center;
+}
+
+.ob-acc__tail {
+  white-space: nowrap;
+}
+
 .ob-btn .ob-acc__ext {
   width: var(--acc-ext-icon-btn);
   height: var(--acc-ext-icon-btn);
-  margin: 0;
+  margin: 0 0 0 var(--sp-2);
+  vertical-align: var(--acc-ext-nudge-btn);
 }
 
 .ob-acc__note {

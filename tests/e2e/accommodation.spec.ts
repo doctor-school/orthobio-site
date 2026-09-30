@@ -68,6 +68,40 @@ test.describe('accommodation section', () => {
     });
   }
 
+  // A wrapping label once left the ↗ icon alone at the far edge of the
+  // full-width CTA and of the address row (orchestrator review, PR #113): the
+  // icon must sit right after the last word, on the same line.
+  for (const width of [360, 1280]) {
+    test(`external-link icons stay glued to their text at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await page.goto('/participants');
+      await waitForWebfonts(page);
+
+      const icons = page.locator(`${SECTION} .ob-acc__ext`);
+      await expect(icons).toHaveCount(2);
+      for (const icon of await icons.all()) {
+        const m = await icon.evaluate((svg) => {
+          const text = svg.previousSibling;
+          if (!text) return null;
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const rects = [...range.getClientRects()];
+          const end = rects[rects.length - 1];
+          const box = svg.getBoundingClientRect();
+          const mid = box.top + box.height / 2;
+          return {
+            gap: box.left - end.right,
+            sameLine: mid >= end.top && mid <= end.bottom,
+          };
+        });
+        expect(m, 'the icon must follow a text node').not.toBeNull();
+        expect(m!.gap, `icon drifts from its text: ${JSON.stringify(m)}`).toBeLessThanOrEqual(8);
+        expect(m!.gap).toBeGreaterThanOrEqual(0);
+        expect(m!.sameLine, 'icon must sit on the last line of its text').toBe(true);
+      }
+    });
+  }
+
   test('the screenshot is lazy, sized and served from our bucket', async ({ page }) => {
     await page.goto('/participants');
     const img = page.locator(`${SECTION} .ob-acc__frame img`);

@@ -416,6 +416,7 @@
   --acc-ext-icon: 14px;
   --acc-ext-icon-btn: 16px;
   --acc-ext-nudge: -1px;
+  --acc-ext-nudge-btn: -2px;
   --acc-link-thickness-active: 2px;
   /* Pressed inline link: the same deep blue as a pressed primary button. */
   --acc-link-pressed: var(--btn-primary-bg-active);

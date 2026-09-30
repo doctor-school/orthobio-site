@@ -26,6 +26,18 @@ export function telHref(printed: string): string {
   return `tel:+${digits}`;
 }
 
+/**
+ * «Забронировать на сайте отеля» → { head: 'Забронировать на сайте ', last:
+ * 'отеля' }. A trailing icon is bound to `last` in a no-wrap span, so it can
+ * never be left alone on a line or drift away from the text it belongs to.
+ * The separator stays in `head` (an ordinary space or Typograf's U+00A0).
+ */
+export function splitLastWord(text: string): { head: string; last: string } {
+  const trimmed = text.trimEnd();
+  const m = /^(.*[\s ])(\S+)$/su.exec(trimmed);
+  return m ? { head: m[1], last: m[2] } : { head: '', last: trimmed };
+}
+
 export interface Segment {
   text: string;
   /** The needle this piece matched; `null` for the running text between. */

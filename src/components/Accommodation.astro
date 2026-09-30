@@ -17,7 +17,7 @@ import SectionHeading from '@/components/SectionHeading.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
 import { mediaUrl, UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import type { AccommodationBlock } from '@/content';
-import { ACCOMMODATION_ANCHOR, segment, telHref } from '@/lib/accommodation';
+import { ACCOMMODATION_ANCHOR, segment, splitLastWord, telHref } from '@/lib/accommodation';
 
 interface Props {
   block: AccommodationBlock;
@@ -28,6 +28,10 @@ const { promo, online, phone, email, group, contacts } = block;
 const code = promo.code;
 const headingId = `${ACCOMMODATION_ANCHOR}-title`;
 const phones = phone.numbers.map((printed) => ({ printed, href: telHref(printed) }));
+// The external-link icon rides on the last word (no-wrap), so it stays at the
+// end of the text on every line length instead of becoming its own flex item.
+const cta = splitLastWord(online.cta);
+const address = splitLastWord(contacts.address);
 ---
 
 <section class="ob-section ob-acc" id={ACCOMMODATION_ANCHOR} aria-labelledby={headingId}>
@@ -80,8 +84,7 @@ const phones = phone.numbers.map((printed) => ({ printed, href: telHref(printed)
         </figcaption>
       </figure>
       <Button class="ob-acc__cta" size="lg" href={online.url} external>
-        {online.cta}
-        <StrokeIcon name="external" class="ob-acc__ext" />
+        <span class="ob-acc__label">{cta.head}<span class="ob-acc__tail">{cta.last}<StrokeIcon name="external" class="ob-acc__ext" /></span></span>
       </Button>
     </article>
 
@@ -153,7 +156,7 @@ const phones = phone.numbers.map((printed) => ({ printed, href: telHref(printed)
       <dt>{contacts.addressLabel}</dt>
       <dd class="ob-acc__row">
         <a class="ob-acc__link" href={UPCOMING_CONGRESS_VENUE.mapUrl} target="_blank" rel="noopener">
-          {contacts.address}<StrokeIcon name="external" class="ob-acc__ext" /><NewTabHint />
+          <span class="ob-acc__label">{address.head}<span class="ob-acc__tail">{address.last}<StrokeIcon name="external" class="ob-acc__ext" /></span></span><NewTabHint />
         </a>
       </dd>
     </dl>

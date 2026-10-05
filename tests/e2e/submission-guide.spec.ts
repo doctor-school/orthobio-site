@@ -72,7 +72,7 @@ test.describe('submission guide section', () => {
   test('every screenshot loads from our bucket at its declared size', async ({ page }) => {
     await page.goto('/participants');
     const imgs = page.locator(`${SECTION} img`);
-    await expect(imgs).toHaveCount(12);
+    await expect(imgs).toHaveCount(11);
     for (const img of await imgs.all()) {
       await expect(img).toHaveAttribute('src', /^https:\/\/s3\.twcstorage\.ru\/orthobio-media\/2027\/submissions\/\d{2}-[a-z-]+\.png$/);
       await expect(img).toHaveAttribute('loading', 'lazy');

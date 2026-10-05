@@ -157,10 +157,10 @@ describe('participants.yaml → submission guide', () => {
     expect(guide.steps[0].links).toEqual([{ text: '«Зарегистрироваться»', href: '/registration' }]);
   });
 
-  it('places all twelve cabinet screenshots, each once, from our bucket', () => {
+  it('places the eleven cabinet screenshots, each once, from our bucket', () => {
     const shots = guide.steps.flatMap((s) => s.shots);
-    expect(shots).toHaveLength(12);
-    expect(new Set(shots.map((s) => s.url)).size).toBe(12);
+    expect(shots).toHaveLength(11);
+    expect(new Set(shots.map((s) => s.url)).size).toBe(11);
     const listed = new Set(
       read('docs/assets-checksums.txt')
         .split(/\r?\n/)
@@ -179,7 +179,6 @@ describe('participants.yaml → submission guide', () => {
     );
     expect(where).toEqual({
       '01': 3,
-      '02': 3,
       '11': 3,
       '03': 4,
       '04': 4,

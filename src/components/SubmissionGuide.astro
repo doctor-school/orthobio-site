@@ -1,0 +1,84 @@
+---
+/**
+ * SubmissionGuide — «Как подать материалы» on /participants (Issue #99): the
+ * owner-approved instruction for the congress cabinet, step by step, with the
+ * cabinet's own screenshots under the step they illustrate.
+ *
+ * Built from the «Проживание» section (Accommodation.astro) rather than a new
+ * visual language: the same landmark section with a fixed anchor, the same
+ * card (`.ob-acc__way`) with a round tile and an h3 head, the same paragraph,
+ * link and framed screenshot. Only the step stack and the screenshot column
+ * are its own (`.ob-sub*`). No client JS.
+ *
+ * The tile carries the step number for the eye and is hidden from assistive
+ * tech; the heading itself starts with the number, visually hidden, so the
+ * outline reads «1. Кто может подать материалы» either way.
+ */
+import SectionHeading from '@/components/SectionHeading.astro';
+import { mediaUrl } from '@/config/site';
+import type { SubmissionGuideBlock } from '@/content';
+import { segment } from '@/lib/accommodation';
+import { SUBMISSION_GUIDE_ANCHOR, submissionStepId } from '@/lib/submission-guide';
+
+interface Props {
+  block: SubmissionGuideBlock;
+}
+
+const { block } = Astro.props;
+const headingId = `${SUBMISSION_GUIDE_ANCHOR}-title`;
+const steps = block.steps.map((step, i) => {
+  const n = i + 1;
+  const hrefs = new Map(step.links.map((l) => [l.text, l.href]));
+  return {
+    ...step,
+    n,
+    id: submissionStepId(n),
+    parts: step.text === null ? [] : segment(step.text, [...hrefs.keys()]),
+    hrefs,
+  };
+});
+---
+
+<section class="ob-section ob-sub" id={SUBMISSION_GUIDE_ANCHOR} aria-labelledby={headingId}>
+  <SectionHeading title={block.heading} id={headingId} />
+
+  <div class="ob-sub__steps">
+    {
+      steps.map((step) => (
+        <article class="ob-acc__way" id={step.id} aria-labelledby={`${step.id}-title`}>
+          <div class="ob-acc__wayhead">
+            <span class="ob-acc__ico ob-sub__num" aria-hidden="true">
+              {step.n}
+            </span>
+            <h3 class="ob-acc__wayt" id={`${step.id}-title`}><span class="ob-sr-only">{`${step.n}. `}</span>{step.title}</h3>
+          </div>
+          {step.parts.length > 0 && (
+            <p class="ob-acc__p">
+              {step.parts.map((s) =>
+                s.mark ? <a class="ob-acc__link" href={step.hrefs.get(s.mark)}>{s.text}</a> : s.text,
+              )}
+            </p>
+          )}
+          {step.shots.length > 0 && (
+            <div class="ob-sub__shots">
+              {step.shots.map((shot) => (
+                <figure class="ob-acc__shot">
+                  <div class="ob-acc__frame">
+                    <img
+                      src={mediaUrl(shot.url)}
+                      alt={shot.alt}
+                      width={shot.width}
+                      height={shot.height}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                </figure>
+              ))}
+            </div>
+          )}
+        </article>
+      ))
+    }
+  </div>
+</section>

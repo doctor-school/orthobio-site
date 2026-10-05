@@ -606,12 +606,63 @@ const accommodationBlockSchema = z.object({
 
 export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
 
+/**
+ * «Как подать материалы» — the owner-approved instruction for submitting
+ * talks, posters and abstracts in the congress cabinet (Issue #99).
+ *
+ * Steps are numbered by their position, never by a field, so the printed
+ * numbers cannot skip or repeat. `text: null` is a step whose copy is not
+ * ready yet: it prints its heading only (step 2, «Как войти в кабинет», waits
+ * for the sign-in rework) — never an invented paragraph.
+ *
+ * Like the accommodation block, the copy stays plain text: a link is a named
+ * phrase of the sentence (`links[].text`), placed by the renderer via
+ * `segment()`, and `pageSchemaChecked` fails the build when the sentence stops
+ * containing it. Dates are `{{tokens}}` filled from the site config.
+ */
+const submissionGuideBlockSchema = z.object({
+  kind: z.literal('submission-guide'),
+  heading: prose(),
+  steps: z
+    .array(
+      z.object({
+        title: prose(),
+        text: proseOrNull(),
+        links: z
+          .array(
+            z.object({
+              /** A phrase of `text`, printed as the link. */
+              text: prose(),
+              /** An internal route — the guide never sends a reader off-site. */
+              href: z.string().regex(/^\/(?!\/)/, 'an internal route: /path'),
+            }),
+          )
+          .default([]),
+        /** Cabinet screenshots (ds-platform stand), in reading order. */
+        shots: z
+          .array(
+            z.object({
+              url: mediaLocation(),
+              alt: prose(),
+              width: z.number().int().positive(),
+              height: z.number().int().positive(),
+            }),
+          )
+          .default([]),
+      }),
+    )
+    .min(1),
+});
+
+export type SubmissionGuideBlock = z.infer<typeof submissionGuideBlockSchema>;
+
 const pageBlockSchema = z.discriminatedUnion('kind', [
   textBlockSchema,
   listBlockSchema,
   stubBlockSchema,
   faqBlockSchema,
   accommodationBlockSchema,
+  submissionGuideBlockSchema,
 ]);
 
 export type PageBlock = z.infer<typeof pageBlockSchema>;
@@ -648,7 +699,44 @@ export const pageSchema = z.object({
  */
 export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
   let accommodationSeen = false;
+  let guideSeen = false;
   page.blocks.forEach((block, i) => {
+    if (block.kind === 'submission-guide') {
+      // Its anchor is fixed and linked from outside the site (Issue #99).
+      if (guideSeen) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', i, 'kind'],
+          message: 'at most one submission-guide block per page — its anchor is fixed',
+        });
+      }
+      guideSeen = true;
+      block.steps.forEach((step, s) => {
+        if (step.text === null) {
+          if (step.links.length > 0 || step.shots.length > 0) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['blocks', i, 'steps', s],
+              message: 'a step without text carries no links or screenshots — it is a heading only',
+            });
+          }
+          return;
+        }
+        const text = step.text;
+        step.links.forEach((link, l) => {
+          try {
+            segment(text, [link.text]);
+          } catch {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['blocks', i, 'steps', s, 'links', l, 'text'],
+              message: `the step text must contain «${link.text}» — the renderer links it there`,
+            });
+          }
+        });
+      });
+      return;
+    }
     if (block.kind === 'accommodation') {
       // The section carries fixed ids (the /registration link target and its
       // aria-labelledby); a second copy would duplicate both.

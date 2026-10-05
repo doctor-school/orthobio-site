@@ -3708,6 +3708,42 @@ body > main:has(> .ob-reg) {
   }
 }
 
+/* ── Submission guide (/participants#podat-materialy, Issue #99) ─────────────
+   Reuses the accommodation card, tile, paragraph, link and screenshot frame
+   (.ob-acc__*); only the stack of steps and the screenshot column are here. */
+
+.ob-sub__steps {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ob-sub__num {
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Screenshots keep their own width (the attribute), up to the card's: a form
+   shot stretched past its pixels blurs, squeezed into a grid cell it is
+   unreadable. `justify-items: start` lets each frame hug its image. */
+.ob-sub__shots {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+}
+
+.ob-sub__shots > .ob-acc__shot {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ob-sub__shots .ob-acc__frame img {
+  width: auto;
+  max-width: 100%;
+}
+
 /* ── Privacy policy (/privacy) ───────────────────────────────────────────── */
 
 .ob-policy {

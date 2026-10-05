@@ -57,6 +57,8 @@ test.describe('submission guide section', () => {
     await page.goto('/participants');
     const text = unbreak((await page.locator(SECTION).textContent()) ?? '');
     expect(text).not.toContain('{{');
+    expect(text).not.toMatch(/приём открыт|открыт приём/);
+    expect(text).toMatch(/«Забрать на исправление» до окончания приёма своего вида: устные доклады — до \d{1,2} [а-я]+ \d{4} года/);
     expect(text).toMatch(/устные доклады — до \d{1,2} [а-я]+ \d{4} года, постерные доклады и тезисы — до \d{1,2} [а-я]+ \d{4} года, до 23:59/);
     expect(text).toMatch(/устный доклад — \d{1,2} [а-я]+ \d{4} года; постерный доклад и тезисы — \d{1,2} [а-я]+ \d{4} года\./);
     expect(text).toMatch(/младше 40 лет на \d{1,2} [а-я]+ \d{4}: родились \d{2}\.\d{2}\.\d{4} или позже — можно; \d{2}\.\d{2}\.\d{4} или раньше — нельзя/);

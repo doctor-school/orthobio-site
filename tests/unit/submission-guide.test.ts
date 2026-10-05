@@ -150,6 +150,12 @@ describe('participants.yaml → submission guide', () => {
     expect(text(5)).toContain(
       'младше 40 лет на 23 апреля 2027: родились 24.04.1987 или позже — можно; 23.04.1987 или раньше — нельзя',
     );
+    // The take-back deadline is dated, as the cabinet now states it
+    // (ds-platform #2573) — never «пока приём открыт».
+    const takeBack = `устные доклады — до ${oral}, постерные доклады и тезисы — до ${poster}`;
+    expect(text(9)).toContain(`можно «Забрать на исправление» до окончания приёма своего вида: ${takeBack};`);
+    expect(text(10)).toContain(`пока заявка «Отправлена», до окончания приёма своего вида (${takeBack}): «Забрать на исправление»`);
+    expect(filled.steps.map((s) => plain(s.text ?? '')).join('\n')).not.toMatch(/приём открыт|открыт приём/);
     expect(JSON.stringify(filled)).not.toContain('{{');
   });
 

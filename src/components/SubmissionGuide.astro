@@ -13,9 +13,18 @@
  * The tile carries the step number for the eye and is hidden from assistive
  * tech; the heading itself starts with the number, visually hidden, so the
  * outline reads «1. Кто может подать материалы» either way.
+ *
+ * A step of sub-steps (step 2, sign-in) is a real <ol> with each screenshot
+ * under the sub-step it shows; its button is the site Button in the
+ * accommodation CTA placement (full width on a phone), `secondary` because the
+ * page's one primary is the hotel booking; its «если не получилось» line is
+ * the accommodation note (`.ob-acc__note`, muted). The button's label and URL
+ * are site config, never copy.
  */
+import Button from '@/components/Button.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
-import { mediaUrl } from '@/config/site';
+import Shots from '@/components/SubmissionGuideShots.astro';
+import { CABINET_LOGIN_LABEL, CABINET_LOGIN_URL } from '@/config/site';
 import type { SubmissionGuideBlock } from '@/content';
 import { segment } from '@/lib/accommodation';
 import { SUBMISSION_GUIDE_ANCHOR, submissionStepId } from '@/lib/submission-guide';
@@ -26,6 +35,7 @@ interface Props {
 
 const { block } = Astro.props;
 const headingId = `${SUBMISSION_GUIDE_ANCHOR}-title`;
+const CTAS = { 'cabinet-login': { label: CABINET_LOGIN_LABEL, href: CABINET_LOGIN_URL } } as const;
 const steps = block.steps.map((step, i) => {
   const n = i + 1;
   const hrefs = new Map(step.links.map((l) => [l.text, l.href]));
@@ -35,6 +45,7 @@ const steps = block.steps.map((step, i) => {
     id: submissionStepId(n),
     parts: step.text === null ? [] : segment(step.text, [...hrefs.keys()]),
     hrefs,
+    cta: step.cta === null ? null : CTAS[step.cta],
   };
 });
 ---
@@ -59,23 +70,26 @@ const steps = block.steps.map((step, i) => {
               )}
             </p>
           )}
-          {step.shots.length > 0 && (
-            <div class="ob-sub__shots">
-              {step.shots.map((shot) => (
-                <figure class="ob-acc__shot">
-                  <div class="ob-acc__frame">
-                    <img
-                      src={mediaUrl(shot.url)}
-                      alt={shot.alt}
-                      width={shot.width}
-                      height={shot.height}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                </figure>
+          {step.items.length > 0 && (
+            <ol class="ob-list ob-sub__items">
+              {step.items.map((item) => (
+                <li>
+                  {item.text}
+                  {item.shots.length > 0 && <Shots shots={item.shots} />}
+                </li>
               ))}
-            </div>
+            </ol>
+          )}
+          {step.shots.length > 0 && <Shots shots={step.shots} />}
+          {step.cta && (
+            <Button class="ob-acc__cta" variant="secondary" size="lg" href={step.cta.href} external>
+              {step.cta.label}
+            </Button>
+          )}
+          {step.note && (
+            <p class="ob-acc__note">
+              <span><em>{step.note.lead}</em> {step.note.text}</span>
+            </p>
           )}
         </article>
       ))

@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 import {
+  CABINET_LOGIN_LABEL,
+  CABINET_LOGIN_URL,
   CONTENT_TOKENS,
   POSTER_AGE_CUTOFF,
   POSTER_AGE_LIMIT_YEARS,
@@ -116,11 +118,26 @@ describe('participants.yaml → submission guide', () => {
     ]);
   });
 
-  it('leaves «Как войти в кабинет» empty until the sign-in rework', () => {
+  it('walks «Как войти в кабинет» as five numbered sub-steps, a button and a note', () => {
     const step = guide.steps[1];
     expect(step.text).toBeNull();
-    expect(step.links).toEqual([]);
-    expect(step.shots).toEqual([]);
+    expect(step.items).toHaveLength(5);
+    expect(step.cta).toBe('cabinet-login');
+    expect(step.note).not.toBeNull();
+    // The button the first sub-step tells the reader to press is the one printed.
+    expect(plain(step.items[0].text)).toContain(`«${CABINET_LOGIN_LABEL}»`);
+    // The screenshots follow «Отправить код» (3) and the code letter (4).
+    expect(step.items.map((item) => item.shots.length)).toEqual([0, 0, 1, 1, 0]);
+  });
+
+  it('sends «Войти в кабинет» to the Doctor.School sign-in by code, back to the congress cabinet', () => {
+    const url = new URL(CABINET_LOGIN_URL);
+    expect(url.origin).toBe('https://new.doctor.school');
+    expect(url.pathname).toBe('/login');
+    expect(url.searchParams.get('method')).toBe('code');
+    expect(url.searchParams.get('returnTo')).toBe('/account/congress');
+    // tests/e2e/submission-guide.spec.ts holds the rendered href to this literal.
+    expect(CABINET_LOGIN_URL).toBe('https://new.doctor.school/login?method=code&returnTo=/account/congress');
   });
 
   it('writes every date as a token — none is spelled out in the copy', () => {
@@ -163,38 +180,44 @@ describe('participants.yaml → submission guide', () => {
     expect(guide.steps[0].links).toEqual([{ text: '«Зарегистрироваться»', href: '/registration' }]);
   });
 
-  it('places the eleven cabinet screenshots, each once, from our bucket', () => {
-    const shots = guide.steps.flatMap((s) => s.shots);
-    expect(shots).toHaveLength(11);
-    expect(new Set(shots.map((s) => s.url)).size).toBe(11);
+  it('places the thirteen screenshots, each once, from our bucket', () => {
+    const shots = guide.steps.flatMap((s) => [...s.items.flatMap((item) => item.shots), ...s.shots]);
+    expect(shots).toHaveLength(13);
+    expect(new Set(shots.map((s) => s.url)).size).toBe(13);
     const listed = new Set(
       read('docs/assets-checksums.txt')
         .split(/\r?\n/)
         .map((line) => line.split('  ')[1]),
     );
     for (const shot of shots) {
-      expect(shot.url).toMatch(/^\/media\/2027\/submissions\/\d{2}-[a-z-]+\.png$/);
+      expect(shot.url).toMatch(/^\/media\/2027\/submissions\/(login-)?\d{2}-[a-z0-9-]+\.png$/);
       expect(listed.has(shot.url.replace('/media/', '')), `${shot.url} is not in the checksum list`).toBe(true);
       expect(shot.alt.length, `${shot.url} needs a meaningful alt`).toBeGreaterThan(40);
     }
   });
 
   it('shows each screenshot under the step it illustrates', () => {
+    const file = (url: string) => url.split('/').at(-1)!;
     const where = Object.fromEntries(
-      guide.steps.flatMap((s, i) => s.shots.map((shot) => [shot.url.split('/').at(-1)!.slice(0, 2), i + 1])),
+      guide.steps.flatMap((s, i) => [
+        ...s.items.flatMap((item, j) => item.shots.map((shot) => [file(shot.url), `${i + 1}.${j + 1}`])),
+        ...s.shots.map((shot) => [file(shot.url), `${i + 1}`]),
+      ]),
     );
     expect(where).toEqual({
-      '01': 3,
-      '11': 3,
-      '03': 4,
-      '04': 4,
-      '05': 4,
-      '07': 4,
-      '08': 5,
-      '09': 5,
-      '10': 6,
-      '06': 7,
-      '12': 9,
+      'login-02-by-code-email.png': '2.3',
+      'login-03-check-email.png': '2.4',
+      '01-cabinet-empty.png': '3',
+      '11-list-with-statuses-v2.png': '3',
+      '03-oral-form-authors.png': '4',
+      '04-oral-form-text.png': '4',
+      '05-validation-errors.png': '4',
+      '07-submit-confirm-v2.png': '4',
+      '08-poster-birthdate.png': '5',
+      '09-poster-age-refusal.png': '5',
+      '10-abstract-form.png': '6',
+      '06-consent-and-submit.png': '7',
+      '12-sent-card-actions-v2.png': '9',
     });
   });
 });
@@ -219,10 +242,22 @@ describe('schema guards of the guide', () => {
     expect(r.success).toBe(false);
   });
 
-  it('refuses links or screenshots on a step without text', () => {
+  it('refuses screenshots, a button or a note on a heading-only step', () => {
     const shot = { url: '/media/2027/submissions/x.png', alt: 'a', width: 1, height: 1 };
-    const r = pageSchemaChecked.safeParse(page([block([step({ text: null, shots: [shot] })])]));
-    expect(r.success).toBe(false);
+    for (const extra of [{ shots: [shot] }, { cta: 'cabinet-login' }, { note: { lead: 'Л.', text: 'Т.' } }]) {
+      expect(pageSchemaChecked.safeParse(page([block([step({ text: null, ...extra })])])).success).toBe(false);
+    }
+  });
+
+  it('allows a step of sub-steps only, with a button and a note', () => {
+    const r = pageSchemaChecked.safeParse(
+      page([block([step({ text: null, items: [{ text: 'Один.' }], cta: 'cabinet-login', note: { lead: 'Л.', text: 'Т.' } })])]),
+    );
+    expect(r.success).toBe(true);
+  });
+
+  it('refuses a button the config does not define', () => {
+    expect(pageSchemaChecked.safeParse(page([block([step({ cta: 'elsewhere' })])])).success).toBe(false);
   });
 
   it('allows one guide per page — its anchor is fixed', () => {

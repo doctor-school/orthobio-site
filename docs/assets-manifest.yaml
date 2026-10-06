@@ -58,6 +58,12 @@
 # 11 are referenced; 02-kind-chooser.png was dropped from the guide by the
 # owner and stays in the bucket unreferenced (keys are immutable).
 #
+# 2026-10-06 (Issue #99): +5 objects under 2027/submissions/ — the sign-in
+# shots for guide step 2 (login-02-by-code-email.png,
+# login-03-check-email.png) and re-shot 07/11/12 under new `-v2` keys. The
+# three replaced objects stay in the bucket unreferenced (keys are immutable),
+# see item 2027-submissions-guide.
+#
 # 2026-09-28 (Issue #106): +1 object — the owner-supplied portrait of
 # Загородний Н.В. (2026/people/zagorodniy-288.webp), see item
 # 2026-people-zagorodniy. Its source JPEG is staged under
@@ -93,9 +99,10 @@ meta:
   # (Issue #23), +49 partner logos (Issue #22, `logos:` below) and +23 video
   # posters (Issue #33, `video_posters:` below), +1 owner-supplied portrait
   # (Issue #106, item 2026-people-zagorodniy), +1 owner-supplied screenshot
-  # (Issue #112, item 2027-accommodation-promo-field), +12 cabinet screenshots
-  # (Issue #99, item 2027-submissions-guide; 11 referenced, one orphaned).
-  s3_objects_total: 2349 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12
+  # (Issue #112, item 2027-accommodation-promo-field), +17 cabinet and sign-in
+  # screenshots (Issue #99, item 2027-submissions-guide; 13 referenced, four
+  # orphaned).
+  s3_objects_total: 2354 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12 + 5
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -587,7 +594,7 @@ years:
         s3_key: null
 
   2027:
-    counters: { files: 12, mb: 0.50 }
+    counters: { files: 14, mb: 0.56 }
     items:
       - id: 2027-accommodation-promo-field
         source: owner-supplied, 2026-09-30 (Issue #112)
@@ -616,26 +623,37 @@ years:
         s3_status: uploaded
         files: 1
       - id: 2027-submissions-guide
-        source: DS Platform stand, congress cabinet, 2026-10-05 (Issue #99)
+        source: DS Platform stand, congress cabinet and sign-in, 2026-10-05/06 (Issue #99)
         source_urls: []
         description: >-
-          Eleven screenshots of the congress submission cabinet
-          («Мои заявки на Конгресс») taken on the DS Platform stand with demo
-          data: 01-cabinet-empty, 11-list-with-statuses and
-          12-sent-card-actions re-shot 2026-10-05 at ds-platform main b00b0424,
-          the other eight unchanged from the earlier pass. RGB PNG at 1×,
-          808–1080 px wide, 498729 B in all; sha256 per file in
-          docs/assets-checksums.txt.
+          Thirteen screenshots for the «Как подать материалы» guide, taken on
+          the DS Platform stand with demo data. Eleven show the congress
+          submission cabinet («Мои заявки на Конгресс»): 01-cabinet-empty,
+          03–06 and 08–10 from the 2026-10-05 pass, and 07-submit-confirm-v2,
+          11-list-with-statuses-v2, 12-sent-card-actions-v2 re-shot
+          2026-10-06. Two show the sign-in by code for step 2:
+          login-02-by-code-email (the e-mail field and «Отправить код») and
+          login-03-check-email (the six code cells). RGB PNG at 1×, 492–1080 px
+          wide, 564058 B in all; sha256 per file in docs/assets-checksums.txt.
 
-          A twelfth, 02-kind-chooser.png (35702 B, sha256
+          Four more objects under this prefix are unreferenced and stay in the
+          bucket — keys are immutable — and are not in the checksum list:
+          02-kind-chooser.png (35702 B, sha256
           4b0d0b58297f6909ef8bd9b22fe055f5e84a4c2a2c904917477200917035c4f6),
-          was uploaded with them and then dropped by the owner (2026-10-05:
-          it repeats 01). The object stays in the bucket unreferenced — keys
-          are immutable — and is not in the checksum list. Served as-is (no derivative): UI text
-          stays crisp in PNG and every file is under 120 KB.
+          dropped by the owner 2026-10-05 (it repeats 01), and the three
+          shots the `-v2` keys replaced 2026-10-06: 07-submit-confirm.png
+          (24126 B, sha256
+          df3f3e596d2e4841745014c5e46c2c183df2dc4809baa27c406cd871d305418f),
+          11-list-with-statuses.png (47530 B, sha256
+          3744b03cd8c505ea7f0e6d04b734c48980a3adc0b05dc925cef4a0b4bd0e3e3e),
+          12-sent-card-actions.png (23184 B, sha256
+          c774a4312c8683f05b08c5d221e74829f07e65bc6f117b362bc8995841e0c3e5).
+          Served as-is (no derivative): UI text stays crisp in PNG and every
+          file is under 120 KB.
 
-          Consumer: participants.yaml → submission-guide.steps[].shots
-          («Как подать материалы», /participants#podat-materialy).
+          Consumer: participants.yaml → submission-guide.steps[].shots and
+          steps[].items[].shots («Как подать материалы»,
+          /participants#podat-materialy).
 
           Upload: `node scripts/upload-media-object.mjs <staged file>
           2027/submissions/<name>.png`, one call per file. Keys are immutable;
@@ -645,10 +663,11 @@ years:
         status: downloaded
         local: '2027/submissions/'
         s3_key: '2027/submissions/'
-        # Uploaded 2026-10-05: read-back sha256 matched for all 12; served as
-        # image/png, Cache-Control immutable. 11 referenced (see above).
+        # Uploaded 2026-10-05 (12) and 2026-10-06 (5): read-back sha256 matched
+        # for all 17; served as image/png, Cache-Control immutable. 13
+        # referenced (see above).
         s3_status: uploaded
-        files: 11
+        files: 13
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Partner / organizer logos (Issue #22) — rescued 2026-07-29

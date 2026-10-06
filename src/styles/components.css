@@ -3744,6 +3744,19 @@ body > main:has(> .ob-reg) {
   max-width: 100%;
 }
 
+/* Sub-steps (step 2, sign-in): the site's numbered list (`.ob-list`, sky
+   markers), in the card's body colour and measure — these are the steps to
+   follow, not an aside. A screenshot sits under the sub-step it shows. */
+.ob-sub__items {
+  color: var(--text-body);
+  max-width: var(--measure);
+  margin: 0 0 var(--sp-5);
+}
+
+.ob-sub__items .ob-sub__shots {
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
 /* ── Privacy policy (/privacy) ───────────────────────────────────────────── */
 
 .ob-policy {

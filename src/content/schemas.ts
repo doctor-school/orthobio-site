@@ -611,15 +611,29 @@ export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
  * talks, posters and abstracts in the congress cabinet (Issue #99).
  *
  * Steps are numbered by their position, never by a field, so the printed
- * numbers cannot skip or repeat. `text: null` is a step whose copy is not
- * ready yet: it prints its heading only (step 2, «Как войти в кабинет», waits
- * for the sign-in rework) — never an invented paragraph.
+ * numbers cannot skip or repeat. A step is a paragraph (`text`), an ordered
+ * list of sub-steps (`items`, each with its own screenshots), or both; one with
+ * neither prints its heading only — never an invented paragraph. `note` is the
+ * secondary «если не получилось» line; `cta: cabinet-login` is the sign-in
+ * button, whose label and URL come from the site config, never from the copy.
  *
  * Like the accommodation block, the copy stays plain text: a link is a named
  * phrase of the sentence (`links[].text`), placed by the renderer via
  * `segment()`, and `pageSchemaChecked` fails the build when the sentence stops
  * containing it. Dates are `{{tokens}}` filled from the site config.
  */
+const guideShots = () =>
+  z
+    .array(
+      z.object({
+        url: mediaLocation(),
+        alt: prose(),
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      }),
+    )
+    .default([]);
+
 const submissionGuideBlockSchema = z.object({
   kind: z.literal('submission-guide'),
   heading: prose(),
@@ -638,17 +652,12 @@ const submissionGuideBlockSchema = z.object({
             }),
           )
           .default([]),
+        /** Numbered sub-steps, each with the screenshots that follow it. */
+        items: z.array(z.object({ text: prose(), shots: guideShots() })).default([]),
         /** Cabinet screenshots (ds-platform stand), in reading order. */
-        shots: z
-          .array(
-            z.object({
-              url: mediaLocation(),
-              alt: prose(),
-              width: z.number().int().positive(),
-              height: z.number().int().positive(),
-            }),
-          )
-          .default([]),
+        shots: guideShots(),
+        cta: z.enum(['cabinet-login']).nullable().default(null),
+        note: z.object({ lead: prose(), text: prose() }).nullable().default(null),
       }),
     )
     .min(1),
@@ -713,11 +722,17 @@ export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
       guideSeen = true;
       block.steps.forEach((step, s) => {
         if (step.text === null) {
-          if (step.links.length > 0 || step.shots.length > 0) {
+          const headingOnly = step.items.length === 0;
+          if (
+            step.links.length > 0 ||
+            (headingOnly && (step.shots.length > 0 || step.cta !== null || step.note !== null))
+          ) {
             ctx.addIssue({
               code: 'custom',
               path: ['blocks', i, 'steps', s],
-              message: 'a step without text carries no links or screenshots — it is a heading only',
+              message: headingOnly
+                ? 'a step without text or items carries nothing — it is a heading only'
+                : 'links are phrases of the step text — a step without text carries none',
             });
           }
           return;

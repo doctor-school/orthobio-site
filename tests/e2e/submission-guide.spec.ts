@@ -12,7 +12,9 @@ import { expectNoOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow
  *
  * - the permanent anchor #podat-materialy lands on the section (the letter to
  *   registered participants links to it);
- * - the ten steps render in order, step 2 as a heading only;
+ * - the ten steps render in order; step 2 is a numbered list of five
+ *   sub-steps with a screenshot after the third and the fourth, the sign-in
+ *   button and a secondary note;
  * - every date token was filled — the page never shows «{{…}}»;
  * - every screenshot actually loads from our bucket at its declared size, and
  *   none of them pushes the page or its card wider than the viewport.
@@ -32,6 +34,11 @@ const STEP_TITLES = [
   '10. Частые вопросы',
 ];
 
+// CABINET_LOGIN_URL in src/config/site.ts — that module touches
+// `import.meta.env`, so the suite cannot import it (see signup.spec.ts); the
+// unit test holds the config to the same address.
+const CABINET_LOGIN_URL = 'https://new.doctor.school/login?method=code&returnTo=/account/congress';
+
 const unbreak = (s: string) => s.replace(/ /g, ' ');
 
 test.describe('submission guide section', () => {
@@ -45,12 +52,34 @@ test.describe('submission guide section', () => {
     );
   });
 
-  test('renders the ten approved steps in order, step 2 as a heading only', async ({ page }) => {
+  test('renders the ten approved steps in order', async ({ page }) => {
     await page.goto('/participants');
     const titles = (await page.locator(`${SECTION} h3`).allTextContents()).map((t) => unbreak(t).trim());
     expect(titles).toEqual(STEP_TITLES);
-    await expect(page.locator('#podat-materialy-2 p')).toHaveCount(0);
-    await expect(page.locator('#podat-materialy-2 img')).toHaveCount(0);
+  });
+
+  test('step 2 walks the sign-in as five numbered sub-steps, shots after the third and fourth', async ({ page }) => {
+    await page.goto('/participants');
+    const items = page.locator('#podat-materialy-2 ol > li');
+    await expect(items).toHaveCount(5);
+    const shots = await items.evaluateAll((lis) => lis.map((li) => li.querySelectorAll('img').length));
+    expect(shots).toEqual([0, 0, 1, 1, 0]);
+    await expect(items.nth(2).locator('img')).toHaveAttribute('src', /\/2027\/submissions\/login-02-[a-z0-9-]+\.png$/);
+    await expect(items.nth(3).locator('img')).toHaveAttribute('src', /\/2027\/submissions\/login-03-[a-z0-9-]+\.png$/);
+    // List → button → the secondary note, in reading order.
+    const order = await page
+      .locator('#podat-materialy-2 > *')
+      .evaluateAll((els) => els.map((el) => (el.matches('ol') ? 'list' : el.matches('.ob-btn') ? 'button' : el.matches('.ob-acc__note') ? 'note' : null)).filter(Boolean));
+    expect(order).toEqual(['list', 'button', 'note']);
+  });
+
+  test('«Войти в кабинет» opens the Doctor.School sign-in by code in a new tab', async ({ page }) => {
+    await page.goto('/participants');
+    const button = page.locator('#podat-materialy-2').getByRole('link', { name: /^Войти в кабинет/ });
+    await expect(button).toHaveCount(1);
+    await expect(button).toHaveAttribute('href', CABINET_LOGIN_URL);
+    await expect(button).toHaveAttribute('target', '_blank');
+    await expect(button).toHaveClass(/(^|\s)ob-btn(\s|$)/);
   });
 
   test('prints the dates from the site settings, never a raw token', async ({ page }) => {
@@ -74,9 +103,9 @@ test.describe('submission guide section', () => {
   test('every screenshot loads from our bucket at its declared size', async ({ page }) => {
     await page.goto('/participants');
     const imgs = page.locator(`${SECTION} img`);
-    await expect(imgs).toHaveCount(11);
+    await expect(imgs).toHaveCount(13);
     for (const img of await imgs.all()) {
-      await expect(img).toHaveAttribute('src', /^https:\/\/s3\.twcstorage\.ru\/orthobio-media\/2027\/submissions\/\d{2}-[a-z-]+\.png$/);
+      await expect(img).toHaveAttribute('src', /^https:\/\/s3\.twcstorage\.ru\/orthobio-media\/2027\/submissions\/(login-)?\d{2}-[a-z0-9-]+\.png$/);
       await expect(img).toHaveAttribute('loading', 'lazy');
       expect((await img.getAttribute('alt'))?.length ?? 0).toBeGreaterThan(40);
       await img.scrollIntoViewIfNeeded();

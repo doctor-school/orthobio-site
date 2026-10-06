@@ -252,6 +252,16 @@ export const NOTIFY_CHANNEL_URL = 'https://t.me/DoctorSchool';
 export const NOTIFY_CTA_LABEL = 'Узнать первым';
 
 /**
+ * «Войти в кабинет» in step 2 of the submission guide (Issue #99, owner-approved
+ * text of 2026-10-06): the Doctor.School sign-in page, opened on the
+ * «по коду» method, which lands in the congress cabinet after the code. The
+ * cabinet lives on the DS Platform, so the URL is off-site and a config value —
+ * a move of the cabinet is a one-line change here, not a copy edit.
+ */
+export const CABINET_LOGIN_URL = 'https://new.doctor.school/login?method=code&returnTo=/account/congress';
+export const CABINET_LOGIN_LABEL = 'Войти в кабинет';
+
+/**
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).
  * These belong to Doctor.School, not to the outgoing site's technical operator.
  */

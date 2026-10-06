@@ -176,8 +176,9 @@ test.describe('without JavaScript', () => {
     // card and the OpenStreetMap credit on its map. 57 since Issue #88: the
     // «Узнать первым» Telegram CTA on the /registration «откроется» card.
     // 59 since Issue #112: the hotel booking CTA and the hotel address (map)
-    // link of the /participants «Проживание» section.
-    expect(checked, 'the sweep must reach every external link on the site').toBe(59);
+    // link of the /participants «Проживание» section. 60 since Issue #99: the
+    // «Войти в кабинет» button of the /participants submission guide.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(60);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

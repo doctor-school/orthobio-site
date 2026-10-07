@@ -600,7 +600,7 @@ years:
         s3_key: null
 
   2027:
-    counters: { files: 14, mb: 0.56 }
+    counters: { files: 16, mb: 0.60 }
     items:
       - id: 2027-accommodation-promo-field
         source: owner-supplied, 2026-09-30 (Issue #112)
@@ -657,9 +657,11 @@ years:
           Served as-is (no derivative): UI text stays crisp in PNG and every
           file is under 120 KB.
 
-          Consumer: participants.yaml → submission-guide.steps[].shots and
+          Consumers: participants.yaml → submission-guide.steps[].shots and
           steps[].items[].shots («Как подать материалы»,
-          /participants#podat-materialy).
+          /participants#podat-materialy); login-03-check-email and
+          01-cabinet-empty also under steps 2 and 3 of the sign-up success
+          card (SignupForm.astro, Issue #116).
 
           Upload: `node scripts/upload-media-object.mjs <staged file>
           2027/submissions/<name>.png`, one call per file. Keys are immutable;

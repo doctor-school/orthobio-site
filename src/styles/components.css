@@ -3277,6 +3277,28 @@ body > main:has(> .ob-reg) {
   overflow-wrap: anywhere;
 }
 
+/* The two letters under the line that announces them (Issue #116): the
+   accommodation screenshot frame and caption (.ob-acc__*), stacked on a phone,
+   side by side from 640px. */
+.ob-signup__letters {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  margin: var(--sp-4) 0 var(--sp-5);
+}
+
+@media (min-width: 640px) {
+  .ob-signup__letters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.ob-signup__letters > .ob-acc__shot {
+  margin: 0;
+  min-width: 0;
+}
+
 /* ── Accommodation (/participants#accommodation, Issue #112) ─────────────── */
 
 .ob-acc__intro {

@@ -192,6 +192,9 @@ const SUCCESS_TITLE = 'Вы зарегистрированы на VIII Конг�
 /** A hand-off reference no other string on the page could contain by chance. */
 const HANDOFF = 'hx7Qp9-REF_zW2';
 const CABINET_PLAIN = 'https://new.doctor.school/login?method=code&returnTo=/account/congress';
+/** The line above the two letters (owner request, Issue #116), as the heading's description. */
+const LETTERS_LINE =
+  'Мы отправим вам два письма: подтверждение регистрации\u00a0— сразу, а письмо с\u00a0кодом для входа\u00a0— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут\u00a0— проверьте папку «Спам».';
 const cabinetButton = (page: Page) =>
   page.locator('[data-signup-success]').getByRole('link', { name: /^Войти в кабинет/ });
 
@@ -315,7 +318,7 @@ test.describe('sign-up form', () => {
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
     await expect(title).toHaveAccessibleDescription(
-      'Письмо-подтверждение придёт на ivanov@example.com в\u00a0течение нескольких минут. Если его нет\u00a0— проверьте папку «Спам».',
+      LETTERS_LINE,
     );
     await expect(page.locator('[data-signup-form]')).toBeHidden();
     // The form's own heading leaves with the form: the card now says one thing.
@@ -417,11 +420,76 @@ test.describe('sign-up form', () => {
     const shown = await first.innerText();
     expect(shown).not.toContain('ivanov@example.com');
     expect(shown).not.toContain('код');
-    // The confirmation line still names the address.
+    // The line about the two letters stays; the address is named only in step 1.
     await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toHaveAccessibleDescription(
-      /ivanov@example\.com/,
+      LETTERS_LINE,
     );
+    expect(await page.locator('[data-signup-success]').innerText()).not.toContain('ivanov@example.com');
   });
+
+  test('shows the two letters under the line that announces them, each from our bucket at its declared size', async ({
+    page,
+  }) => {
+    await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    const figures = page.locator('[data-signup-success] .ob-signup__letters figure');
+    await expect(figures.locator('figcaption')).toHaveText(['Подтверждение регистрации', 'Письмо с кодом']);
+    const imgs = figures.locator('img');
+    await expect(imgs).toHaveCount(2);
+    for (const [i, img] of (await imgs.all()).entries()) {
+      await expect(img).toHaveAttribute(
+        'src',
+        `https://s3.twcstorage.ru/orthobio-media/2027/submissions/${['letter-confirmation', 'letter-code'][i]}.png`,
+      );
+      await expect(img).toHaveAttribute('loading', 'lazy');
+      expect(await img.getAttribute('alt')).toMatch(/^Письмо «.+»: .{40,}/);
+      await img.scrollIntoViewIfNeeded();
+      const width = Number(await img.getAttribute('width'));
+      const height = Number(await img.getAttribute('height'));
+      await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => (el.complete ? [el.naturalWidth, el.naturalHeight] : null)), {
+          message: `${await img.getAttribute('src')} did not load at ${width}×${height}`,
+          timeout: 15_000,
+        })
+        .toEqual([width, height]);
+    }
+  });
+
+  // Side by side where the card has room, stacked on a phone; never wider than the card.
+  for (const [width, sideBySide] of [
+    [360, false],
+    [390, false],
+    [768, true],
+    [1280, true],
+  ] as const) {
+    test(`the two letters sit ${sideBySide ? 'side by side' : 'stacked'} inside the card at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+      const figures = page.locator('[data-signup-success] .ob-signup__letters figure');
+      await expect(figures).toHaveCount(2);
+      const [a, b] = await Promise.all([figures.nth(0).boundingBox(), figures.nth(1).boundingBox()]);
+      if (sideBySide) {
+        expect(Math.round(a!.y)).toBe(Math.round(b!.y));
+        expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width);
+      } else {
+        expect(b!.y).toBeGreaterThanOrEqual(a!.y + a!.height);
+      }
+      const card = (await page.locator('.ob-signup__card:visible').boundingBox())!;
+      for (const box of [a!, b!]) {
+        expect(box.x).toBeGreaterThanOrEqual(card.x - 0.5);
+        expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+      }
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
 
   test('a success body that is not JSON still shows the card, with the plain link', async ({ page }) => {
     await page.route(SIGN_UP_URL, (route) => route.fulfill({ status: 200, body: '' }));

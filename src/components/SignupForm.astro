@@ -43,12 +43,37 @@ import {
   SMARTCAPTCHA_SITEKEY,
   SMARTCAPTCHA_SITEKEY_PREVIEW,
   UPCOMING_CONGRESS_DATES,
+  mediaUrl,
 } from '@/config/site';
 import { FORCE_OPEN_HOSTS, formatMoscowInstant } from '@/lib/registration';
 
 const opensLabel = formatMoscowInstant(REGISTRATION_WINDOW.opensAt);
 const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIEW !== '';
 const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
+
+/**
+ * The two letters a registrant receives, shown on the success card so the
+ * reader knows what to expect and where the code comes from (owner request,
+ * Issue #116). Screenshots of the real letters taken on a DS Platform stage
+ * stand, in the bucket under 2027/submissions/ (docs/assets-manifest.yaml,
+ * item 2027-congress-letters); framed like the guide's screenshots.
+ */
+const SIGNUP_LETTERS = [
+  {
+    url: '/media/2027/submissions/letter-confirmation.png',
+    caption: 'Подтверждение регистрации',
+    alt: 'Письмо «Doctor.School — вы зарегистрированы на VIII Конгресс ОРТОБИОЛОГИЯ 2027»: дата, время и место Конгресса и строка о том, как подать материалы, — на сайте orthobio.ru в разделе «Участникам» найти «Как подать материалы» и нажать «Войти в кабинет»',
+    width: 520,
+    height: 494,
+  },
+  {
+    url: '/media/2027/submissions/letter-code.png',
+    caption: 'Письмо с кодом',
+    alt: 'Письмо «… — код для входа в Doctor.School»: шесть символов кода крупно и подсказка ввести их во вкладке Doctor.School, где код запрошен; код действует 1 час',
+    width: 520,
+    height: 423,
+  },
+] as const;
 ---
 
 <div
@@ -372,9 +397,29 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».
       </h2>
       <p class="ob-signup__stext" id="signup-success-text">
-        Письмо-подтверждение придёт на <b data-signup-email></b> в&nbsp;течение нескольких минут. Если
-        его нет&nbsp;— проверьте папку «Спам».
+        Мы отправим вам два письма: подтверждение регистрации&nbsp;— сразу, а письмо с&nbsp;кодом для
+        входа&nbsp;— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут&nbsp;—
+        проверьте папку «Спам».
       </p>
+      <div class="ob-signup__letters">
+        {
+          SIGNUP_LETTERS.map((letter) => (
+            <figure class="ob-acc__shot">
+              <div class="ob-acc__frame">
+                <img
+                  src={mediaUrl(letter.url)}
+                  alt={letter.alt}
+                  width={letter.width}
+                  height={letter.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption class="ob-acc__cap">{letter.caption}</figcaption>
+            </figure>
+          ))
+        }
+      </div>
       <p class="ob-signup__stext ob-signup__lead">Чтобы подать доклад или тезисы:</p>
       <ol class="ob-list ob-signup__steps">
         <li>

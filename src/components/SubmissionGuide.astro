@@ -15,11 +15,17 @@
  * outline reads «1. Кто может подать материалы» either way.
  *
  * A step of sub-steps (step 2, sign-in) is a real <ol> with each screenshot
- * under the sub-step it shows; its button is the site Button in the
- * accommodation CTA placement (full width on a phone), `secondary` because the
- * page's one primary is the hotel booking; its «если не получилось» line is
- * the accommodation note (`.ob-acc__note`, muted). The button's label and URL
- * are site config, never copy.
+ * under the sub-step it shows; the button sits under the sub-step that names
+ * it (owner, 2026-10-07), the site Button in the accommodation CTA placement
+ * (full width on a phone), `secondary` because the page's one primary is the
+ * hotel booking; its «если не получилось» line is the accommodation note
+ * (`.ob-acc__note`, muted). The button's label and URL are site config, never
+ * copy.
+ *
+ * The page has two of these blocks, each at its own fixed anchor (owner,
+ * 2026-10-07): «Как подать материалы» (who may submit, sign-in) ends with a
+ * pointer to «Как заполнить заявку» (the cabinet steps, no sign-in), so a
+ * reader who signed in elsewhere skips straight to the second.
  */
 import Button from '@/components/Button.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
@@ -27,14 +33,14 @@ import Shots from '@/components/SubmissionGuideShots.astro';
 import { CABINET_LOGIN_LABEL, CABINET_LOGIN_URL } from '@/config/site';
 import type { SubmissionGuideBlock } from '@/content';
 import { segment } from '@/lib/accommodation';
-import { SUBMISSION_GUIDE_ANCHOR, submissionStepId } from '@/lib/submission-guide';
+import { guideStepId } from '@/lib/submission-guide';
 
 interface Props {
   block: SubmissionGuideBlock;
 }
 
 const { block } = Astro.props;
-const headingId = `${SUBMISSION_GUIDE_ANCHOR}-title`;
+const headingId = `${block.anchor}-title`;
 const CTAS = { 'cabinet-login': { label: CABINET_LOGIN_LABEL, href: CABINET_LOGIN_URL } } as const;
 const steps = block.steps.map((step, i) => {
   const n = i + 1;
@@ -42,15 +48,15 @@ const steps = block.steps.map((step, i) => {
   return {
     ...step,
     n,
-    id: submissionStepId(n),
+    id: guideStepId(block.anchor, n),
     parts: step.text === null ? [] : segment(step.text, [...hrefs.keys()]),
     hrefs,
-    cta: step.cta === null ? null : CTAS[step.cta],
+    items: step.items.map((item) => ({ ...item, cta: item.cta === null ? null : CTAS[item.cta] })),
   };
 });
 ---
 
-<section class="ob-section ob-sub" id={SUBMISSION_GUIDE_ANCHOR} aria-labelledby={headingId}>
+<section class="ob-section ob-sub" id={block.anchor} aria-labelledby={headingId}>
   <SectionHeading title={block.heading} id={headingId} />
 
   <div class="ob-sub__steps">
@@ -75,17 +81,17 @@ const steps = block.steps.map((step, i) => {
               {step.items.map((item) => (
                 <li>
                   {item.text}
+                  {item.cta && (
+                    <Button class="ob-acc__cta ob-sub__cta" variant="secondary" size="lg" href={item.cta.href} external>
+                      {item.cta.label}
+                    </Button>
+                  )}
                   {item.shots.length > 0 && <Shots shots={item.shots} />}
                 </li>
               ))}
             </ol>
           )}
           {step.shots.length > 0 && <Shots shots={step.shots} />}
-          {step.cta && (
-            <Button class="ob-acc__cta" variant="secondary" size="lg" href={step.cta.href} external>
-              {step.cta.label}
-            </Button>
-          )}
           {step.note && (
             <p class="ob-acc__note">
               <span><em>{step.note.lead}</em> {step.note.text}</span>
@@ -95,4 +101,13 @@ const steps = block.steps.map((step, i) => {
       ))
     }
   </div>
+  {
+    block.next && (
+      <p class="ob-sub__next">
+        <a class="ob-acc__link" href={`#${block.next.anchor}`}>
+          {block.next.text} <span aria-hidden="true">↓</span>
+        </a>
+      </p>
+    )
+  }
 </section>

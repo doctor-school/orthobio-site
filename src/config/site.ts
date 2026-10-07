@@ -244,6 +244,14 @@ export const REGISTRATION_URL = '/registration';
 export const REGISTRATION_CTA_LABEL = 'Регистрация на конгресс';
 
 /**
+ * «Как заполнить заявку» on /participants (owner, 2026-10-07): the cabinet
+ * steps without sign-in, where the sign-up success card sends a reader who has
+ * just signed in with its personal button. The anchor is permanent and equals
+ * FILL_GUIDE_ANCHOR in src/lib/submission-guide.ts (a unit test pins the two).
+ */
+export const FILL_GUIDE_URL = '/participants#zapolnit-zayavku';
+
+/**
  * «Узнать первым» on the /registration «откроется …» card (Issue #88, owner
  * decision): the Doctor.School Telegram channel. The ONLY «узнать первым»
  * link on the site — the e2e suite holds every such link to this URL.

@@ -8,5 +8,20 @@ export const SUBMISSION_GUIDE_ANCHOR = 'podat-materialy';
 
 export const SUBMISSION_GUIDE_HREF = `/participants#${SUBMISSION_GUIDE_ANCHOR}`;
 
-/** Id of the n-th step (1-based), so a reply can point at one step. */
-export const submissionStepId = (n: number): string => `${SUBMISSION_GUIDE_ANCHOR}-${n}`;
+/**
+ * «Как заполнить заявку» (owner, 2026-10-07): the cabinet steps, split off the
+ * sign-in so a reader who signed in by one route — the success card's personal
+ * button or the guide above — is never walked through sign-in again. Both
+ * routes end with a link here, so this anchor is permanent too.
+ */
+export const FILL_GUIDE_ANCHOR = 'zapolnit-zayavku';
+
+/** The two guide blocks of /participants, each at its own fixed anchor. */
+export const GUIDE_ANCHORS = [SUBMISSION_GUIDE_ANCHOR, FILL_GUIDE_ANCHOR] as const;
+
+export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];
+
+/** Id of the n-th step (1-based) of a guide, so a reply can point at one step. */
+export const guideStepId = (anchor: GuideAnchor, n: number): string => `${anchor}-${n}`;
+
+export const submissionStepId = (n: number): string => guideStepId(SUBMISSION_GUIDE_ANCHOR, n);

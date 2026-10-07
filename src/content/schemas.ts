@@ -26,6 +26,7 @@
 import { z } from 'astro/zod';
 
 import { segment } from '../lib/accommodation';
+import { GUIDE_ANCHORS } from '../lib/submission-guide';
 
 import { typographize } from './typographize';
 
@@ -636,6 +637,8 @@ const guideShots = () =>
 
 const submissionGuideBlockSchema = z.object({
   kind: z.literal('submission-guide'),
+  /** The block's fixed anchor; its steps are `<anchor>-<n>`. */
+  anchor: z.enum(GUIDE_ANCHORS),
   heading: prose(),
   steps: z
     .array(
@@ -652,15 +655,27 @@ const submissionGuideBlockSchema = z.object({
             }),
           )
           .default([]),
-        /** Numbered sub-steps, each with the screenshots that follow it. */
-        items: z.array(z.object({ text: prose(), shots: guideShots() })).default([]),
+        /**
+         * Numbered sub-steps, each with the button it names (site config,
+         * never copy) and the screenshots that follow it.
+         */
+        items: z
+          .array(
+            z.object({
+              text: prose(),
+              cta: z.enum(['cabinet-login']).nullable().default(null),
+              shots: guideShots(),
+            }),
+          )
+          .default([]),
         /** Cabinet screenshots (ds-platform stand), in reading order. */
         shots: guideShots(),
-        cta: z.enum(['cabinet-login']).nullable().default(null),
         note: z.object({ lead: prose(), text: prose() }).nullable().default(null),
       }),
     )
     .min(1),
+  /** The closing pointer to the next guide on the page («Дальше — … ↓»). */
+  next: z.object({ text: prose(), anchor: z.enum(GUIDE_ANCHORS) }).nullable().default(null),
 });
 
 export type SubmissionGuideBlock = z.infer<typeof submissionGuideBlockSchema>;
@@ -708,24 +723,24 @@ export const pageSchema = z.object({
  */
 export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
   let accommodationSeen = false;
-  let guideSeen = false;
+  const guideAnchors = new Set<string>();
   page.blocks.forEach((block, i) => {
     if (block.kind === 'submission-guide') {
       // Its anchor is fixed and linked from outside the site (Issue #99).
-      if (guideSeen) {
+      if (guideAnchors.has(block.anchor)) {
         ctx.addIssue({
           code: 'custom',
-          path: ['blocks', i, 'kind'],
-          message: 'at most one submission-guide block per page — its anchor is fixed',
+          path: ['blocks', i, 'anchor'],
+          message: `at most one submission-guide block per anchor — #${block.anchor} is fixed`,
         });
       }
-      guideSeen = true;
+      guideAnchors.add(block.anchor);
       block.steps.forEach((step, s) => {
         if (step.text === null) {
           const headingOnly = step.items.length === 0;
           if (
             step.links.length > 0 ||
-            (headingOnly && (step.shots.length > 0 || step.cta !== null || step.note !== null))
+            (headingOnly && (step.shots.length > 0 || step.note !== null))
           ) {
             ctx.addIssue({
               code: 'custom',
@@ -792,6 +807,17 @@ export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
         code: 'custom',
         path: ['blocks', i, 'linkLabel'],
         message: 'linkHref and linkLabel must be set together — a link needs a visible label',
+      });
+    }
+  });
+  // A guide's closing pointer must land on another guide of this page.
+  page.blocks.forEach((block, i) => {
+    if (block.kind !== 'submission-guide' || block.next === null) return;
+    if (block.next.anchor === block.anchor || !guideAnchors.has(block.next.anchor)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['blocks', i, 'next', 'anchor'],
+        message: `#${block.next.anchor} is not another guide on this page`,
       });
     }
   });

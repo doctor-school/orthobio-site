@@ -3753,6 +3753,17 @@ body > main:has(> .ob-reg) {
   margin: 0 0 var(--sp-5);
 }
 
+/* «Войти в кабинет» under the sub-step that names it. */
+.ob-sub__cta {
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
+/* The closing «Дальше — … ↓» pointer to the next guide on the page. */
+.ob-sub__next {
+  margin: var(--sp-5) 0 0;
+  font-weight: var(--fw-semibold);
+}
+
 .ob-sub__items .ob-sub__shots {
   margin: var(--sp-3) 0 var(--sp-2);
 }

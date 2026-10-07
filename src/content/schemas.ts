@@ -618,6 +618,10 @@ export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
  * secondary «если не получилось» line; `cta: cabinet-login` is the sign-in
  * button, whose label and URL come from the site config, never from the copy.
  *
+ * A guide that is the whole page (/participants/zapolnit-zayavku) has no
+ * heading of its own — the page <h1> is it — and opens with `intro`, one line
+ * on what has to be done first, with its link.
+ *
  * Like the accommodation block, the copy stays plain text: a link is a named
  * phrase of the sentence (`links[].text`), placed by the renderer via
  * `segment()`, and `pageSchemaChecked` fails the build when the sentence stops
@@ -635,26 +639,35 @@ const guideShots = () =>
     )
     .default([]);
 
+/** An internal route — the guide never sends a reader off-site. */
+const internalRoute = () => z.string().regex(/^\/(?!\/)/, 'an internal route: /path');
+
+/** Phrases of a sentence printed as links to pages of this site. */
+const phraseLinks = () =>
+  z
+    .array(
+      z.object({
+        /** A phrase of the sentence, printed as the link. */
+        text: prose(),
+        href: internalRoute(),
+      }),
+    )
+    .default([]);
+
 const submissionGuideBlockSchema = z.object({
   kind: z.literal('submission-guide'),
   /** The block's fixed anchor; its steps are `<anchor>-<n>`. */
   anchor: z.enum(GUIDE_ANCHORS),
-  heading: prose(),
+  /** Null when the guide is the whole page: the page <h1> heads it. */
+  heading: proseOrNull(),
+  /** One line above the steps: what has to be done first, and where. */
+  intro: z.object({ text: prose(), links: phraseLinks() }).nullable().default(null),
   steps: z
     .array(
       z.object({
         title: prose(),
         text: proseOrNull(),
-        links: z
-          .array(
-            z.object({
-              /** A phrase of `text`, printed as the link. */
-              text: prose(),
-              /** An internal route — the guide never sends a reader off-site. */
-              href: z.string().regex(/^\/(?!\/)/, 'an internal route: /path'),
-            }),
-          )
-          .default([]),
+        links: phraseLinks(),
         /**
          * Numbered sub-steps, each with the button it names (site config,
          * never copy) and the screenshots that follow it.
@@ -664,6 +677,8 @@ const submissionGuideBlockSchema = z.object({
             z.object({
               text: prose(),
               cta: z.enum(['cabinet-login']).nullable().default(null),
+              /** A muted line right under the button (or the sub-step text). */
+              note: proseOrNull(),
               shots: guideShots(),
             }),
           )
@@ -674,8 +689,8 @@ const submissionGuideBlockSchema = z.object({
       }),
     )
     .min(1),
-  /** The closing pointer to the next guide on the page («Дальше — … ↓»). */
-  next: z.object({ text: prose(), anchor: z.enum(GUIDE_ANCHORS) }).nullable().default(null),
+  /** The closing button to the next guide, on its own page («… →»). */
+  next: z.object({ text: prose(), href: internalRoute() }).nullable().default(null),
 });
 
 export type SubmissionGuideBlock = z.infer<typeof submissionGuideBlockSchema>;
@@ -735,6 +750,18 @@ export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
         });
       }
       guideAnchors.add(block.anchor);
+      const intro = block.intro;
+      intro?.links.forEach((link, l) => {
+        try {
+          segment(intro.text, [link.text]);
+        } catch {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['blocks', i, 'intro', 'links', l, 'text'],
+            message: `the intro must contain «${link.text}» — the renderer links it there`,
+          });
+        }
+      });
       block.steps.forEach((step, s) => {
         if (step.text === null) {
           const headingOnly = step.items.length === 0;
@@ -807,17 +834,6 @@ export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
         code: 'custom',
         path: ['blocks', i, 'linkLabel'],
         message: 'linkHref and linkLabel must be set together — a link needs a visible label',
-      });
-    }
-  });
-  // A guide's closing pointer must land on another guide of this page.
-  page.blocks.forEach((block, i) => {
-    if (block.kind !== 'submission-guide' || block.next === null) return;
-    if (block.next.anchor === block.anchor || !guideAnchors.has(block.next.anchor)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['blocks', i, 'next', 'anchor'],
-        message: `#${block.next.anchor} is not another guide on this page`,
       });
     }
   });

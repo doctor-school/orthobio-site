@@ -11,6 +11,7 @@ export const STATIC_PUBLIC_ROUTES = [
   '/',
   '/program/',
   '/participants/',
+  '/participants/zapolnit-zayavku/',
   '/orgs/',
   '/nmo/',
   '/partners/',

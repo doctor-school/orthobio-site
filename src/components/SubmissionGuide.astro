@@ -22,10 +22,13 @@
  * (`.ob-acc__note`, muted). The button's label and URL are site config, never
  * copy.
  *
- * The page has two of these blocks, each at its own fixed anchor (owner,
- * 2026-10-07): «Как подать материалы» (who may submit, sign-in) ends with a
- * pointer to «Как заполнить заявку» (the cabinet steps, no sign-in), so a
- * reader who signed in elsewhere skips straight to the second.
+ * Two of these blocks, one task per page (owner, 2026-10-07): «Как подать
+ * материалы» on /participants (who may submit, sign-in) ends with a button to
+ * /participants/zapolnit-zayavku, where «Как заполнить заявку» (the cabinet
+ * steps, no sign-in) is the whole page — no heading of its own under the page
+ * <h1>, and one intro line pointing back to the sign-in for whoever is not in
+ * yet, its steps then <h2> (axe `heading-order`). A sub-step's `note` (the
+ * «уже входили» line) sits muted right under its button.
  */
 import Button from '@/components/Button.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
@@ -41,7 +44,16 @@ interface Props {
 
 const { block } = Astro.props;
 const headingId = `${block.anchor}-title`;
+// Steps sit one level under the guide's heading; with none, under the page <h1>.
+const StepHeading = block.heading ? 'h3' : 'h2';
 const CTAS = { 'cabinet-login': { label: CABINET_LOGIN_LABEL, href: CABINET_LOGIN_URL } } as const;
+const intro =
+  block.intro === null
+    ? null
+    : {
+        parts: segment(block.intro.text, block.intro.links.map((l) => l.text)),
+        hrefs: new Map(block.intro.links.map((l) => [l.text, l.href])),
+      };
 const steps = block.steps.map((step, i) => {
   const n = i + 1;
   const hrefs = new Map(step.links.map((l) => [l.text, l.href]));
@@ -56,8 +68,15 @@ const steps = block.steps.map((step, i) => {
 });
 ---
 
-<section class="ob-section ob-sub" id={block.anchor} aria-labelledby={headingId}>
-  <SectionHeading title={block.heading} id={headingId} />
+<section class="ob-section ob-sub" id={block.anchor} aria-labelledby={block.heading ? headingId : undefined}>
+  {block.heading && <SectionHeading title={block.heading} id={headingId} />}
+  {
+    intro && (
+      <p class="ob-acc__p ob-sub__intro">
+        {intro.parts.map((s) => (s.mark ? <a class="ob-acc__link" href={intro.hrefs.get(s.mark)}>{s.text}</a> : s.text))}
+      </p>
+    )
+  }
 
   <div class="ob-sub__steps">
     {
@@ -67,7 +86,7 @@ const steps = block.steps.map((step, i) => {
             <span class="ob-acc__ico ob-sub__num" aria-hidden="true">
               {step.n}
             </span>
-            <h3 class="ob-acc__wayt" id={`${step.id}-title`}><span class="ob-sr-only">{`${step.n}. `}</span>{step.title}</h3>
+            <StepHeading class="ob-acc__wayt" id={`${step.id}-title`}><span class="ob-sr-only">{`${step.n}. `}</span>{step.title}</StepHeading>
           </div>
           {step.parts.length > 0 && (
             <p class="ob-acc__p">
@@ -86,6 +105,7 @@ const steps = block.steps.map((step, i) => {
                       {item.cta.label}
                     </Button>
                   )}
+                  {item.note && <p class="ob-sub__hint">{item.note}</p>}
                   {item.shots.length > 0 && <Shots shots={item.shots} />}
                 </li>
               ))}
@@ -104,9 +124,9 @@ const steps = block.steps.map((step, i) => {
   {
     block.next && (
       <p class="ob-sub__next">
-        <a class="ob-acc__link" href={`#${block.next.anchor}`}>
-          {block.next.text} <span aria-hidden="true">↓</span>
-        </a>
+        <Button variant="secondary" arrow href={block.next.href}>
+          {block.next.text}
+        </Button>
       </p>
     )
   }

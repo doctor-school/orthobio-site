@@ -16,8 +16,11 @@ import {
 } from '@/config/site';
 import { pageSchemaChecked, type SubmissionGuideBlock } from '@/content/schemas';
 import { fillContentTokensDeep, formatDotted, formatRuDay, youngerThanCutoff } from '@/lib/dates';
+import { STATIC_PUBLIC_ROUTES } from '@/lib/seo';
 import {
   FILL_GUIDE_ANCHOR,
+  FILL_GUIDE_PATH,
+  FILL_GUIDE_REDIRECT_SCRIPT,
   guideStepId,
   SUBMISSION_GUIDE_ANCHOR,
   SUBMISSION_GUIDE_HREF,
@@ -37,10 +40,13 @@ const plain = (s: string) => s.replaceAll(NB, ' ');
 
 const raw = parse(read('src/content/pages/participants.yaml')) as Record<string, unknown>;
 const participants = pageSchemaChecked.parse(raw);
+// «Как заполнить заявку» is its own page (owner, 2026-10-07): one task per page.
+const rawFill = parse(read('src/content/pages/zapolnit-zayavku.yaml')) as Record<string, unknown>;
+const fillPage = pageSchemaChecked.parse(rawFill);
 const isGuide = (b: { kind: string }): b is SubmissionGuideBlock => b.kind === 'submission-guide';
-const guides = participants.blocks.filter(isGuide);
-const guide = guides.find((b) => b.anchor === SUBMISSION_GUIDE_ANCHOR)!;
-const fill = guides.find((b) => b.anchor === FILL_GUIDE_ANCHOR)!;
+const guide = participants.blocks.filter(isGuide).find((b) => b.anchor === SUBMISSION_GUIDE_ANCHOR)!;
+const fill = fillPage.blocks.filter(isGuide).find((b) => b.anchor === FILL_GUIDE_ANCHOR)!;
+const guides = [guide, fill];
 // What the page prints: getPage() fills the tokens after the schema.
 const filled = fillContentTokensDeep(guide, CONTENT_TOKENS);
 const filledFill = fillContentTokensDeep(fill, CONTENT_TOKENS);
@@ -100,31 +106,62 @@ describe('poster age cutoff in the config', () => {
 });
 
 describe('participants.yaml → submission guide', () => {
-  it('lives at the permanent anchors #podat-materialy and #zapolnit-zayavku', () => {
+  it('signs in at the permanent anchor #podat-materialy, fills in on its own page', () => {
     expect(SUBMISSION_GUIDE_ANCHOR).toBe('podat-materialy');
     expect(SUBMISSION_GUIDE_HREF).toBe('/participants#podat-materialy');
     expect(submissionStepId(2)).toBe('podat-materialy-2');
     expect(FILL_GUIDE_ANCHOR).toBe('zapolnit-zayavku');
-    expect(FILL_GUIDE_URL).toBe(`/participants#${FILL_GUIDE_ANCHOR}`);
+    expect(FILL_GUIDE_PATH).toBe('/participants/zapolnit-zayavku');
+    // The sign-up success card links here through the site config.
+    expect(FILL_GUIDE_URL).toBe(FILL_GUIDE_PATH);
     expect(guideStepId(FILL_GUIDE_ANCHOR, 8)).toBe('zapolnit-zayavku-8');
   });
 
-  it('sits with the submission blocks: sign-in, then filling in, then «Проживание»', () => {
+  it('lists the filling page in the sitemap, so the e2e route matrix covers it too', () => {
+    expect(STATIC_PUBLIC_ROUTES).toContain(`${FILL_GUIDE_PATH}/`);
+  });
+
+  it('sends an old /participants#zapolnit-zayavku link on to the filling page', () => {
+    const go = (hash: string) => {
+      let replaced: string | null = null;
+      const location = { hash, replace: (url: string) => void (replaced = url) };
+      new Function('location', FILL_GUIDE_REDIRECT_SCRIPT)(location);
+      return replaced;
+    };
+    expect(go(`#${FILL_GUIDE_ANCHOR}`)).toBe(FILL_GUIDE_PATH);
+    expect(go(`#${FILL_GUIDE_ANCHOR}-4`)).toBe(`${FILL_GUIDE_PATH}#${FILL_GUIDE_ANCHOR}-4`);
+    expect(go('#podat-materialy')).toBeNull();
+    expect(go('#zapolnit-zayavku-x')).toBeNull();
+    expect(go('')).toBeNull();
+  });
+
+  it('keeps only the sign-in guide on /participants, right before «Проживание»', () => {
     const order = participants.blocks.map((b) => (isGuide(b) ? b.anchor : b.kind));
     const at = order.indexOf('accommodation');
-    expect(order.slice(at - 2, at + 1)).toEqual([SUBMISSION_GUIDE_ANCHOR, FILL_GUIDE_ANCHOR, 'accommodation']);
-    expect(guides).toHaveLength(2);
+    expect(order.slice(at - 1, at + 1)).toEqual([SUBMISSION_GUIDE_ANCHOR, 'accommodation']);
+    expect(participants.blocks.filter(isGuide)).toHaveLength(1);
+    expect(fillPage.blocks).toHaveLength(1);
   });
 
-  it('keeps the approved heading and its two steps, then points on to «Как заполнить заявку»', () => {
-    expect(plain(guide.heading)).toBe('Как подать материалы на VIII Конгресс «Ортобиология 2027»');
+  it('keeps the approved heading and its two steps, then a button to «Как заполнить заявку»', () => {
+    expect(plain(guide.heading ?? '')).toBe('Как подать материалы на VIII Конгресс «Ортобиология 2027»');
     expect(guide.steps.map((s) => plain(s.title))).toEqual(['Кто может подать материалы', 'Как войти в кабинет']);
-    expect(guide.next?.anchor).toBe(FILL_GUIDE_ANCHOR);
-    expect(plain(guide.next?.text ?? '')).toBe('Дальше — как заполнить заявку');
+    expect(plain(guide.next?.text ?? '')).toBe('Как заполнить заявку');
+    expect(guide.next?.href).toBe(FILL_GUIDE_PATH);
+    expect(guide.intro).toBeNull();
   });
 
-  it('keeps the eight cabinet steps of the approved text, in order, under «Как заполнить заявку»', () => {
-    expect(plain(fill.heading)).toBe('Как заполнить заявку');
+  it('heads the filling page «Как заполнить заявку» with one line on where to sign in', () => {
+    expect(plain(fillPage.title)).toBe('Как заполнить заявку');
+    // The page <h1> is the guide's heading; a second one would repeat it.
+    expect(fill.heading).toBeNull();
+    expect(plain(fill.intro?.text ?? '')).toBe(
+      'Заявку заполняют в личном кабинете. Если вы ещё не вошли — как войти в кабинет.',
+    );
+    expect(fill.intro?.links.map((l) => [plain(l.text), l.href])).toEqual([['как войти в кабинет', SUBMISSION_GUIDE_HREF]]);
+  });
+
+  it('keeps the eight cabinet steps of the approved text, in order', () => {
     expect(fill.next).toBeNull();
     expect(fill.steps.map((s) => plain(s.title))).toEqual([
       'Кабинет «Мои заявки на Конгресс»',
@@ -138,12 +175,12 @@ describe('participants.yaml → submission guide', () => {
     ]);
   });
 
-  it('shows no sign-in in «Как заполнить заявку» — a reader there is already signed in', () => {
-    const text = JSON.stringify(filledFill);
+  it('shows no sign-in in the eight steps — the intro line is the one pointer to it', () => {
+    const text = JSON.stringify(fillContentTokensDeep(fill.steps, CONTENT_TOKENS));
     expect(fill.steps.flatMap((s) => s.items.map((item) => item.cta))).toEqual([]);
     expect(text).not.toContain(CABINET_LOGIN_LABEL);
     expect(text).not.toMatch(/Отправить код|код для входа|войти|вход[ау]?[^а-яё]/i);
-    // «Тезисы» points at «Согласие» by its new number.
+    // «Тезисы» points at «Согласие» by its number on this page.
     expect(plain(fill.steps[3].text ?? '')).toContain('покрывает согласие (раздел 5).');
     expect(plain(fill.steps[4].title)).toBe('Согласие на обработку персональных данных');
   });
@@ -154,6 +191,14 @@ describe('participants.yaml → submission guide', () => {
     expect(step.items).toHaveLength(5);
     // The button sits under the sub-step that tells the reader to press it.
     expect(step.items.map((item) => item.cta)).toEqual(['cabinet-login', null, null, null, null]);
+    // A returning reader is told up front that no code is coming (30-day session).
+    expect(step.items.map((item) => item.note && plain(item.note))).toEqual([
+      'Если вы уже входили в кабинет с этого устройства, он откроется сразу — код не понадобится.',
+      null,
+      null,
+      null,
+      null,
+    ]);
     expect(step.note).not.toBeNull();
     expect(plain(step.items[0].text)).toContain(`«${CABINET_LOGIN_LABEL}»`);
     // The screenshots follow «Отправить код» (3) and the code letter (4).
@@ -171,7 +216,8 @@ describe('participants.yaml → submission guide', () => {
   });
 
   it('writes every date as a token — none is spelled out in the copy', () => {
-    const steps = (raw.blocks as { kind: string; steps?: { text: string | null }[] }[])
+    const steps = [raw, rawFill]
+      .flatMap((p) => p.blocks as { kind: string; steps?: { text: string | null }[] }[])
       .filter((b) => b.kind === 'submission-guide')
       .flatMap((b) => b.steps!);
     const copy = steps.map((s) => s.text ?? '').join('\n');
@@ -315,13 +361,20 @@ describe('schema guards of the guide', () => {
     expect(pageSchemaChecked.safeParse(page([block([step()], { anchor: 'elsewhere' })])).success).toBe(false);
   });
 
-  it('points a guide only at another guide of the page', () => {
-    const next = { text: 'Дальше', anchor: 'zapolnit-zayavku' };
-    expect(pageSchemaChecked.safeParse(page([block([step()], { next })])).success).toBe(false);
-    const self = { ...next, anchor: 'podat-materialy' };
-    expect(pageSchemaChecked.safeParse(page([block([step()], { next: self })])).success).toBe(false);
-    const ok = page([block([step()], { next }), block([step()], { anchor: 'zapolnit-zayavku' })]);
-    expect(pageSchemaChecked.safeParse(ok).success).toBe(true);
+  it('points a guide on only to a page of this site', () => {
+    const next = (href: string) => page([block([step()], { next: { text: 'Дальше', href } })]);
+    expect(pageSchemaChecked.safeParse(next('/participants/zapolnit-zayavku')).success).toBe(true);
+    expect(pageSchemaChecked.safeParse(next('https://example.com/')).success).toBe(false);
+    expect(pageSchemaChecked.safeParse(next('//example.com/')).success).toBe(false);
+  });
+
+  it('fails the build when the intro line stops containing its link phrase', () => {
+    const link = { text: 'как войти', href: '/participants#podat-materialy' };
+    const intro = (text: string) => page([block([step()], { heading: null, intro: { text, links: [link] } })]);
+    expect(pageSchemaChecked.safeParse(intro('Если не вошли — как войти.')).success).toBe(true);
+    const r = pageSchemaChecked.safeParse(intro('Если не вошли — войдите.'));
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('must contain');
   });
 
   it('refuses a screenshot hosted anywhere but our storage', () => {

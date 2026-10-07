@@ -9,14 +9,25 @@ export const SUBMISSION_GUIDE_ANCHOR = 'podat-materialy';
 export const SUBMISSION_GUIDE_HREF = `/participants#${SUBMISSION_GUIDE_ANCHOR}`;
 
 /**
- * «Как заполнить заявку» (owner, 2026-10-07): the cabinet steps, split off the
- * sign-in so a reader who signed in by one route — the success card's personal
- * button or the guide above — is never walked through sign-in again. Both
- * routes end with a link here, so this anchor is permanent too.
+ * «Как заполнить заявку» (owner, 2026-10-07): the cabinet steps on a page of
+ * their own, apart from the sign-in, so a reader who signed in by one route —
+ * the success card's personal button or the guide on /participants — never
+ * scrolls past the sign-in again. Both routes end with a link to this page.
+ * Its block keeps the anchor, so the step ids stay `zapolnit-zayavku-<n>`.
  */
 export const FILL_GUIDE_ANCHOR = 'zapolnit-zayavku';
 
-/** The two guide blocks of /participants, each at its own fixed anchor. */
+export const FILL_GUIDE_PATH = `/participants/${FILL_GUIDE_ANCHOR}`;
+
+/**
+ * The guide used to sit at /participants#zapolnit-zayavku. The fragment never
+ * reaches the server, so only the page itself can send such a link on — this
+ * script, inlined on /participants, does, step anchors included.
+ */
+export const FILL_GUIDE_REDIRECT_SCRIPT = `var m = /^#${FILL_GUIDE_ANCHOR}(-\\d+)?$/.exec(location.hash);
+if (m) location.replace(${JSON.stringify(FILL_GUIDE_PATH)} + (m[1] ? ${JSON.stringify(`#${FILL_GUIDE_ANCHOR}`)} + m[1] : ''));`;
+
+/** The two guide blocks, each at its own fixed anchor. */
 export const GUIDE_ANCHORS = [SUBMISSION_GUIDE_ANCHOR, FILL_GUIDE_ANCHOR] as const;
 
 export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];

@@ -78,7 +78,7 @@ describe('owner-approved pre-registration launch content', () => {
   // getPage() fills tokens AFTER the schema's Typograf pass (src/lib/dates.ts
   // says why), so the hand-typeset value must read exactly as Typograf would
   // have typeset the same sentence spelled out — nbsp included.
-  const tokenSentences = ['participants.yaml', 'faq.yaml'].flatMap((file) => {
+  const tokenSentences = ['participants.yaml', 'zapolnit-zayavku.yaml', 'faq.yaml'].flatMap((file) => {
     const strings: string[] = [];
     const walk = (v: unknown): void => {
       if (typeof v === 'string') {

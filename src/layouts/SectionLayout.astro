@@ -14,13 +14,16 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 
 interface Props {
   page: PageEntry['data'];
+  /** Back link to the page this one belongs to (a sub-page of a section). */
+  crumb?: { href: string; label: string };
 }
 
-const { page } = Astro.props;
+const { page, crumb } = Astro.props;
 ---
 
 <BaseLayout title={page.title} description={page.description}>
   <div class="ob-container ob-section">
+    {crumb && <p class="ob-crumb"><a href={crumb.href}>{crumb.label}</a></p>}
     <SectionHeading level="h1" overline={page.overline} title={page.title} />
     {
       page.lead.length > 0 && (

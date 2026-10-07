@@ -657,9 +657,10 @@ years:
           Served as-is (no derivative): UI text stays crisp in PNG and every
           file is under 120 KB.
 
-          Consumers: participants.yaml → submission-guide.steps[].shots and
-          steps[].items[].shots («Как подать материалы»,
-          /participants#podat-materialy); login-03-check-email and
+          Consumers: submission-guide.steps[].shots and
+          steps[].items[].shots of participants.yaml («Как подать материалы»,
+          /participants#podat-materialy) and zapolnit-zayavku.yaml («Как
+          заполнить заявку», /participants/zapolnit-zayavku); login-03-check-email and
           01-cabinet-empty also under steps 2 and 3 of the sign-up success
           card (SignupForm.astro, Issue #116).
 

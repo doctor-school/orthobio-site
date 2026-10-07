@@ -3708,7 +3708,8 @@ body > main:has(> .ob-reg) {
   }
 }
 
-/* ── Submission guide (/participants#podat-materialy, Issue #99) ─────────────
+/* ── Submission guides (/participants#podat-materialy and
+   /participants/zapolnit-zayavku, Issue #99) ─────────────────────────────
    Reuses the accommodation card, tile, paragraph, link and screenshot frame
    (.ob-acc__*); only the stack of steps and the screenshot column are here. */
 
@@ -3758,10 +3759,22 @@ body > main:has(> .ob-reg) {
   margin: var(--sp-3) 0 var(--sp-2);
 }
 
-/* The closing «Дальше — … ↓» pointer to the next guide on the page. */
+/* The muted line right under that button («уже входили — код не нужен»):
+   an aside to the step, in the accommodation note's colour. */
+.ob-sub__hint {
+  margin: 0 0 var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+/* The one line above the steps of the filling page: what comes first. */
+.ob-sub__intro {
+  margin-bottom: var(--sp-5);
+}
+
+/* The closing button to the next guide, on its own page. */
 .ob-sub__next {
   margin: var(--sp-5) 0 0;
-  font-weight: var(--fw-semibold);
 }
 
 .ob-sub__items .ob-sub__shots {

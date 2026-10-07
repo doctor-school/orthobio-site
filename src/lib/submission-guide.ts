@@ -34,5 +34,3 @@ export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];
 
 /** Id of the n-th step (1-based) of a guide, so a reply can point at one step. */
 export const guideStepId = (anchor: GuideAnchor, n: number): string => `${anchor}-${n}`;
-
-export const submissionStepId = (n: number): string => guideStepId(SUBMISSION_GUIDE_ANCHOR, n);

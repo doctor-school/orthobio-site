@@ -24,7 +24,6 @@ import {
   guideStepId,
   SUBMISSION_GUIDE_ANCHOR,
   SUBMISSION_GUIDE_HREF,
-  submissionStepId,
 } from '@/lib/submission-guide';
 
 /**
@@ -109,7 +108,7 @@ describe('participants.yaml → submission guide', () => {
   it('signs in at the permanent anchor #podat-materialy, fills in on its own page', () => {
     expect(SUBMISSION_GUIDE_ANCHOR).toBe('podat-materialy');
     expect(SUBMISSION_GUIDE_HREF).toBe('/participants#podat-materialy');
-    expect(submissionStepId(2)).toBe('podat-materialy-2');
+    expect(guideStepId(SUBMISSION_GUIDE_ANCHOR, 2)).toBe('podat-materialy-2');
     expect(FILL_GUIDE_ANCHOR).toBe('zapolnit-zayavku');
     expect(FILL_GUIDE_PATH).toBe('/participants/zapolnit-zayavku');
     // The sign-up success card links here through the site config.

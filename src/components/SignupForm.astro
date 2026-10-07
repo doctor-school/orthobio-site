@@ -508,7 +508,8 @@ const SIGNIN_SHOTS = {
            button above. `external` writes the target and its announcement. -->
       <p class="ob-signup__stext ob-signup__lead">Пошаговая инструкция со скриншотами:</p>
       <Button class="ob-signup__fill" variant="ghost" arrow href={FILL_GUIDE_URL} external>Как заполнить заявку</Button>
-      <p class="ob-signup__stext">
+      <!-- The 24 hours are the personal button's; the plain login has no clock. -->
+      <p class="ob-signup__stext" data-signup-handoff="with" hidden>
         Кнопка действует сутки. Если вернётесь позже&nbsp;— войдите через раздел «Участникам» →
         «Как подать материалы».
       </p>

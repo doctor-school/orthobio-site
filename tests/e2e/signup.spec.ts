@@ -552,6 +552,18 @@ test.describe('sign-up form', () => {
         return seq.every((n, i) => i === 0 || seq[i - 1].compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING);
       });
       expect(inOrder).toBe(true);
+      // The «сутки» line is about the personal button, so only its variant says it;
+      // without a hand-off the button is the plain login (review of #117).
+      const note = card.locator('.ob-signup__fill ~ p');
+      await expect(note).toHaveCount(1);
+      if (handoff) {
+        await expect(note).toBeVisible();
+        await expect(note).toHaveText(
+          'Кнопка действует сутки. Если вернётесь позже — войдите через раздел «Участникам» → «Как подать материалы».',
+        );
+      } else {
+        await expect(note).toBeHidden();
+      }
     });
   }
 

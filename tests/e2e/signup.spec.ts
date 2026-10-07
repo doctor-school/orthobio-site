@@ -188,6 +188,13 @@ const blockSignupModule = (page: Page) =>
 
 const submit = (page: Page) => page.getByRole('button', { name: 'Зарегистрироваться' }).click();
 
+const SUCCESS_TITLE = 'Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».';
+/** A hand-off reference no other string on the page could contain by chance. */
+const HANDOFF = 'hx7Qp9-REF_zW2';
+const CABINET_PLAIN = 'https://new.doctor.school/login?method=code&returnTo=/account/congress';
+const cabinetButton = (page: Page) =>
+  page.locator('[data-signup-success]').getByRole('link', { name: /^Войти в кабинет/ });
+
 test.describe('sign-up form', () => {
   test('is shown on the local host, with «Другое» pinned last in the specialty list', async ({ page }) => {
     await open(page);
@@ -304,7 +311,7 @@ test.describe('sign-up form', () => {
     await fillValid(page);
     await submit(page);
 
-    const title = page.getByRole('heading', { level: 2, name: 'Заявка принята' });
+    const title = page.getByRole('heading', { level: 2, name: SUCCESS_TITLE });
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
     await expect(title).toHaveAccessibleDescription(
@@ -345,6 +352,85 @@ test.describe('sign-up form', () => {
       region: 'г. Москва',
       personalDataConsent: true,
     });
+  });
+
+  // Issue #116: the card's one action opens the platform's code step with the
+  // personal reference from the response — and the reference goes nowhere else.
+  test('«Войти в кабинет» carries the hand-off reference, and only its href does', async ({ page }) => {
+    const consoleText: string[] = [];
+    page.on('console', (msg) => consoleText.push(msg.text()));
+    const sent: string[] = [];
+    page.on('request', (req) => sent.push(`${req.url()} ${req.postData() ?? ''}`));
+    await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    const cta = cabinetButton(page);
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute(
+      'href',
+      `https://new.doctor.school/login?method=code&handoff=${HANDOFF}&returnTo=/account/congress`,
+    );
+    await expect(cta).toHaveAttribute('target', '_blank');
+    await expect(cta).toHaveAttribute('rel', 'noopener');
+    await expect(cta).toHaveClass(/ob-btn--accent/);
+    await expect(page.locator('[data-signup-success] .ob-btn')).toHaveCount(1);
+
+    // The visitor's address, in full, in step 1 (the code goes there).
+    const steps = page.locator('[data-signup-success] ol');
+    await expect(steps.locator('li').first().locator('[data-signup-code-sent]')).toBeVisible();
+    expect(await steps.locator('li').first().innerText()).toContain('ivanov@example.com');
+    await expect(steps.locator('li')).toHaveCount(3);
+
+    // Exactly one occurrence in the whole document: the href checked above.
+    const html = await page.evaluate(() => document.documentElement.outerHTML);
+    expect(html.split(HANDOFF)).toHaveLength(2);
+    expect(await page.locator('body').innerText()).not.toContain(HANDOFF);
+    const leaks = await page.evaluate(
+      (ref) => [
+        location.href,
+        document.title,
+        document.cookie,
+        JSON.stringify({ ...localStorage }),
+        JSON.stringify({ ...sessionStorage }),
+      ].filter((v) => v.includes(ref)),
+      HANDOFF,
+    );
+    expect(leaks).toEqual([]);
+    expect(consoleText.filter((t) => t.includes(HANDOFF))).toEqual([]);
+    expect(sent.filter((t) => t.includes(HANDOFF))).toEqual([]);
+  });
+
+  test('falls back to the plain sign-in link when the response has no reference', async ({ page }) => {
+    await mockSignUp(page, 200, { status: 'accepted' });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    await expect(cabinetButton(page)).toHaveAttribute('href', CABINET_PLAIN);
+    // Without the reference no code is sent on the click, so step 1 does not
+    // promise one (the only allowed deviation from the approved text).
+    const first = page.locator('[data-signup-success] ol li').first();
+    await expect(first).toBeVisible();
+    await expect(first.locator('[data-signup-code-sent]')).toBeHidden();
+    const shown = await first.innerText();
+    expect(shown).not.toContain('ivanov@example.com');
+    expect(shown).not.toContain('код');
+    // The confirmation line still names the address.
+    await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toHaveAccessibleDescription(
+      /ivanov@example\.com/,
+    );
+  });
+
+  test('a success body that is not JSON still shows the card, with the plain link', async ({ page }) => {
+    await page.route(SIGN_UP_URL, (route) => route.fulfill({ status: 200, body: '' }));
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toBeFocused();
+    await expect(cabinetButton(page)).toHaveAttribute('href', CABINET_PLAIN);
   });
 
   test('sends the patronymic when one is given, normalised', async ({ page }) => {
@@ -1285,7 +1371,8 @@ test.describe('registration page design', () => {
   const STATES = [
     { name: 'not-yet-open', status: 422, json: { code: 'not-yet-open' }, heading: /Регистрация откроется/ },
     { name: 'closed', status: 422, json: { code: 'closed' }, heading: /Регистрация на конгресс закрыта/ },
-    { name: 'success', status: 200, json: { status: 'accepted' }, heading: /Заявка принята/ },
+    // With the hand-off (Issue #116): the instruction, the address and the button.
+    { name: 'success', status: 200, json: { status: 'accepted', handoff: HANDOFF }, heading: SUCCESS_TITLE },
   ] as const;
   for (const state of STATES) {
     for (const width of OVERFLOW_WIDTHS) {
@@ -1300,6 +1387,14 @@ test.describe('registration page design', () => {
         expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
         await expectNoHeadingSpill(page, `/registration ${state.name} @${width}`);
         await expectNoColumnOverlap(page, `/registration ${state.name} @${width}`);
+        // Nothing pokes out of the visible card: a long address and the button wrap.
+        const spill = await page.locator('.ob-signup__card:visible').evaluate((card) => {
+          const box = card.getBoundingClientRect();
+          return [...card.querySelectorAll('*')]
+            .map((el) => el.getBoundingClientRect())
+            .filter((r) => r.width > 0 && (r.left < box.left - 0.5 || r.right > box.right + 0.5)).length;
+        });
+        expect(spill).toBe(0);
         const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
         const blocking = results.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
         expect(blocking, JSON.stringify(blocking.map((v) => v.id))).toEqual([]);

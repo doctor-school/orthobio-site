@@ -34,6 +34,8 @@
 import Button from '@/components/Button.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
+  CABINET_LOGIN_LABEL,
+  CABINET_LOGIN_URL,
   CONTACT_EMAIL,
   NOTIFY_CHANNEL_URL,
   NOTIFY_CTA_LABEL,
@@ -351,7 +353,12 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     </form>
 
     <!-- The heading takes the focus (design); its description carries the
-         address, so one announcement holds both. -->
+         address, so one announcement holds both. Below it, the owner-approved
+         instruction «А» (Issue #116, orthobio-site#99): how to reach the
+         congress cabinet, with the card's one action. The button's href is
+         the configured sign-in link until the response's hand-off reference
+         is added by the script; without a reference no code is sent on the
+         click, so step 1 loses its «we send the code» clause. -->
     <div class="ob-signup__success ob-signup__status" data-signup-success role="status" hidden>
       <span class="ob-signup__badge ob-signup__badge--ok" aria-hidden="true">
         <StrokeIcon name="check" />
@@ -362,11 +369,31 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         aria-describedby="signup-success-text"
         data-signup-success-text
       >
-        Заявка принята
+        Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».
       </h2>
       <p class="ob-signup__stext" id="signup-success-text">
         Письмо-подтверждение придёт на <b data-signup-email></b> в&nbsp;течение нескольких минут. Если
         его нет&nbsp;— проверьте папку «Спам».
+      </p>
+      <p class="ob-signup__stext ob-signup__lead">Чтобы подать доклад или тезисы:</p>
+      <ol class="ob-list ob-signup__steps">
+        <li>
+          Нажмите «Войти в кабинет»<span data-signup-code-sent hidden
+            >&nbsp;— мы сразу отправим код на <b data-signup-email></b></span
+          >.
+        </li>
+        <li>
+          Откройте письмо «…&nbsp;— код для входа в Doctor.School» и введите 6&nbsp;символов из письма на
+          открывшейся странице.
+        </li>
+        <li>Откроется кабинет «Мои заявки на Конгресс»&nbsp;— нажмите «+&nbsp;Новая заявка».</li>
+      </ol>
+      <Button class="ob-signup__cabinet" variant="accent" size="lg" href={CABINET_LOGIN_URL} external>
+        {CABINET_LOGIN_LABEL}
+      </Button>
+      <p class="ob-signup__stext">
+        Кнопка действует сутки. Если вернётесь позже&nbsp;— войдите через раздел «Участникам» →
+        «Как подать материалы».
       </p>
     </div>
   </div>
@@ -447,7 +474,8 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
 </script>
 
 <script>
-  import { REGISTRATION_WINDOW } from '@/config/site';
+  import { CABINET_LOGIN_URL, REGISTRATION_WINDOW } from '@/config/site';
+  import { cabinetLoginHref, handoffFrom } from '@/lib/cabinet-login';
   import { pickSitekey } from '@/lib/captcha';
   import { isValidContactPhone } from '@/lib/contact-phone';
   import { isPlatformEmail } from '@/lib/email';
@@ -926,10 +954,26 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         setBusy(false);
 
         if (res.ok) {
+          // The hand-off reference lives in this scope and the button's href
+          // only (lib/cabinet-login.ts); an unreadable body is an accepted
+          // sign-up all the same, just without one.
+          let handoff: string | null = null;
+          try {
+            handoff = handoffFrom(await res.json());
+          } catch {
+            handoff = null;
+          }
+          success.querySelector<HTMLAnchorElement>('.ob-signup__cabinet')!.href = cabinetLoginHref(
+            CABINET_LOGIN_URL,
+            handoff,
+          );
+          success.querySelector<HTMLElement>('[data-signup-code-sent]')!.hidden = handoff === null;
           form.hidden = true;
           // The success block is the card's whole content, so the form's head goes too.
           root.querySelector<HTMLElement>('[data-signup-head]')!.hidden = true;
-          root.querySelector<HTMLElement>('[data-signup-email]')!.textContent = String(body.email);
+          for (const email of success.querySelectorAll<HTMLElement>('[data-signup-email]')) {
+            email.textContent = String(body.email);
+          }
           success.hidden = false;
           root.querySelector<HTMLElement>('[data-signup-success-text]')!.focus();
           return;

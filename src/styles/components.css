@@ -3259,6 +3259,24 @@ body > main:has(> .ob-reg) {
   color: var(--ob-sky-text);
 }
 
+/* Instruction «А» on the success card (Issue #116): the steps to follow are
+   body text, as in the submission guide, under a lead in the same colour; the
+   address in step 1 is set like the one in the line above. */
+.ob-signup__lead,
+.ob-signup__steps {
+  color: var(--text-body);
+}
+
+.ob-signup__steps {
+  max-width: var(--measure-copy);
+}
+
+.ob-signup__steps b {
+  color: var(--ink);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
 /* ── Accommodation (/participants#accommodation, Issue #112) ─────────────── */
 
 .ob-acc__intro {

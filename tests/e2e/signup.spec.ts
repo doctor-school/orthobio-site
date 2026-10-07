@@ -195,6 +195,9 @@ const CABINET_PLAIN = 'https://new.doctor.school/login?method=code&returnTo=/acc
 /** The line above the two letters (owner request, Issue #116), as the heading's description. */
 const LETTERS_LINE =
   'Мы отправим вам два письма: подтверждение регистрации\u00a0— сразу, а письмо с\u00a0кодом для входа\u00a0— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут\u00a0— проверьте папку «Спам».';
+/** Its replacement when the response carries no hand-off: no code letter is coming. */
+const FALLBACK_LINE =
+  'Подтверждение регистрации придёт на почту в течение пары минут. Если его нет — проверьте папку «Спам».';
 const cabinetButton = (page: Page) =>
   page.locator('[data-signup-success]').getByRole('link', { name: /^Войти в кабинет/ });
 
@@ -317,8 +320,9 @@ test.describe('sign-up form', () => {
     const title = page.getByRole('heading', { level: 2, name: SUCCESS_TITLE });
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
+    // The intake answered without a hand-off reference: the fallback line.
     await expect(title).toHaveAccessibleDescription(
-      LETTERS_LINE,
+      FALLBACK_LINE,
     );
     await expect(page.locator('[data-signup-form]')).toBeHidden();
     // The form's own heading leaves with the form: the card now says one thing.
@@ -420,10 +424,16 @@ test.describe('sign-up form', () => {
     const shown = await first.innerText();
     expect(shown).not.toContain('ivanov@example.com');
     expect(shown).not.toContain('код');
-    // The line about the two letters stays; the address is named only in step 1.
+    // No code letter is coming: the line says only the confirmation, and the
+    // code letter is not shown (owner, 2026-10-07). The address is named only in step 1.
     await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toHaveAccessibleDescription(
-      LETTERS_LINE,
+      FALLBACK_LINE,
     );
+    const letters = page.locator('[data-signup-success] .ob-signup__letters figure');
+    await expect(letters.locator('figcaption').filter({ visible: true })).toHaveText(['Подтверждение регистрации']);
+    await expect(letters.nth(1)).toBeHidden();
+    // The sign-in path itself is the same either way.
+    await expect(page.locator('[data-signup-success] ol .ob-signup__shot')).toHaveCount(2);
     expect(await page.locator('[data-signup-success]').innerText()).not.toContain('ivanov@example.com');
   });
 
@@ -456,6 +466,51 @@ test.describe('sign-up form', () => {
         })
         .toEqual([width, height]);
     }
+  });
+
+  test('shows the sign-in path: the button under step 1, the code step under step 2, the cabinet under step 3', async ({
+    page,
+  }) => {
+    await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toHaveAccessibleDescription(
+      LETTERS_LINE,
+    );
+    const steps = page.locator('[data-signup-success] ol > li');
+    await expect(steps.nth(0).locator('img')).toHaveCount(0);
+    for (const [i, key, size] of [
+      [1, 'login-03-check-email', [492, 560]],
+      [2, '01-cabinet-empty', [1080, 544]],
+    ] as const) {
+      const img = steps.nth(i).locator('.ob-signup__shot img');
+      await expect(img).toHaveCount(1);
+      await expect(img).toHaveAttribute('src', `https://s3.twcstorage.ru/orthobio-media/2027/submissions/${key}.png`);
+      expect(await img.getAttribute('alt')).toMatch(/^(Экран|Кабинет) «.+»: .{40,}/);
+      await img.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => (el.complete ? [el.naturalWidth, el.naturalHeight] : null)), {
+          timeout: 15_000,
+        })
+        .toEqual([...size]);
+    }
+
+    // Reading order: letters → step 1 + button → step 2 + shot → step 3 + shot → the «сутки» line.
+    await expect(steps.nth(0).locator('.ob-signup__cabinet')).toHaveCount(1);
+    const order = await page.locator('[data-signup-success]').evaluate((card) => {
+      const at = (sel: string) => card.querySelector(sel)!;
+      const seq = [
+        at('.ob-signup__letters'),
+        at('ol > li:nth-child(1) .ob-signup__cabinet'),
+        at('ol > li:nth-child(2) .ob-signup__shot'),
+        at('ol > li:nth-child(3) .ob-signup__shot'),
+        card.lastElementChild!,
+      ];
+      return seq.every((el, i) => i === 0 || seq[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(order).toBe(true);
   });
 
   // Side by side where the card has room, stacked on a phone; never wider than the card.

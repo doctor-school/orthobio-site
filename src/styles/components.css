@@ -3299,6 +3299,34 @@ body > main:has(> .ob-reg) {
   min-width: 0;
 }
 
+/* A sign-in screenshot under its step (steps 2 and 3): the guide's framed
+   shot at its own width, up to the step's — stretched past its pixels the UI
+   text blurs. The frame hugs the image. */
+.ob-signup__shot {
+  display: grid;
+  justify-items: start;
+  margin: var(--sp-3) 0 var(--sp-2);
+  min-width: 0;
+}
+
+.ob-signup__shot .ob-acc__frame {
+  max-width: 100%;
+}
+
+.ob-signup__shot .ob-acc__frame img {
+  width: auto;
+  max-width: 100%;
+}
+
+/* «Войти в кабинет» on its own line under step 1, the step it belongs to —
+   the button is inline-flex and would otherwise run on after the address. */
+.ob-signup__steps .ob-signup__cabinet {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
 /* ── Accommodation (/participants#accommodation, Issue #112) ─────────────── */
 
 .ob-acc__intro {

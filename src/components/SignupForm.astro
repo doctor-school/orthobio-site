@@ -65,15 +65,39 @@ const SIGNUP_LETTERS = [
     alt: 'Письмо «Doctor.School — вы зарегистрированы на VIII Конгресс ОРТОБИОЛОГИЯ 2027»: дата, время и место Конгресса и строка о том, как подать материалы, — на сайте orthobio.ru в разделе «Участникам» найти «Как подать материалы» и нажать «Войти в кабинет»',
     width: 520,
     height: 494,
+    handoffOnly: false,
   },
   {
     url: '/media/2027/submissions/letter-code.png',
     caption: 'Письмо с кодом',
-    alt: 'Письмо «… — код для входа в Doctor.School»: шесть символов кода крупно и подсказка ввести их во вкладке Doctor.School, где код запрошен; код действует 1 час',
+    alt: 'Письмо «… — код для входа в Doctor.School»: шесть цифр кода крупно и подсказка ввести их во вкладке Doctor.School, где код запрошен; код действует 1 час',
     width: 520,
     height: 423,
+    // Sent only by the hand-off click; without a reference the visitor asks
+    // for the code on the sign-in page, so the card does not promise it.
+    handoffOnly: true,
   },
 ] as const;
+
+/**
+ * The sign-in path under steps 2 and 3 (owner, 2026-10-07): the code step and
+ * the empty cabinet, the same bucket objects the «Как подать материалы» guide
+ * shows (item 2027-submissions-guide), framed the same way.
+ */
+const SIGNIN_SHOTS = {
+  codeStep: {
+    url: '/media/2027/submissions/login-03-check-email.png',
+    alt: 'Экран «Проверьте почту»: адрес, на который отправлен код, шесть пустых клеток «Код из письма» и кнопка «Подтвердить и войти»',
+    width: 492,
+    height: 560,
+  },
+  cabinet: {
+    url: '/media/2027/submissions/01-cabinet-empty.png',
+    alt: 'Кабинет «Мои заявки на Конгресс», блок «Новая заявка»: выбор вида заявки — «Устный доклад», «Постерный доклад» или «Тезисы», у каждого срок приёма и ссылка «Начать заявку», у тезисов — счётчик «Отправлено 0 тезисов из 3»',
+    width: 1080,
+    height: 544,
+  },
+} as const;
 ---
 
 <div
@@ -396,15 +420,24 @@ const SIGNUP_LETTERS = [
       >
         Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».
       </h2>
+      <!-- Two versions of the line; the script shows the one that is true for
+           the response. Without a hand-off reference no code letter is coming
+           (owner, 2026-10-07). -->
       <p class="ob-signup__stext" id="signup-success-text">
-        Мы отправим вам два письма: подтверждение регистрации&nbsp;— сразу, а письмо с&nbsp;кодом для
-        входа&nbsp;— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут&nbsp;—
-        проверьте папку «Спам».
+        <span data-signup-handoff="with">
+          Мы отправим вам два письма: подтверждение регистрации&nbsp;— сразу, а письмо с&nbsp;кодом для
+          входа&nbsp;— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут&nbsp;—
+          проверьте папку «Спам».
+        </span>
+        <span data-signup-handoff="without" hidden>
+          Подтверждение регистрации придёт на почту в&nbsp;течение пары минут. Если его нет&nbsp;— проверьте
+          папку «Спам».
+        </span>
       </p>
       <div class="ob-signup__letters">
         {
           SIGNUP_LETTERS.map((letter) => (
-            <figure class="ob-acc__shot">
+            <figure class="ob-acc__shot" data-signup-handoff={letter.handoffOnly ? 'with' : undefined}>
               <div class="ob-acc__frame">
                 <img
                   src={mediaUrl(letter.url)}
@@ -423,19 +456,47 @@ const SIGNUP_LETTERS = [
       <p class="ob-signup__stext ob-signup__lead">Чтобы подать доклад или тезисы:</p>
       <ol class="ob-list ob-signup__steps">
         <li>
-          Нажмите «Войти в кабинет»<span data-signup-code-sent hidden
+          Нажмите «Войти в кабинет»<span data-signup-code-sent data-signup-handoff="with" hidden
             >&nbsp;— мы сразу отправим код на <b data-signup-email></b></span
           >.
+          <!-- The step's own action sits under it: after the screenshots of
+               steps 2 and 3 it would be a long scroll away (owner, 2026-10-07). -->
+          <Button class="ob-signup__cabinet" variant="accent" size="lg" href={CABINET_LOGIN_URL} external>
+            {CABINET_LOGIN_LABEL}
+          </Button>
         </li>
         <li>
-          Откройте письмо «…&nbsp;— код для входа в Doctor.School» и введите 6&nbsp;символов из письма на
+          Откройте письмо «…&nbsp;— код для входа в Doctor.School» и введите 6&nbsp;цифр из письма на
           открывшейся странице.
+          <figure class="ob-acc__shot ob-signup__shot">
+            <div class="ob-acc__frame">
+              <img
+                src={mediaUrl(SIGNIN_SHOTS.codeStep.url)}
+                alt={SIGNIN_SHOTS.codeStep.alt}
+                width={SIGNIN_SHOTS.codeStep.width}
+                height={SIGNIN_SHOTS.codeStep.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </figure>
         </li>
-        <li>Откроется кабинет «Мои заявки на Конгресс»&nbsp;— нажмите «+&nbsp;Новая заявка».</li>
+        <li>
+          Откроется кабинет «Мои заявки на Конгресс»&nbsp;— нажмите «+&nbsp;Новая заявка».
+          <figure class="ob-acc__shot ob-signup__shot">
+            <div class="ob-acc__frame">
+              <img
+                src={mediaUrl(SIGNIN_SHOTS.cabinet.url)}
+                alt={SIGNIN_SHOTS.cabinet.alt}
+                width={SIGNIN_SHOTS.cabinet.width}
+                height={SIGNIN_SHOTS.cabinet.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </figure>
+        </li>
       </ol>
-      <Button class="ob-signup__cabinet" variant="accent" size="lg" href={CABINET_LOGIN_URL} external>
-        {CABINET_LOGIN_LABEL}
-      </Button>
       <p class="ob-signup__stext">
         Кнопка действует сутки. Если вернётесь позже&nbsp;— войдите через раздел «Участникам» →
         «Как подать материалы».
@@ -1012,7 +1073,9 @@ const SIGNUP_LETTERS = [
             CABINET_LOGIN_URL,
             handoff,
           );
-          success.querySelector<HTMLElement>('[data-signup-code-sent]')!.hidden = handoff === null;
+          for (const part of success.querySelectorAll<HTMLElement>('[data-signup-handoff]')) {
+            part.hidden = (part.dataset.signupHandoff === 'with') !== (handoff !== null);
+          }
           form.hidden = true;
           // The success block is the card's whole content, so the form's head goes too.
           root.querySelector<HTMLElement>('[data-signup-head]')!.hidden = true;

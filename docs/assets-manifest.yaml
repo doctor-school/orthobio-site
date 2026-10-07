@@ -57,6 +57,18 @@
 # hotel «Милан» promo-code field (2027/accommodation/hotel-promo-field.png),
 # see item 2027-accommodation-promo-field.
 #
+# 2026-10-05 (Issue #99): +12 objects — screenshots of the congress
+# submission cabinet (DS Platform stand) for the «Как подать материалы» guide
+# on /participants (2027/submissions/*.png), see item 2027-submissions-guide.
+# 11 are referenced; 02-kind-chooser.png was dropped from the guide by the
+# owner and stays in the bucket unreferenced (keys are immutable).
+#
+# 2026-10-06 (Issue #99): +5 objects under 2027/submissions/ — the sign-in
+# shots for guide step 2 (login-02-by-code-email.png,
+# login-03-check-email.png) and re-shot 07/11/12 under new `-v2` keys. The
+# three replaced objects stay in the bucket unreferenced (keys are immutable),
+# see item 2027-submissions-guide.
+#
 # 2026-09-28 (Issue #106): +1 object — the owner-supplied portrait of
 # Загородний Н.В. (2026/people/zagorodniy-288.webp), see item
 # 2026-people-zagorodniy. Its source JPEG is staged under
@@ -92,9 +104,11 @@ meta:
   # (Issue #23), +49 partner logos (Issue #22, `logos:` below) and +23 video
   # posters (Issue #33, `video_posters:` below), +1 owner-supplied portrait
   # (Issue #106, item 2026-people-zagorodniy), +1 owner-supplied screenshot
-  # (Issue #112, item 2027-accommodation-promo-field), +2 letter
+  # (Issue #112, item 2027-accommodation-promo-field), +17 cabinet and sign-in
+  # screenshots (Issue #99, item 2027-submissions-guide; 13 referenced, four
+  # orphaned), +2 letter
   # screenshots (Issues #116/#99, item 2027-congress-letters).
-  s3_objects_total: 2339 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 2
+  s3_objects_total: 2356 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12 + 5 + 2
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -586,7 +600,7 @@ years:
         s3_key: null
 
   2027:
-    counters: { files: 1, mb: 0.02 }
+    counters: { files: 16, mb: 0.60 }
     items:
       - id: 2027-accommodation-promo-field
         source: owner-supplied, 2026-09-30 (Issue #112)
@@ -614,6 +628,54 @@ years:
         # 20134 B, Cache-Control immutable.
         s3_status: uploaded
         files: 1
+      - id: 2027-submissions-guide
+        source: DS Platform stand, congress cabinet and sign-in, 2026-10-05/06 (Issue #99)
+        source_urls: []
+        description: >-
+          Thirteen screenshots for the «Как подать материалы» guide, taken on
+          the DS Platform stand with demo data. Eleven show the congress
+          submission cabinet («Мои заявки на Конгресс»): 01-cabinet-empty,
+          03–06 and 08–10 from the 2026-10-05 pass, and 07-submit-confirm-v2,
+          11-list-with-statuses-v2, 12-sent-card-actions-v2 re-shot
+          2026-10-06. Two show the sign-in by code for step 2:
+          login-02-by-code-email (the e-mail field and «Отправить код») and
+          login-03-check-email (the six code cells). RGB PNG at 1×, 492–1080 px
+          wide, 564058 B in all; sha256 per file in docs/assets-checksums.txt.
+
+          Four more objects under this prefix are unreferenced and stay in the
+          bucket — keys are immutable — and are not in the checksum list:
+          02-kind-chooser.png (35702 B, sha256
+          4b0d0b58297f6909ef8bd9b22fe055f5e84a4c2a2c904917477200917035c4f6),
+          dropped by the owner 2026-10-05 (it repeats 01), and the three
+          shots the `-v2` keys replaced 2026-10-06: 07-submit-confirm.png
+          (24126 B, sha256
+          df3f3e596d2e4841745014c5e46c2c183df2dc4809baa27c406cd871d305418f),
+          11-list-with-statuses.png (47530 B, sha256
+          3744b03cd8c505ea7f0e6d04b734c48980a3adc0b05dc925cef4a0b4bd0e3e3e),
+          12-sent-card-actions.png (23184 B, sha256
+          c774a4312c8683f05b08c5d221e74829f07e65bc6f117b362bc8995841e0c3e5).
+          Served as-is (no derivative): UI text stays crisp in PNG and every
+          file is under 120 KB.
+
+          Consumers: participants.yaml → submission-guide.steps[].shots and
+          steps[].items[].shots («Как подать материалы»,
+          /participants#podat-materialy); login-03-check-email and
+          01-cabinet-empty also under steps 2 and 3 of the sign-up success
+          card (SignupForm.astro, Issue #116).
+
+          Upload: `node scripts/upload-media-object.mjs <staged file>
+          2027/submissions/<name>.png`, one call per file. Keys are immutable;
+          a re-shot screenshot goes to a NEW key, not over an old one.
+        actual_year: 2027
+        type: photos
+        status: downloaded
+        local: '2027/submissions/'
+        s3_key: '2027/submissions/'
+        # Uploaded 2026-10-05 (12) and 2026-10-06 (5): read-back sha256 matched
+        # for all 17; served as image/png, Cache-Control immutable. 13
+        # referenced (see above).
+        s3_status: uploaded
+        files: 13
       - id: 2027-congress-letters
         source: DS Platform stage slot pr-2637, the real letters of a congress sign-up, 2026-10-07 (Issues #116, #99)
         source_urls: []

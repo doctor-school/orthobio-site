@@ -382,7 +382,9 @@ test.describe('sign-up form', () => {
     await expect(cta).toHaveAttribute('target', '_blank');
     await expect(cta).toHaveAttribute('rel', 'noopener');
     await expect(cta).toHaveClass(/ob-btn--accent/);
-    await expect(page.locator('[data-signup-success] .ob-btn')).toHaveCount(1);
+    // The one action of the card; the other link it holds stays on the site.
+    await expect(page.locator('[data-signup-success] .ob-btn--accent')).toHaveCount(1);
+    await expect(page.locator('[data-signup-success] a[href^="https://new.doctor.school"]')).toHaveCount(1);
 
     // The visitor's address, in full, in step 1 (the code goes there).
     const steps = page.locator('[data-signup-success] ol');
@@ -512,6 +514,40 @@ test.describe('sign-up form', () => {
     });
     expect(order).toBe(true);
   });
+
+  // Owner, 2026-10-07: the card signs in; the cabinet steps are «Как заполнить
+  // заявку» on /participants, which the card links to in both variants.
+  for (const handoff of [true, false]) {
+    test(`after step 3 the card points to «Как заполнить заявку» (${handoff ? 'with' : 'without'} a hand-off)`, async ({
+      page,
+    }) => {
+      await mockSignUp(page, 200, handoff ? { status: 'accepted', handoff: HANDOFF } : { status: 'accepted' });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+
+      const card = page.locator('[data-signup-success]');
+      const link = card.getByRole('link', { name: /^Как заполнить заявку/ });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', '/participants#zapolnit-zayavku');
+      // An on-site link opens in the same tab, as the site's internal links do.
+      await expect(link).not.toHaveAttribute('target', /.*/);
+      await expect(link).toHaveClass(/ob-btn--ghost/);
+      const lead = card.locator('.ob-signup__lead').last();
+      await expect(lead).toBeVisible();
+      // Step 3 → the line → the link → the «сутки» line.
+      const inOrder = await card.evaluate((el) => {
+        const seq = [
+          el.querySelector('ol > li:nth-child(3)')!,
+          el.querySelector('ol ~ .ob-signup__lead')!,
+          el.querySelector('.ob-signup__fill')!,
+          el.lastElementChild!,
+        ];
+        return seq.every((n, i) => i === 0 || seq[i - 1].compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      expect(inOrder).toBe(true);
+    });
+  }
 
   // Side by side where the card has room, stacked on a phone; never wider than the card.
   for (const [width, sideBySide] of [

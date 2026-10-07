@@ -58,14 +58,15 @@ test.describe('submission guide section', () => {
     expect(titles).toEqual(STEP_TITLES);
   });
 
-  test('step 2 walks the sign-in as five numbered sub-steps, shots after the third and fourth', async ({ page }) => {
+  test('step 2 walks the sign-in as five numbered sub-steps, a shot after the third, the screen and the letter after the fourth', async ({ page }) => {
     await page.goto('/participants');
     const items = page.locator('#podat-materialy-2 ol > li');
     await expect(items).toHaveCount(5);
     const shots = await items.evaluateAll((lis) => lis.map((li) => li.querySelectorAll('img').length));
-    expect(shots).toEqual([0, 0, 1, 1, 0]);
+    expect(shots).toEqual([0, 0, 1, 2, 0]);
     await expect(items.nth(2).locator('img')).toHaveAttribute('src', /\/2027\/submissions\/login-02-[a-z0-9-]+\.png$/);
-    await expect(items.nth(3).locator('img')).toHaveAttribute('src', /\/2027\/submissions\/login-03-[a-z0-9-]+\.png$/);
+    await expect(items.nth(3).locator('img').first()).toHaveAttribute('src', /\/2027\/submissions\/login-03-[a-z0-9-]+\.png$/);
+    await expect(items.nth(3).locator('img').last()).toHaveAttribute('src', /\/2027\/submissions\/letter-code\.png$/);
     // List → button → the secondary note, in reading order.
     const order = await page
       .locator('#podat-materialy-2 > *')
@@ -103,9 +104,9 @@ test.describe('submission guide section', () => {
   test('every screenshot loads from our bucket at its declared size', async ({ page }) => {
     await page.goto('/participants');
     const imgs = page.locator(`${SECTION} img`);
-    await expect(imgs).toHaveCount(13);
+    await expect(imgs).toHaveCount(14);
     for (const img of await imgs.all()) {
-      await expect(img).toHaveAttribute('src', /^https:\/\/s3\.twcstorage\.ru\/orthobio-media\/2027\/submissions\/(login-)?\d{2}-[a-z0-9-]+\.png$/);
+      await expect(img).toHaveAttribute('src', /^https:\/\/s3\.twcstorage\.ru\/orthobio-media\/2027\/submissions\/((login-)?\d{2}-[a-z0-9-]+|letter-code)\.png$/);
       await expect(img).toHaveAttribute('loading', 'lazy');
       expect((await img.getAttribute('alt'))?.length ?? 0).toBeGreaterThan(40);
       await img.scrollIntoViewIfNeeded();

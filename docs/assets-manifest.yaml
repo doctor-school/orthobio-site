@@ -48,6 +48,11 @@
 # see item 2026-committee-portraits. This is the first rescue run after the
 # 2026-07-27 sweep; every other number in this file still describes that sweep.
 #
+# 2026-10-07 (Issues #116 and #99): +2 objects under 2027/submissions/ — the
+# two letters a congress registrant receives (letter-confirmation.png,
+# letter-code.png), shown on the sign-up success card and in guide step 2,
+# see item 2027-congress-letters.
+#
 # 2026-09-30 (Issue #112): +1 object — the owner-supplied screenshot of the
 # hotel «Милан» promo-code field (2027/accommodation/hotel-promo-field.png),
 # see item 2027-accommodation-promo-field.
@@ -101,8 +106,9 @@ meta:
   # (Issue #106, item 2026-people-zagorodniy), +1 owner-supplied screenshot
   # (Issue #112, item 2027-accommodation-promo-field), +17 cabinet and sign-in
   # screenshots (Issue #99, item 2027-submissions-guide; 13 referenced, four
-  # orphaned).
-  s3_objects_total: 2354 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12 + 5
+  # orphaned), +2 letter
+  # screenshots (Issues #116/#99, item 2027-congress-letters).
+  s3_objects_total: 2356 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12 + 5 + 2
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -668,6 +674,37 @@ years:
         # referenced (see above).
         s3_status: uploaded
         files: 13
+      - id: 2027-congress-letters
+        source: DS Platform stage slot pr-2637, the real letters of a congress sign-up, 2026-10-07 (Issues #116, #99)
+        source_urls: []
+        description: >-
+          Two screenshots of the letters a congress registrant receives, as a
+          reader sees them in a mail client: the subject line over the
+          letter's own HTML body, with no mail-client chrome and no sender
+          (the stage sender differs from production). letter-confirmation is
+          the 044 confirmation letter in its final form, with the line about
+          where to submit (ds-platform #2634); letter-code is the sign-in code
+          letter; its code is a one-off stage code. The congress title, date
+          and venue are the production values. RGB PNG at 1×, 520 px wide:
+          letter-confirmation 520×494, 26974 B; letter-code 520×423, 17869 B;
+          sha256 in docs/assets-checksums.txt.
+
+          Consumers: the sign-up success card (SignupForm.astro, both letters,
+          Issue #116) and the «Как подать материалы» guide, step 2, sub-step 4
+          (participants.yaml, letter-code only, Issue #99).
+
+          Upload: `node scripts/upload-media-object.mjs <staged file>
+          2027/submissions/<name>.png`, one call per file. Keys are immutable;
+          a re-shot letter goes to a NEW key, not over an old one.
+        actual_year: 2027
+        type: photos
+        status: downloaded
+        local: '2027/submissions/'
+        s3_key: '2027/submissions/'
+        # Uploaded 2026-10-07: read-back sha256 matched for both; served as
+        # image/png, Cache-Control immutable.
+        s3_status: uploaded
+        files: 2
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Partner / organizer logos (Issue #22) — rescued 2026-07-29

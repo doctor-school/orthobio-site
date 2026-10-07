@@ -127,7 +127,7 @@ describe('participants.yaml → submission guide', () => {
     // The button the first sub-step tells the reader to press is the one printed.
     expect(plain(step.items[0].text)).toContain(`«${CABINET_LOGIN_LABEL}»`);
     // The screenshots follow «Отправить код» (3) and the code letter (4).
-    expect(step.items.map((item) => item.shots.length)).toEqual([0, 0, 1, 1, 0]);
+    expect(step.items.map((item) => item.shots.length)).toEqual([0, 0, 1, 2, 0]);
   });
 
   it('sends «Войти в кабинет» to the Doctor.School sign-in by code, back to the congress cabinet', () => {
@@ -180,17 +180,17 @@ describe('participants.yaml → submission guide', () => {
     expect(guide.steps[0].links).toEqual([{ text: '«Зарегистрироваться»', href: '/registration' }]);
   });
 
-  it('places the thirteen screenshots, each once, from our bucket', () => {
+  it('places the fourteen screenshots, each once, from our bucket', () => {
     const shots = guide.steps.flatMap((s) => [...s.items.flatMap((item) => item.shots), ...s.shots]);
-    expect(shots).toHaveLength(13);
-    expect(new Set(shots.map((s) => s.url)).size).toBe(13);
+    expect(shots).toHaveLength(14);
+    expect(new Set(shots.map((s) => s.url)).size).toBe(14);
     const listed = new Set(
       read('docs/assets-checksums.txt')
         .split(/\r?\n/)
         .map((line) => line.split('  ')[1]),
     );
     for (const shot of shots) {
-      expect(shot.url).toMatch(/^\/media\/2027\/submissions\/(login-)?\d{2}-[a-z0-9-]+\.png$/);
+      expect(shot.url).toMatch(/^\/media\/2027\/submissions\/((login-)?\d{2}-[a-z0-9-]+|letter-code)\.png$/);
       expect(listed.has(shot.url.replace('/media/', '')), `${shot.url} is not in the checksum list`).toBe(true);
       expect(shot.alt.length, `${shot.url} needs a meaningful alt`).toBeGreaterThan(40);
     }
@@ -207,6 +207,7 @@ describe('participants.yaml → submission guide', () => {
     expect(where).toEqual({
       'login-02-by-code-email.png': '2.3',
       'login-03-check-email.png': '2.4',
+      'letter-code.png': '2.4',
       '01-cabinet-empty.png': '3',
       '11-list-with-statuses-v2.png': '3',
       '03-oral-form-authors.png': '4',

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 import { waitForWebfonts } from './_fonts';
@@ -263,6 +263,67 @@ for (const { path, section, shots } of GUIDE_PAGES) {
         .analyze();
       const blocking = results.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
       expect(blocking, JSON.stringify(blocking, null, 2)).toEqual([]);
+    });
+  }
+}
+
+const BUCKET = 'https://s3.twcstorage.ru/**';
+
+/** Box heights of every screenshot in `section`, rounded to the pixel. */
+const shotHeights = (page: Page, section: string) =>
+  page
+    .locator(`${section} img`)
+    .evaluateAll((imgs) => imgs.map((img) => Math.round(img.getBoundingClientRect().height)));
+
+/**
+ * Layout-shift guard (responsive-a11y audit of #114): each screenshot's box is
+ * reserved by its width/height attributes BEFORE its bytes arrive. A style that
+ * sizes the image from its content (`width: auto`) leaves it 0×0 until load, so
+ * every one of them shoves the text below it down as it lands.
+ *
+ * First measurement: the bucket requests are held open, never answered. Second:
+ * each is answered with an image of exactly its declared size — the test above
+ * proves the bucket serves every screenshot at that size, and keeping this one
+ * off the network keeps a slow bucket from failing a layout assertion.
+ */
+for (const { path, section } of GUIDE_PAGES) {
+  for (const width of [390, 1280]) {
+    test(`${path} at ${width}px: every screenshot holds its loaded box before it loads`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.route(BUCKET, () => new Promise<void>(() => {}));
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      // `load` never comes while the images hang; the boxes are the
+      // stylesheet's to size, so measure once it has arrived.
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every((link) => link.sheet !== null),
+          ),
+        )
+        .toBe(true);
+      const pending = await shotHeights(page, section);
+      expect(pending.every((h) => h > 0), `heights before load: ${pending.join(', ')}`).toBe(true);
+      const declared = new Map(
+        await page.locator(`${section} img`).evaluateAll((imgs) =>
+          imgs.map((img) => [(img as HTMLImageElement).src, [img.getAttribute('width'), img.getAttribute('height')]] as const),
+        ),
+      );
+
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      await page.route(BUCKET, (route) => {
+        const [w, h] = declared.get(route.request().url()) ?? [];
+        if (!w || !h) return route.abort();
+        return route.fulfill({
+          contentType: 'image/svg+xml',
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"/>`,
+        });
+      });
+      await page.goto(path);
+      for (const img of await page.locator(`${section} img`).all()) {
+        await img.scrollIntoViewIfNeeded();
+        await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+      }
+      expect(await shotHeights(page, section)).toEqual(pending);
     });
   }
 }

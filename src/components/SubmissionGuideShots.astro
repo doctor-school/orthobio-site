@@ -18,7 +18,7 @@ const { shots } = Astro.props;
   {
     shots.map((shot) => (
       <figure class="ob-acc__shot">
-        <div class="ob-acc__frame">
+        <div class="ob-acc__frame ob-acc__frame--native">
           <img
             src={mediaUrl(shot.url)}
             alt={shot.alt}

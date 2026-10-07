@@ -119,7 +119,21 @@ test.describe('without JavaScript', () => {
     // own website as a bare <a target="_blank"> outside the four link
     // components, so ROUTES alone would leave 22 pages unchecked.
     for (const path of [...ROUTES, ...PROFILE_ROUTES]) {
-      await page.goto(path);
+      // The sweep reads markup and the stylesheets (`summary:visible` below
+      // is decided by CSS), never an image. Waiting for `load` would wait on
+      // every image from the bucket — eleven screenshots on the filling page —
+      // and time out on a slow fetch this test never looks at; so wait for the
+      // parsed DOM and the stylesheets instead.
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      // A poll of `evaluate`, not `waitForFunction`: with scripting off the
+      // latter's in-page polling can stall on the first navigation.
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every((link) => link.sheet !== null),
+          ),
+        )
+        .toBe(true);
 
       // Media past the fold lives inside a closed <details>, and a hidden
       // subtree has NO accessible name — the assertion below would have read

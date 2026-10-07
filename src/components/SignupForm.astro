@@ -34,19 +34,71 @@
 import Button from '@/components/Button.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
+  CABINET_LOGIN_LABEL,
+  CABINET_LOGIN_URL,
   CONTACT_EMAIL,
+  FILL_GUIDE_URL,
   NOTIFY_CHANNEL_URL,
   NOTIFY_CTA_LABEL,
   REGISTRATION_WINDOW,
   SMARTCAPTCHA_SITEKEY,
   SMARTCAPTCHA_SITEKEY_PREVIEW,
   UPCOMING_CONGRESS_DATES,
+  mediaUrl,
 } from '@/config/site';
 import { FORCE_OPEN_HOSTS, formatMoscowInstant } from '@/lib/registration';
 
 const opensLabel = formatMoscowInstant(REGISTRATION_WINDOW.opensAt);
 const hasCaptchaKey = SMARTCAPTCHA_SITEKEY !== '' || SMARTCAPTCHA_SITEKEY_PREVIEW !== '';
 const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
+
+/**
+ * The two letters a registrant receives, shown on the success card so the
+ * reader knows what to expect and where the code comes from (owner request,
+ * Issue #116). Screenshots of the real letters taken on a DS Platform stage
+ * stand, in the bucket under 2027/submissions/ (docs/assets-manifest.yaml,
+ * item 2027-congress-letters); framed like the guide's screenshots.
+ */
+const SIGNUP_LETTERS = [
+  {
+    url: '/media/2027/submissions/letter-confirmation.png',
+    caption: 'Подтверждение регистрации',
+    alt: 'Письмо «Doctor.School — вы зарегистрированы на VIII Конгресс ОРТОБИОЛОГИЯ 2027»: дата, время и место Конгресса и строка о том, как подать материалы, — на сайте orthobio.ru в разделе «Участникам» найти «Как подать материалы» и нажать «Войти в кабинет»',
+    width: 520,
+    height: 494,
+    handoffOnly: false,
+  },
+  {
+    url: '/media/2027/submissions/letter-code.png',
+    caption: 'Письмо с кодом',
+    alt: 'Письмо «… — код для входа в Doctor.School»: шесть цифр кода крупно и подсказка ввести их во вкладке Doctor.School, где код запрошен; код действует 1 час',
+    width: 520,
+    height: 423,
+    // Sent only by the hand-off click; without a reference the visitor asks
+    // for the code on the sign-in page, so the card does not promise it.
+    handoffOnly: true,
+  },
+] as const;
+
+/**
+ * The sign-in path under steps 2 and 3 (owner, 2026-10-07): the code step and
+ * the empty cabinet, the same bucket objects the «Как подать материалы» guide
+ * shows (item 2027-submissions-guide), framed the same way.
+ */
+const SIGNIN_SHOTS = {
+  codeStep: {
+    url: '/media/2027/submissions/login-03-check-email.png',
+    alt: 'Экран «Проверьте почту»: адрес, на который отправлен код, шесть пустых клеток «Код из письма» и кнопка «Подтвердить и войти»',
+    width: 492,
+    height: 560,
+  },
+  cabinet: {
+    url: '/media/2027/submissions/01-cabinet-empty.png',
+    alt: 'Кабинет «Мои заявки на Конгресс», блок «Новая заявка»: выбор вида заявки — «Устный доклад», «Постерный доклад» или «Тезисы», у каждого срок приёма и ссылка «Начать заявку», у тезисов — счётчик «Отправлено 0 тезисов из 3»',
+    width: 1080,
+    height: 544,
+  },
+} as const;
 ---
 
 <div
@@ -351,22 +403,115 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
     </form>
 
     <!-- The heading takes the focus (design); its description carries the
-         address, so one announcement holds both. -->
-    <div class="ob-signup__success ob-signup__status" data-signup-success role="status" hidden>
+         address, so one announcement holds both — and the live region is those
+         two alone, never the instruction under them. Below it, the owner-approved
+         instruction «А» (Issue #116, orthobio-site#99): how to reach the
+         congress cabinet, with the card's one action. The button's href is
+         the configured sign-in link until the response's hand-off reference
+         is added by the script; without a reference no code is sent on the
+         click, so step 1 loses its «we send the code» clause. -->
+    <div class="ob-signup__success ob-signup__status" data-signup-success hidden>
       <span class="ob-signup__badge ob-signup__badge--ok" aria-hidden="true">
         <StrokeIcon name="check" />
       </span>
-      <h2
-        class="ob-signup__stitle"
-        tabindex="-1"
-        aria-describedby="signup-success-text"
-        data-signup-success-text
-      >
-        Заявка принята
-      </h2>
-      <p class="ob-signup__stext" id="signup-success-text">
-        Письмо-подтверждение придёт на <b data-signup-email></b> в&nbsp;течение нескольких минут. Если
-        его нет&nbsp;— проверьте папку «Спам».
+      <div class="ob-signup__shead" role="status">
+        <h2
+          class="ob-signup__stitle"
+          tabindex="-1"
+          aria-describedby="signup-success-text"
+          data-signup-success-text
+        >
+          Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».
+        </h2>
+        <!-- Two versions of the line; the script shows the one that is true for
+             the response. Without a hand-off reference no code letter is coming
+             (owner, 2026-10-07). -->
+        <p class="ob-signup__stext" id="signup-success-text">
+          <span data-signup-handoff="with">
+            Мы отправим вам два письма: подтверждение регистрации&nbsp;— сразу, а письмо с&nbsp;кодом для
+            входа&nbsp;— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут&nbsp;—
+            проверьте папку «Спам».
+          </span>
+          <span data-signup-handoff="without" hidden>
+            Подтверждение регистрации придёт на почту в&nbsp;течение пары минут. Если его нет&nbsp;— проверьте
+            папку «Спам».
+          </span>
+        </p>
+      </div>
+      <div class="ob-signup__letters">
+        {
+          SIGNUP_LETTERS.map((letter) => (
+            <figure class="ob-acc__shot" data-signup-handoff={letter.handoffOnly ? 'with' : undefined}>
+              <div class="ob-acc__frame ob-acc__frame--native">
+                <img
+                  src={mediaUrl(letter.url)}
+                  alt={letter.alt}
+                  width={letter.width}
+                  height={letter.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <figcaption class="ob-acc__cap">{letter.caption}</figcaption>
+            </figure>
+          ))
+        }
+      </div>
+      <p class="ob-signup__stext ob-signup__lead">Чтобы подать доклад или тезисы:</p>
+      <ol class="ob-list ob-signup__steps">
+        <li>
+          Нажмите «Войти в кабинет»<span data-signup-code-sent data-signup-handoff="with" hidden
+            >&nbsp;— мы сразу отправим код на <b data-signup-email></b></span
+          >.
+          <!-- The step's own action sits under it: after the screenshots of
+               steps 2 and 3 it would be a long scroll away (owner, 2026-10-07). -->
+          <Button class="ob-signup__cabinet" variant="accent" size="lg" href={CABINET_LOGIN_URL} external>
+            {CABINET_LOGIN_LABEL}
+          </Button>
+        </li>
+        <li>
+          Откройте письмо «…&nbsp;— код для входа в Doctor.School» и введите 6&nbsp;цифр из письма на
+          открывшейся странице.
+          <figure class="ob-acc__shot ob-signup__shot">
+            <div class="ob-acc__frame ob-acc__frame--native">
+              <img
+                src={mediaUrl(SIGNIN_SHOTS.codeStep.url)}
+                alt={SIGNIN_SHOTS.codeStep.alt}
+                width={SIGNIN_SHOTS.codeStep.width}
+                height={SIGNIN_SHOTS.codeStep.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </figure>
+        </li>
+        <li>
+          Откроется кабинет «Мои заявки на Конгресс»&nbsp;— нажмите «+&nbsp;Новая заявка».
+          <figure class="ob-acc__shot ob-signup__shot">
+            <div class="ob-acc__frame ob-acc__frame--native">
+              <img
+                src={mediaUrl(SIGNIN_SHOTS.cabinet.url)}
+                alt={SIGNIN_SHOTS.cabinet.alt}
+                width={SIGNIN_SHOTS.cabinet.width}
+                height={SIGNIN_SHOTS.cabinet.height}
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </figure>
+        </li>
+      </ol>
+      <!-- The sign-in ends here; the cabinet steps are their own page, with no
+           sign-in in it (owner, 2026-10-07). On-site, yet in a NEW tab: this
+           card is a state of the form's script, so leaving it in this tab and
+           coming Back shows the empty form and loses the personal 24-hour
+           button above. `external` writes the target and its announcement. -->
+      <p class="ob-signup__stext ob-signup__lead">Пошаговая инструкция со скриншотами:</p>
+      <Button class="ob-signup__fill" variant="ghost" arrow href={FILL_GUIDE_URL} external>Как заполнить заявку</Button>
+      <!-- The 24 hours are the personal button's; the plain login has no clock. -->
+      <p class="ob-signup__stext" data-signup-handoff="with" hidden>
+        Кнопка действует сутки. Если вернётесь позже&nbsp;— войдите через раздел «Участникам» →
+        «Как подать материалы».
       </p>
     </div>
   </div>
@@ -447,7 +592,8 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
 </script>
 
 <script>
-  import { REGISTRATION_WINDOW } from '@/config/site';
+  import { CABINET_LOGIN_URL, REGISTRATION_WINDOW } from '@/config/site';
+  import { cabinetLoginHref, handoffFrom } from '@/lib/cabinet-login';
   import { pickSitekey } from '@/lib/captcha';
   import { isValidContactPhone } from '@/lib/contact-phone';
   import { isPlatformEmail } from '@/lib/email';
@@ -926,10 +1072,28 @@ const closesLabel = formatMoscowInstant(REGISTRATION_WINDOW.closesAt);
         setBusy(false);
 
         if (res.ok) {
+          // The hand-off reference lives in this scope and the button's href
+          // only (lib/cabinet-login.ts); an unreadable body is an accepted
+          // sign-up all the same, just without one.
+          let handoff: string | null = null;
+          try {
+            handoff = handoffFrom(await res.json());
+          } catch {
+            handoff = null;
+          }
+          success.querySelector<HTMLAnchorElement>('.ob-signup__cabinet')!.href = cabinetLoginHref(
+            CABINET_LOGIN_URL,
+            handoff,
+          );
+          for (const part of success.querySelectorAll<HTMLElement>('[data-signup-handoff]')) {
+            part.hidden = (part.dataset.signupHandoff === 'with') !== (handoff !== null);
+          }
           form.hidden = true;
           // The success block is the card's whole content, so the form's head goes too.
           root.querySelector<HTMLElement>('[data-signup-head]')!.hidden = true;
-          root.querySelector<HTMLElement>('[data-signup-email]')!.textContent = String(body.email);
+          for (const email of success.querySelectorAll<HTMLElement>('[data-signup-email]')) {
+            email.textContent = String(body.email);
+          }
           success.hidden = false;
           root.querySelector<HTMLElement>('[data-signup-success-text]')!.focus();
           return;

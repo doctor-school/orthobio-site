@@ -191,8 +191,9 @@ test.describe('without JavaScript', () => {
     // «Узнать первым» Telegram CTA on the /registration «откроется» card.
     // 59 since Issue #112: the hotel booking CTA and the hotel address (map)
     // link of the /participants «Проживание» section. 60 since Issue #99: the
-    // «Войти в кабинет» button of the /participants submission guide.
-    expect(checked, 'the sweep must reach every external link on the site').toBe(60);
+    // «Войти в кабинет» button of the /participants submission guide. 61 since
+    // Issue #116: the «Войти в кабинет» button of the /registration success card.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(61);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

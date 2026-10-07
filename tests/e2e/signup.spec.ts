@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page, type Request } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Request, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
@@ -188,6 +188,19 @@ const blockSignupModule = (page: Page) =>
 
 const submit = (page: Page) => page.getByRole('button', { name: 'Зарегистрироваться' }).click();
 
+const SUCCESS_TITLE = 'Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».';
+/** A hand-off reference no other string on the page could contain by chance. */
+const HANDOFF = 'hx7Qp9-REF_zW2';
+const CABINET_PLAIN = 'https://new.doctor.school/login?method=code&returnTo=/account/congress';
+/** The line above the two letters (owner request, Issue #116), as the heading's description. */
+const LETTERS_LINE =
+  'Мы отправим вам два письма: подтверждение регистрации\u00a0— сразу, а письмо с\u00a0кодом для входа\u00a0— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут\u00a0— проверьте папку «Спам».';
+/** Its replacement when the response carries no hand-off: no code letter is coming. */
+const FALLBACK_LINE =
+  'Подтверждение регистрации придёт на почту в течение пары минут. Если его нет — проверьте папку «Спам».';
+const cabinetButton = (page: Page) =>
+  page.locator('[data-signup-success]').getByRole('link', { name: /^Войти в кабинет/ });
+
 test.describe('sign-up form', () => {
   test('is shown on the local host, with «Другое» pinned last in the specialty list', async ({ page }) => {
     await open(page);
@@ -304,11 +317,12 @@ test.describe('sign-up form', () => {
     await fillValid(page);
     await submit(page);
 
-    const title = page.getByRole('heading', { level: 2, name: 'Заявка принята' });
+    const title = page.getByRole('heading', { level: 2, name: SUCCESS_TITLE });
     await expect(title).toBeVisible();
     await expect(title).toBeFocused();
+    // The intake answered without a hand-off reference: the fallback line.
     await expect(title).toHaveAccessibleDescription(
-      'Письмо-подтверждение придёт на ivanov@example.com в\u00a0течение нескольких минут. Если его нет\u00a0— проверьте папку «Спам».',
+      FALLBACK_LINE,
     );
     await expect(page.locator('[data-signup-form]')).toBeHidden();
     // The form's own heading leaves with the form: the card now says one thing.
@@ -345,6 +359,344 @@ test.describe('sign-up form', () => {
       region: 'г. Москва',
       personalDataConsent: true,
     });
+  });
+
+  // Issue #116: the card's one action opens the platform's code step with the
+  // personal reference from the response — and the reference goes nowhere else.
+  test('«Войти в кабинет» carries the hand-off reference, and only its href does', async ({ page }) => {
+    const consoleText: string[] = [];
+    page.on('console', (msg) => consoleText.push(msg.text()));
+    const sent: string[] = [];
+    page.on('request', (req) => sent.push(`${req.url()} ${req.postData() ?? ''}`));
+    await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    const cta = cabinetButton(page);
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute(
+      'href',
+      `https://new.doctor.school/login?method=code&handoff=${HANDOFF}&returnTo=/account/congress`,
+    );
+    await expect(cta).toHaveAttribute('target', '_blank');
+    await expect(cta).toHaveAttribute('rel', 'noopener');
+    await expect(cta).toHaveClass(/ob-btn--accent/);
+    // The one action of the card; the other link it holds stays on the site.
+    await expect(page.locator('[data-signup-success] .ob-btn--accent')).toHaveCount(1);
+    await expect(page.locator('[data-signup-success] a[href^="https://new.doctor.school"]')).toHaveCount(1);
+
+    // The visitor's address, in full, in step 1 (the code goes there).
+    const steps = page.locator('[data-signup-success] ol');
+    await expect(steps.locator('li').first().locator('[data-signup-code-sent]')).toBeVisible();
+    expect(await steps.locator('li').first().innerText()).toContain('ivanov@example.com');
+    await expect(steps.locator('li')).toHaveCount(3);
+
+    // Exactly one occurrence in the whole document: the href checked above.
+    const html = await page.evaluate(() => document.documentElement.outerHTML);
+    expect(html.split(HANDOFF)).toHaveLength(2);
+    expect(await page.locator('body').innerText()).not.toContain(HANDOFF);
+    const leaks = await page.evaluate(
+      (ref) => [
+        location.href,
+        document.title,
+        document.cookie,
+        JSON.stringify({ ...localStorage }),
+        JSON.stringify({ ...sessionStorage }),
+      ].filter((v) => v.includes(ref)),
+      HANDOFF,
+    );
+    expect(leaks).toEqual([]);
+    expect(consoleText.filter((t) => t.includes(HANDOFF))).toEqual([]);
+    expect(sent.filter((t) => t.includes(HANDOFF))).toEqual([]);
+  });
+
+  test('falls back to the plain sign-in link when the response has no reference', async ({ page }) => {
+    await mockSignUp(page, 200, { status: 'accepted' });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    await expect(cabinetButton(page)).toHaveAttribute('href', CABINET_PLAIN);
+    // Without the reference no code is sent on the click, so step 1 does not
+    // promise one (the only allowed deviation from the approved text).
+    const first = page.locator('[data-signup-success] ol li').first();
+    await expect(first).toBeVisible();
+    await expect(first.locator('[data-signup-code-sent]')).toBeHidden();
+    const shown = await first.innerText();
+    expect(shown).not.toContain('ivanov@example.com');
+    expect(shown).not.toContain('код');
+    // No code letter is coming: the line says only the confirmation, and the
+    // code letter is not shown (owner, 2026-10-07). The address is named only in step 1.
+    await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toHaveAccessibleDescription(
+      FALLBACK_LINE,
+    );
+    const letters = page.locator('[data-signup-success] .ob-signup__letters figure');
+    await expect(letters.locator('figcaption').filter({ visible: true })).toHaveText(['Подтверждение регистрации']);
+    await expect(letters.nth(1)).toBeHidden();
+    // The sign-in path itself is the same either way.
+    await expect(page.locator('[data-signup-success] ol .ob-signup__shot')).toHaveCount(2);
+    expect(await page.locator('[data-signup-success]').innerText()).not.toContain('ivanov@example.com');
+  });
+
+  test('shows the two letters under the line that announces them, each from our bucket at its declared size', async ({
+    page,
+  }) => {
+    await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    const figures = page.locator('[data-signup-success] .ob-signup__letters figure');
+    await expect(figures.locator('figcaption')).toHaveText(['Подтверждение регистрации', 'Письмо с кодом']);
+    const imgs = figures.locator('img');
+    await expect(imgs).toHaveCount(2);
+    for (const [i, img] of (await imgs.all()).entries()) {
+      await expect(img).toHaveAttribute(
+        'src',
+        `https://s3.twcstorage.ru/orthobio-media/2027/submissions/${['letter-confirmation', 'letter-code'][i]}.png`,
+      );
+      await expect(img).toHaveAttribute('loading', 'lazy');
+      expect(await img.getAttribute('alt')).toMatch(/^Письмо «.+»: .{40,}/);
+      await img.scrollIntoViewIfNeeded();
+      const width = Number(await img.getAttribute('width'));
+      const height = Number(await img.getAttribute('height'));
+      await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => (el.complete ? [el.naturalWidth, el.naturalHeight] : null)), {
+          message: `${await img.getAttribute('src')} did not load at ${width}×${height}`,
+          timeout: 15_000,
+        })
+        .toEqual([width, height]);
+    }
+  });
+
+  test('shows the sign-in path: the button under step 1, the code step under step 2, the cabinet under step 3', async ({
+    page,
+  }) => {
+    await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toHaveAccessibleDescription(
+      LETTERS_LINE,
+    );
+    const steps = page.locator('[data-signup-success] ol > li');
+    await expect(steps.nth(0).locator('img')).toHaveCount(0);
+    for (const [i, key, size] of [
+      [1, 'login-03-check-email', [492, 560]],
+      [2, '01-cabinet-empty', [1080, 544]],
+    ] as const) {
+      const img = steps.nth(i).locator('.ob-signup__shot img');
+      await expect(img).toHaveCount(1);
+      await expect(img).toHaveAttribute('src', `https://s3.twcstorage.ru/orthobio-media/2027/submissions/${key}.png`);
+      expect(await img.getAttribute('alt')).toMatch(/^(Экран|Кабинет) «.+»: .{40,}/);
+      await img.scrollIntoViewIfNeeded();
+      await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => (el.complete ? [el.naturalWidth, el.naturalHeight] : null)), {
+          timeout: 15_000,
+        })
+        .toEqual([...size]);
+    }
+
+    // Reading order: letters → step 1 + button → step 2 + shot → step 3 + shot → the «сутки» line.
+    await expect(steps.nth(0).locator('.ob-signup__cabinet')).toHaveCount(1);
+    const order = await page.locator('[data-signup-success]').evaluate((card) => {
+      const at = (sel: string) => card.querySelector(sel)!;
+      const seq = [
+        at('.ob-signup__letters'),
+        at('ol > li:nth-child(1) .ob-signup__cabinet'),
+        at('ol > li:nth-child(2) .ob-signup__shot'),
+        at('ol > li:nth-child(3) .ob-signup__shot'),
+        card.lastElementChild!,
+      ];
+      return seq.every((el, i) => i === 0 || seq[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(order).toBe(true);
+  });
+
+  // Owner, 2026-10-07: the card signs in; the cabinet steps are «Как заполнить
+  // заявку», a page of their own, which the card links to in both variants —
+  // in a new tab: the card is a state of this page's script, so leaving it in
+  // this tab and coming Back shows the empty form and loses the personal
+  // 24-hour button.
+  for (const handoff of [true, false]) {
+    test(`after step 3 the card points to «Как заполнить заявку» (${handoff ? 'with' : 'without'} a hand-off)`, async ({
+      page,
+    }) => {
+      await mockSignUp(page, 200, handoff ? { status: 'accepted', handoff: HANDOFF } : { status: 'accepted' });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+
+      const card = page.locator('[data-signup-success]');
+      const link = card.getByRole('link', { name: /^Как заполнить заявку/ });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('href', '/participants/zapolnit-zayavku');
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener');
+      await expect(link).toHaveAccessibleName(/^Как заполнить заявку\s+\(открывается в новой вкладке\)$/);
+      await expect(link).toHaveClass(/ob-btn--ghost/);
+      const lead = card.locator('.ob-signup__lead').last();
+      await expect(lead).toBeVisible();
+      // Not a restatement of the link right under it (responsive-a11y audit of #117).
+      await expect(lead).toHaveText('Пошаговая инструкция со скриншотами:');
+      // Step 3 → the line → the link → the «сутки» line.
+      const inOrder = await card.evaluate((el) => {
+        const seq = [
+          el.querySelector('ol > li:nth-child(3)')!,
+          el.querySelector('ol ~ .ob-signup__lead')!,
+          el.querySelector('.ob-signup__fill')!,
+          el.lastElementChild!,
+        ];
+        return seq.every((n, i) => i === 0 || seq[i - 1].compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      expect(inOrder).toBe(true);
+      // The «сутки» line is about the personal button, so only its variant says it;
+      // without a hand-off the button is the plain login (review of #117).
+      const note = card.locator('.ob-signup__fill ~ p');
+      await expect(note).toHaveCount(1);
+      if (handoff) {
+        await expect(note).toBeVisible();
+        await expect(note).toHaveText(
+          'Кнопка действует сутки. Если вернётесь позже — войдите через раздел «Участникам» → «Как подать материалы».',
+        );
+      } else {
+        await expect(note).toBeHidden();
+      }
+    });
+  }
+
+  // Responsive-a11y audit of #117: the live region is the heading and its one
+  // line, not the ~900-character instruction under them — a screen reader would
+  // read the whole card out on arrival. The heading still takes the focus.
+  for (const handoff of [true, false]) {
+    test(`announces only the heading and its line (${handoff ? 'with' : 'without'} a hand-off)`, async ({ page }) => {
+      await mockSignUp(page, 200, handoff ? { status: 'accepted', handoff: HANDOFF } : { status: 'accepted' });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+
+      const card = page.locator('[data-signup-success]');
+      const heading = page.getByRole('heading', { level: 2, name: SUCCESS_TITLE });
+      await expect(heading).toBeFocused();
+      expect(await card.getAttribute('role')).toBeNull();
+      expect(await card.evaluate((el) => el.closest('[role="status"], [role="alert"], [aria-live]'))).toBeNull();
+      const live = card.locator('[role="status"]');
+      await expect(live).toHaveCount(1);
+      await expect(live.locator('[aria-live], [role="status"], [role="alert"]')).toHaveCount(0);
+      await expect(live).toHaveText(`${SUCCESS_TITLE} ${handoff ? LETTERS_LINE : FALLBACK_LINE}`, { useInnerText: true });
+    });
+  }
+
+  // Responsive-a11y audit of #117: without a hand-off one letter is left, and
+  // it must not sit in half of a two-column row beside an empty column.
+  for (const width of [768, 1280]) {
+    test(`a single letter takes the whole row at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await mockSignUp(page, 200, { status: 'accepted' });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+      const grid = page.locator('[data-signup-success] .ob-signup__letters');
+      const shown = grid.locator('figure').filter({ visible: true });
+      await expect(shown).toHaveCount(1);
+      expect(await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)).toBe(1);
+      const [row, figure] = [(await grid.boundingBox())!, (await shown.boundingBox())!];
+      expect(figure.width).toBeGreaterThan(row.width / 2);
+      expect(figure.x + figure.width).toBeLessThanOrEqual(row.x + row.width + 0.5);
+    });
+  }
+
+  // Responsive-a11y audit of #117: every image of the card reserves its box
+  // from its width/height attributes before its bytes arrive — sized from its
+  // content it is 0×0 until load and shoves the steps below it down as it
+  // lands. The bucket requests are held, measured, then answered with an image
+  // of exactly the declared size (the tests above prove the bucket serves each
+  // at that size; staying off the network keeps a slow bucket out of a layout
+  // assertion).
+  for (const width of [390, 1280]) {
+    test(`every image of the card holds its loaded box before it loads at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      const held: Route[] = [];
+      let answer: ((route: Route) => Promise<void>) | null = null;
+      await page.route('https://s3.twcstorage.ru/orthobio-media/2027/submissions/**', (route) =>
+        answer ? answer(route) : void held.push(route),
+      );
+      await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+
+      const imgs = page.locator('[data-signup-success] img');
+      await expect(imgs).toHaveCount(4);
+      const heights = () => imgs.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+      const pending = await heights();
+      expect(pending.every((h) => h > 0), `heights before load: ${pending.join(', ')}`).toBe(true);
+
+      const declared = new Map(
+        await imgs.evaluateAll((els) =>
+          els.map((el) => [(el as HTMLImageElement).src, [el.getAttribute('width'), el.getAttribute('height')]] as const),
+        ),
+      );
+      answer = (route: Route) => {
+        const [w, h] = declared.get(route.request().url()) ?? [];
+        if (!w || !h) return route.abort();
+        return route.fulfill({
+          contentType: 'image/svg+xml',
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"/>`,
+        });
+      };
+      await Promise.all(held.map(answer));
+      for (const img of await imgs.all()) {
+        await img.scrollIntoViewIfNeeded();
+        await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+      }
+      expect(await heights()).toEqual(pending);
+    });
+  }
+
+  // Side by side where the card has room, stacked on a phone; never wider than the card.
+  for (const [width, sideBySide] of [
+    [360, false],
+    [390, false],
+    [768, true],
+    [1280, true],
+  ] as const) {
+    test(`the two letters sit ${sideBySide ? 'side by side' : 'stacked'} inside the card at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+      const figures = page.locator('[data-signup-success] .ob-signup__letters figure');
+      await expect(figures).toHaveCount(2);
+      const [a, b] = await Promise.all([figures.nth(0).boundingBox(), figures.nth(1).boundingBox()]);
+      if (sideBySide) {
+        expect(Math.round(a!.y)).toBe(Math.round(b!.y));
+        expect(b!.x).toBeGreaterThanOrEqual(a!.x + a!.width);
+      } else {
+        expect(b!.y).toBeGreaterThanOrEqual(a!.y + a!.height);
+      }
+      const card = (await page.locator('.ob-signup__card:visible').boundingBox())!;
+      for (const box of [a!, b!]) {
+        expect(box.x).toBeGreaterThanOrEqual(card.x - 0.5);
+        expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+      }
+      expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('a success body that is not JSON still shows the card, with the plain link', async ({ page }) => {
+    await page.route(SIGN_UP_URL, (route) => route.fulfill({ status: 200, body: '' }));
+    await open(page);
+    await fillValid(page);
+    await submit(page);
+
+    await expect(page.getByRole('heading', { level: 2, name: SUCCESS_TITLE })).toBeFocused();
+    await expect(cabinetButton(page)).toHaveAttribute('href', CABINET_PLAIN);
   });
 
   test('sends the patronymic when one is given, normalised', async ({ page }) => {
@@ -1285,7 +1637,8 @@ test.describe('registration page design', () => {
   const STATES = [
     { name: 'not-yet-open', status: 422, json: { code: 'not-yet-open' }, heading: /Регистрация откроется/ },
     { name: 'closed', status: 422, json: { code: 'closed' }, heading: /Регистрация на конгресс закрыта/ },
-    { name: 'success', status: 200, json: { status: 'accepted' }, heading: /Заявка принята/ },
+    // With the hand-off (Issue #116): the instruction, the address and the button.
+    { name: 'success', status: 200, json: { status: 'accepted', handoff: HANDOFF }, heading: SUCCESS_TITLE },
   ] as const;
   for (const state of STATES) {
     for (const width of OVERFLOW_WIDTHS) {
@@ -1300,6 +1653,14 @@ test.describe('registration page design', () => {
         expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
         await expectNoHeadingSpill(page, `/registration ${state.name} @${width}`);
         await expectNoColumnOverlap(page, `/registration ${state.name} @${width}`);
+        // Nothing pokes out of the visible card: a long address and the button wrap.
+        const spill = await page.locator('.ob-signup__card:visible').evaluate((card) => {
+          const box = card.getBoundingClientRect();
+          return [...card.querySelectorAll('*')]
+            .map((el) => el.getBoundingClientRect())
+            .filter((r) => r.width > 0 && (r.left < box.left - 0.5 || r.right > box.right + 0.5)).length;
+        });
+        expect(spill).toBe(0);
         const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
         const blocking = results.violations.filter((v) => ['critical', 'serious'].includes(v.impact ?? ''));
         expect(blocking, JSON.stringify(blocking.map((v) => v.id))).toEqual([]);

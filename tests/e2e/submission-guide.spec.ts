@@ -107,8 +107,8 @@ test.describe('submission guide section', () => {
     const shots = await items.evaluateAll((lis) => lis.map((li) => li.querySelectorAll('img').length));
     expect(shots).toEqual([0, 0, 1, 2, 0]);
     await expect(items.nth(2).locator('img')).toHaveAttribute('src', /\/2027\/submissions\/login-02-[a-z0-9-]+\.png$/);
-    await expect(items.nth(3).locator('img').first()).toHaveAttribute('src', /\/2027\/submissions\/login-03-[a-z0-9-]+\.png$/);
-    await expect(items.nth(3).locator('img').last()).toHaveAttribute('src', /\/2027\/submissions\/letter-code\.png$/);
+    await expect(items.nth(3).locator('img').first()).toHaveAttribute('src', /\/2027\/submissions\/letter-code\.png$/);
+    await expect(items.nth(3).locator('img').last()).toHaveAttribute('src', /\/2027\/submissions\/login-03-[a-z0-9-]+\.png$/);
     // The button sits right under the sub-step that names it, and only there.
     const buttons = await items.evaluateAll((lis) => lis.map((li) => li.querySelectorAll('.ob-btn').length));
     expect(buttons).toEqual([1, 0, 0, 0, 0]);

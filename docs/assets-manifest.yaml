@@ -667,6 +667,10 @@ years:
           Upload: `node scripts/upload-media-object.mjs <staged file>
           2027/submissions/<name>.png`, one call per file. Keys are immutable;
           a re-shot screenshot goes to a NEW key, not over an old one.
+          Dates are baked into the pixels («23 апреля 2027» in 01/08/09, the
+          intake deadlines under each kind in 01): a change of
+          UPCOMING_CONGRESS_DATES / SUBMISSION_DEADLINES in src/config/site.ts
+          requires re-shooting those files to NEW keys.
         actual_year: 2027
         type: photos
         status: downloaded

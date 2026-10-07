@@ -403,43 +403,46 @@ const SIGNIN_SHOTS = {
     </form>
 
     <!-- The heading takes the focus (design); its description carries the
-         address, so one announcement holds both. Below it, the owner-approved
+         address, so one announcement holds both — and the live region is those
+         two alone, never the instruction under them. Below it, the owner-approved
          instruction «А» (Issue #116, orthobio-site#99): how to reach the
          congress cabinet, with the card's one action. The button's href is
          the configured sign-in link until the response's hand-off reference
          is added by the script; without a reference no code is sent on the
          click, so step 1 loses its «we send the code» clause. -->
-    <div class="ob-signup__success ob-signup__status" data-signup-success role="status" hidden>
+    <div class="ob-signup__success ob-signup__status" data-signup-success hidden>
       <span class="ob-signup__badge ob-signup__badge--ok" aria-hidden="true">
         <StrokeIcon name="check" />
       </span>
-      <h2
-        class="ob-signup__stitle"
-        tabindex="-1"
-        aria-describedby="signup-success-text"
-        data-signup-success-text
-      >
-        Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».
-      </h2>
-      <!-- Two versions of the line; the script shows the one that is true for
-           the response. Without a hand-off reference no code letter is coming
-           (owner, 2026-10-07). -->
-      <p class="ob-signup__stext" id="signup-success-text">
-        <span data-signup-handoff="with">
-          Мы отправим вам два письма: подтверждение регистрации&nbsp;— сразу, а письмо с&nbsp;кодом для
-          входа&nbsp;— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут&nbsp;—
-          проверьте папку «Спам».
-        </span>
-        <span data-signup-handoff="without" hidden>
-          Подтверждение регистрации придёт на почту в&nbsp;течение пары минут. Если его нет&nbsp;— проверьте
-          папку «Спам».
-        </span>
-      </p>
+      <div class="ob-signup__shead" role="status">
+        <h2
+          class="ob-signup__stitle"
+          tabindex="-1"
+          aria-describedby="signup-success-text"
+          data-signup-success-text
+        >
+          Вы зарегистрированы на VIII Конгресс «Ортобиология 2027».
+        </h2>
+        <!-- Two versions of the line; the script shows the one that is true for
+             the response. Without a hand-off reference no code letter is coming
+             (owner, 2026-10-07). -->
+        <p class="ob-signup__stext" id="signup-success-text">
+          <span data-signup-handoff="with">
+            Мы отправим вам два письма: подтверждение регистрации&nbsp;— сразу, а письмо с&nbsp;кодом для
+            входа&nbsp;— когда вы нажмёте «Войти в кабинет». Если письма не пришли за пару минут&nbsp;—
+            проверьте папку «Спам».
+          </span>
+          <span data-signup-handoff="without" hidden>
+            Подтверждение регистрации придёт на почту в&nbsp;течение пары минут. Если его нет&nbsp;— проверьте
+            папку «Спам».
+          </span>
+        </p>
+      </div>
       <div class="ob-signup__letters">
         {
           SIGNUP_LETTERS.map((letter) => (
             <figure class="ob-acc__shot" data-signup-handoff={letter.handoffOnly ? 'with' : undefined}>
-              <div class="ob-acc__frame">
+              <div class="ob-acc__frame ob-acc__frame--native">
                 <img
                   src={mediaUrl(letter.url)}
                   alt={letter.alt}
@@ -470,7 +473,7 @@ const SIGNIN_SHOTS = {
           Откройте письмо «…&nbsp;— код для входа в Doctor.School» и введите 6&nbsp;цифр из письма на
           открывшейся странице.
           <figure class="ob-acc__shot ob-signup__shot">
-            <div class="ob-acc__frame">
+            <div class="ob-acc__frame ob-acc__frame--native">
               <img
                 src={mediaUrl(SIGNIN_SHOTS.codeStep.url)}
                 alt={SIGNIN_SHOTS.codeStep.alt}
@@ -485,7 +488,7 @@ const SIGNIN_SHOTS = {
         <li>
           Откроется кабинет «Мои заявки на Конгресс»&nbsp;— нажмите «+&nbsp;Новая заявка».
           <figure class="ob-acc__shot ob-signup__shot">
-            <div class="ob-acc__frame">
+            <div class="ob-acc__frame ob-acc__frame--native">
               <img
                 src={mediaUrl(SIGNIN_SHOTS.cabinet.url)}
                 alt={SIGNIN_SHOTS.cabinet.alt}
@@ -503,7 +506,7 @@ const SIGNIN_SHOTS = {
            card is a state of the form's script, so leaving it in this tab and
            coming Back shows the empty form and loses the personal 24-hour
            button above. `external` writes the target and its announcement. -->
-      <p class="ob-signup__stext ob-signup__lead">Как заполнить заявку&nbsp;— по шагам, со скриншотами:</p>
+      <p class="ob-signup__stext ob-signup__lead">Пошаговая инструкция со скриншотами:</p>
       <Button class="ob-signup__fill" variant="ghost" arrow href={FILL_GUIDE_URL} external>Как заполнить заявку</Button>
       <p class="ob-signup__stext">
         Кнопка действует сутки. Если вернётесь позже&nbsp;— войдите через раздел «Участникам» →

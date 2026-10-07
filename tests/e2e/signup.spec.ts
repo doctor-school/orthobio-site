@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page, type Request } from '@playwright/test';
+import { expect, test, type Locator, type Page, type Request, type Route } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 import { expectNoColumnOverlap, expectNoHeadingSpill } from './_layout';
@@ -539,6 +539,8 @@ test.describe('sign-up form', () => {
       await expect(link).toHaveClass(/ob-btn--ghost/);
       const lead = card.locator('.ob-signup__lead').last();
       await expect(lead).toBeVisible();
+      // Not a restatement of the link right under it (responsive-a11y audit of #117).
+      await expect(lead).toHaveText('Пошаговая инструкция со скриншотами:');
       // Step 3 → the line → the link → the «сутки» line.
       const inOrder = await card.evaluate((el) => {
         const seq = [
@@ -550,6 +552,95 @@ test.describe('sign-up form', () => {
         return seq.every((n, i) => i === 0 || seq[i - 1].compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING);
       });
       expect(inOrder).toBe(true);
+    });
+  }
+
+  // Responsive-a11y audit of #117: the live region is the heading and its one
+  // line, not the ~900-character instruction under them — a screen reader would
+  // read the whole card out on arrival. The heading still takes the focus.
+  for (const handoff of [true, false]) {
+    test(`announces only the heading and its line (${handoff ? 'with' : 'without'} a hand-off)`, async ({ page }) => {
+      await mockSignUp(page, 200, handoff ? { status: 'accepted', handoff: HANDOFF } : { status: 'accepted' });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+
+      const card = page.locator('[data-signup-success]');
+      const heading = page.getByRole('heading', { level: 2, name: SUCCESS_TITLE });
+      await expect(heading).toBeFocused();
+      expect(await card.getAttribute('role')).toBeNull();
+      expect(await card.evaluate((el) => el.closest('[role="status"], [role="alert"], [aria-live]'))).toBeNull();
+      const live = card.locator('[role="status"]');
+      await expect(live).toHaveCount(1);
+      await expect(live.locator('[aria-live], [role="status"], [role="alert"]')).toHaveCount(0);
+      await expect(live).toHaveText(`${SUCCESS_TITLE} ${handoff ? LETTERS_LINE : FALLBACK_LINE}`, { useInnerText: true });
+    });
+  }
+
+  // Responsive-a11y audit of #117: without a hand-off one letter is left, and
+  // it must not sit in half of a two-column row beside an empty column.
+  for (const width of [768, 1280]) {
+    test(`a single letter takes the whole row at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      await mockSignUp(page, 200, { status: 'accepted' });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+      const grid = page.locator('[data-signup-success] .ob-signup__letters');
+      const shown = grid.locator('figure').filter({ visible: true });
+      await expect(shown).toHaveCount(1);
+      expect(await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length)).toBe(1);
+      const [row, figure] = [(await grid.boundingBox())!, (await shown.boundingBox())!];
+      expect(figure.width).toBeGreaterThan(row.width / 2);
+      expect(figure.x + figure.width).toBeLessThanOrEqual(row.x + row.width + 0.5);
+    });
+  }
+
+  // Responsive-a11y audit of #117: every image of the card reserves its box
+  // from its width/height attributes before its bytes arrive — sized from its
+  // content it is 0×0 until load and shoves the steps below it down as it
+  // lands. The bucket requests are held, measured, then answered with an image
+  // of exactly the declared size (the tests above prove the bucket serves each
+  // at that size; staying off the network keeps a slow bucket out of a layout
+  // assertion).
+  for (const width of [390, 1280]) {
+    test(`every image of the card holds its loaded box before it loads at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
+      const held: Route[] = [];
+      let answer: ((route: Route) => Promise<void>) | null = null;
+      await page.route('https://s3.twcstorage.ru/orthobio-media/2027/submissions/**', (route) =>
+        answer ? answer(route) : void held.push(route),
+      );
+      await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
+      await open(page);
+      await fillValid(page);
+      await submit(page);
+
+      const imgs = page.locator('[data-signup-success] img');
+      await expect(imgs).toHaveCount(4);
+      const heights = () => imgs.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+      const pending = await heights();
+      expect(pending.every((h) => h > 0), `heights before load: ${pending.join(', ')}`).toBe(true);
+
+      const declared = new Map(
+        await imgs.evaluateAll((els) =>
+          els.map((el) => [(el as HTMLImageElement).src, [el.getAttribute('width'), el.getAttribute('height')]] as const),
+        ),
+      );
+      answer = (route: Route) => {
+        const [w, h] = declared.get(route.request().url()) ?? [];
+        if (!w || !h) return route.abort();
+        return route.fulfill({
+          contentType: 'image/svg+xml',
+          body: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"/>`,
+        });
+      };
+      await Promise.all(held.map(answer));
+      for (const img of await imgs.all()) {
+        await img.scrollIntoViewIfNeeded();
+        await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+      }
+      expect(await heights()).toEqual(pending);
     });
   }
 

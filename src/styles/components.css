@@ -3182,8 +3182,11 @@ body > main:has(> .ob-reg) {
 }
 
 /* Status cards («откроется …», «закрыта», «заявка принята»): a badge, a
-   title that takes programmatic focus when the state arrives, one line. */
-.ob-signup__status {
+   title that takes programmatic focus when the state arrives, one line.
+   On «заявка принята» the title and its line are the card's live region on
+   their own (`.ob-signup__shead`), laid out as if still the card's children. */
+.ob-signup__status,
+.ob-signup__shead {
   display: grid;
   gap: var(--sp-4);
   justify-items: start;
@@ -3278,18 +3281,21 @@ body > main:has(> .ob-reg) {
 }
 
 /* The two letters under the line that announces them (Issue #116): the
-   accommodation screenshot frame and caption (.ob-acc__*), stacked on a phone,
-   side by side from 640px. */
+   accommodation screenshot frame and caption (.ob-acc__*), each at its own
+   width up to its column, stacked on a phone, side by side from 640px. With no
+   hand-off the code letter is hidden and the one left keeps the whole row —
+   half a row beside an empty column reads as a missing picture. */
 .ob-signup__letters {
   display: grid;
   gap: var(--sp-4);
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
+  justify-items: start;
   margin: var(--sp-4) 0 var(--sp-5);
 }
 
 @media (min-width: 640px) {
-  .ob-signup__letters {
+  .ob-signup__letters:not(:has(> [hidden])) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -3300,8 +3306,8 @@ body > main:has(> .ob-reg) {
 }
 
 /* A sign-in screenshot under its step (steps 2 and 3): the guide's framed
-   shot at its own width, up to the step's — stretched past its pixels the UI
-   text blurs. The frame hugs the image. */
+   shot at its own width (`.ob-acc__frame--native`), up to the step's —
+   stretched past its pixels the UI text blurs. The frame hugs the image. */
 .ob-signup__shot {
   display: grid;
   justify-items: start;
@@ -3310,11 +3316,6 @@ body > main:has(> .ob-reg) {
 }
 
 .ob-signup__shot .ob-acc__frame {
-  max-width: 100%;
-}
-
-.ob-signup__shot .ob-acc__frame img {
-  width: auto;
   max-width: 100%;
 }
 
@@ -3518,8 +3519,18 @@ body > main:has(> .ob-reg) {
 
 .ob-acc__frame img {
   display: block;
-  width: 100%;
+  max-width: 100%;
   height: auto;
+}
+
+/* A frame fills its column unless it is `--native`: then the image keeps the
+   width its attribute declares, capped at the column. That width must come
+   from the attribute and never from `width: auto` — sized from its content, an
+   image is 0×0 until its bytes arrive and shoves everything below it down as
+   it lands; from the attribute, `height: auto` reserves the box at its aspect
+   ratio before load. */
+.ob-acc__frame:not(.ob-acc__frame--native) img {
+  width: 100%;
 }
 
 .ob-acc__cap {

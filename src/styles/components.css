@@ -3450,8 +3450,18 @@ body > main:has(> .ob-reg) {
 
 .ob-acc__frame img {
   display: block;
-  width: 100%;
+  max-width: 100%;
   height: auto;
+}
+
+/* A frame fills its column unless it is `--native`: then the image keeps the
+   width its attribute declares, capped at the column. That width must come
+   from the attribute and never from `width: auto` — sized from its content, an
+   image is 0×0 until its bytes arrive and shoves everything below it down as
+   it lands; from the attribute, `height: auto` reserves the box at its aspect
+   ratio before load. */
+.ob-acc__frame:not(.ob-acc__frame--native) img {
+  width: 100%;
 }
 
 .ob-acc__cap {
@@ -3706,6 +3716,75 @@ body > main:has(> .ob-reg) {
     column-gap: var(--sp-7);
     padding: var(--sp-6);
   }
+}
+
+/* ── Submission guides (/participants#podat-materialy and
+   /participants/zapolnit-zayavku, Issue #99) ─────────────────────────────
+   Reuses the accommodation card, tile, paragraph, link and screenshot frame
+   (.ob-acc__*); only the stack of steps and the screenshot column are here. */
+
+.ob-sub__steps {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ob-sub__num {
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Screenshots keep their own width (the attribute, `.ob-acc__frame--native`),
+   up to the card's: a form shot stretched past its pixels blurs, squeezed into
+   a grid cell it is unreadable. `justify-items: start` lets each frame hug its
+   image. */
+.ob-sub__shots {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+}
+
+.ob-sub__shots > .ob-acc__shot {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Sub-steps (step 2, sign-in): the site's numbered list (`.ob-list`, sky
+   markers), in the card's body colour and measure — these are the steps to
+   follow, not an aside. A screenshot sits under the sub-step it shows. */
+.ob-sub__items {
+  color: var(--text-body);
+  max-width: var(--measure);
+  margin: 0 0 var(--sp-5);
+}
+
+/* «Войти в кабинет» under the sub-step that names it. */
+.ob-sub__cta {
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
+/* The muted line right under that button («уже входили — код не нужен»):
+   an aside to the step, in the accommodation note's colour. */
+.ob-sub__hint {
+  margin: 0 0 var(--sp-2);
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+/* The one line above the steps of the filling page: what comes first. */
+.ob-sub__intro {
+  margin-bottom: var(--sp-5);
+}
+
+/* The closing button to the next guide, on its own page. */
+.ob-sub__next {
+  margin: var(--sp-5) 0 0;
+}
+
+.ob-sub__items .ob-sub__shots {
+  margin: var(--sp-3) 0 var(--sp-2);
 }
 
 /* ── Privacy policy (/privacy) ───────────────────────────────────────────── */

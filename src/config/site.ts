@@ -11,7 +11,7 @@
  *   wrong link can never ship silently.
  */
 
-import { instantFromEnv } from '@/lib/dates';
+import { formatDotted, formatRuDay, instantFromEnv, youngerThanCutoff } from '@/lib/dates';
 
 /** Public site metadata. */
 export const SITE = {
@@ -146,6 +146,20 @@ export const SUBMISSION_DEADLINES = {
 } as const;
 
 /**
+ * Poster talks are accepted from participants younger than this many years on
+ * the first day of the congress (organisers' ТЗ п. 6, Issue #108; the submission
+ * guide, Issue #99). The birth-date bounds the guide prints are derived from it
+ * and from `UPCOMING_CONGRESS_DATES.startDate`, so a moved congress day moves
+ * them too.
+ */
+export const POSTER_AGE_LIMIT_YEARS = 40;
+
+export const POSTER_AGE_CUTOFF = youngerThanCutoff(
+  UPCOMING_CONGRESS_DATES.startDate,
+  POSTER_AGE_LIMIT_YEARS,
+);
+
+/**
  * Values page copy (`src/content/pages/*.yaml`) may reference as `{{name}}`.
  * Filled in `getPage()` after the Content Layer cache, so components never see
  * a token and a future CMS loader feeding the same plain text needs no
@@ -155,6 +169,9 @@ export const SUBMISSION_DEADLINES = {
 export const CONTENT_TOKENS: Readonly<Record<string, string>> = {
   oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
   posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
+  congressStartDay: formatRuDay(UPCOMING_CONGRESS_DATES.startDate),
+  posterBornFrom: formatDotted(POSTER_AGE_CUTOFF.bornFrom),
+  posterBornUntil: formatDotted(POSTER_AGE_CUTOFF.bornUntil),
 };
 
 /**
@@ -227,12 +244,30 @@ export const REGISTRATION_URL = '/registration';
 export const REGISTRATION_CTA_LABEL = 'Регистрация на конгресс';
 
 /**
+ * «Как заполнить заявку» (owner, 2026-10-07): the cabinet steps on a page of
+ * their own, without sign-in, where the sign-up success card sends a reader who
+ * has just signed in with its personal button. Equals FILL_GUIDE_PATH in
+ * src/lib/submission-guide.ts (a unit test pins the two).
+ */
+export const FILL_GUIDE_URL = '/participants/zapolnit-zayavku';
+
+/**
  * «Узнать первым» on the /registration «откроется …» card (Issue #88, owner
  * decision): the Doctor.School Telegram channel. The ONLY «узнать первым»
  * link on the site — the e2e suite holds every such link to this URL.
  */
 export const NOTIFY_CHANNEL_URL = 'https://t.me/DoctorSchool';
 export const NOTIFY_CTA_LABEL = 'Узнать первым';
+
+/**
+ * «Войти в кабинет» in step 2 of the submission guide (Issue #99, owner-approved
+ * text of 2026-10-06): the Doctor.School sign-in page, opened on the
+ * «по коду» method, which lands in the congress cabinet after the code. The
+ * cabinet lives on the DS Platform, so the URL is off-site and a config value —
+ * a move of the cabinet is a one-line change here, not a copy edit.
+ */
+export const CABINET_LOGIN_URL = 'https://new.doctor.school/login?method=code&returnTo=/account/congress';
+export const CABINET_LOGIN_LABEL = 'Войти в кабинет';
 
 /**
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).

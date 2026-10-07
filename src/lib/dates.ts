@@ -82,3 +82,78 @@ export function fillContentTokensDeep<T>(value: T, tokens: Readonly<Record<strin
   };
   return walk(value) as T;
 }
+
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const GENITIVE_MONTHS = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+] as const;
+
+/** «2027-04-23» → [2027, 4, 23]; anything but a real calendar day fails the build. */
+function isoParts(iso: string): [year: number, month: number, day: number] {
+  const m = ISO_DATE.exec(iso);
+  const parts = m ? ([Number(m[1]), Number(m[2]), Number(m[3])] as const) : null;
+  const probe = parts ? new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])) : null;
+  if (
+    !parts ||
+    !probe ||
+    probe.getUTCFullYear() !== parts[0] ||
+    probe.getUTCMonth() !== parts[1] - 1 ||
+    probe.getUTCDate() !== parts[2]
+  ) {
+    throw new Error(`«${iso}» is not a calendar date in the form YYYY-MM-DD`);
+  }
+  return [parts[0], parts[1], parts[2]];
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * «2027-04-23» → «23 апреля 2027», typeset as Typograf typesets the same
+ * words in running text (U+00A0 after the day, an ordinary space before the
+ * year) — the value is filled into copy AFTER the Typograf pass.
+ */
+/*#__NO_SIDE_EFFECTS__*/
+export function formatRuDay(iso: string): string {
+  const [year, month, day] = isoParts(iso);
+  return `${day} ${GENITIVE_MONTHS[month - 1]} ${year}`;
+}
+
+/** «1987-04-24» → «24.04.1987», the form a date-of-birth field shows. */
+/*#__NO_SIDE_EFFECTS__*/
+export function formatDotted(iso: string): string {
+  const [year, month, day] = isoParts(iso);
+  return `${pad2(day)}.${pad2(month)}.${year}`;
+}
+
+/**
+ * Who is «younger than `years` on `onIso`»: born on `bornFrom` or later. Born on
+ * `bornUntil` or earlier means the birthday of that age has already come by
+ * that day — a person born exactly `years` years before turns `years` on it and
+ * is not younger. Both ISO dates.
+ *
+ * A 29 February that does not exist `years` years earlier falls back to
+ * 28 February: whoever was born on 1 March has not had that birthday yet.
+ */
+/*#__NO_SIDE_EFFECTS__*/
+export function youngerThanCutoff(onIso: string, years: number): { bornFrom: string; bornUntil: string } {
+  if (!Number.isInteger(years) || years <= 0) throw new Error(`age limit ${years} must be a positive integer`);
+  const [year, month, day] = isoParts(onIso);
+  const y = year - years;
+  const lastDay = new Date(Date.UTC(y, month, 0)).getUTCDate();
+  const until = new Date(Date.UTC(y, month - 1, Math.min(day, lastDay)));
+  const from = new Date(until.getTime() + 24 * 60 * 60 * 1000);
+  const iso = (d: Date) => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+  return { bornFrom: iso(from), bornUntil: iso(until) };
+}

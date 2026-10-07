@@ -1,0 +1,16 @@
+---
+/**
+ * /participants/zapolnit-zayavku — «Как заполнить заявку» (Issue #99): the
+ * cabinet steps as a page of their own, apart from the sign-in on
+ * /participants (owner, 2026-10-07: one instruction, one task). The same
+ * section shell and guide block as /participants; the copy lives in
+ * zapolnit-zayavku.yaml. The crumb leads back to «Участникам», the page this
+ * one belongs to (the header marks it as current).
+ */
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('zapolnit-zayavku');
+---
+
+<SectionLayout page={page} crumb={{ href: '/participants/', label: 'Участникам' }} />

@@ -2,8 +2,13 @@
 /** /participants — ТЗ §4: формы участия и требования к материалам; дедлайны 2027 не выдуманы. */
 import { getPage } from '@/content';
 import SectionLayout from '@/layouts/SectionLayout.astro';
+import { FILL_GUIDE_REDIRECT_SCRIPT } from '@/lib/submission-guide';
 
 const { data: page } = await getPage('participants');
 ---
 
-<SectionLayout page={page} />
+<SectionLayout page={page}>
+  {/* «Как заполнить заявку» moved to its own page; an old link to its anchor
+      here is sent on (the fragment never reaches the server). */}
+  <script is:inline set:html={FILL_GUIDE_REDIRECT_SCRIPT} />
+</SectionLayout>

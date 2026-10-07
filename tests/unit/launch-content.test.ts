@@ -63,21 +63,26 @@ describe('owner-approved pre-registration launch content', () => {
     expect(SUBMISSION_DEADLINES.oralTalk.display).toBe(`15${NB}января 2027${NB}года`);
     expect(SUBMISSION_DEADLINES.posterAbstract.date).toBe('2027-01-29');
     expect(SUBMISSION_DEADLINES.posterAbstract.display).toBe(`29${NB}января 2027${NB}года`);
-    // Page copy sees exactly these two values, under these two names.
+    // Page copy sees exactly these values, under these names: the two
+    // deadlines, and the first congress day with the poster birth-date bounds
+    // the submission guide prints (Issue #99).
     expect(CONTENT_TOKENS).toEqual({
       oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
       posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
+      congressStartDay: `23${NB}апреля 2027`,
+      posterBornFrom: '24.04.1987',
+      posterBornUntil: '23.04.1987',
     });
   });
 
   // getPage() fills tokens AFTER the schema's Typograf pass (src/lib/dates.ts
   // says why), so the hand-typeset value must read exactly as Typograf would
   // have typeset the same sentence spelled out — nbsp included.
-  const tokenSentences = ['participants.yaml', 'faq.yaml'].flatMap((file) => {
+  const tokenSentences = ['participants.yaml', 'zapolnit-zayavku.yaml', 'faq.yaml'].flatMap((file) => {
     const strings: string[] = [];
     const walk = (v: unknown): void => {
       if (typeof v === 'string') {
-        if (/\{\{(oralTalkDeadline|posterAbstractDeadline)\}\}/.test(v)) strings.push(v);
+        if (/\{\{[A-Za-z][A-Za-z0-9]*\}\}/.test(v)) strings.push(v);
       } else if (v && typeof v === 'object') Object.values(v).forEach(walk);
     };
     walk(parse(readFileSync(fileURLToPath(new URL(`../../src/content/pages/${file}`, import.meta.url)), 'utf8')));
@@ -88,7 +93,7 @@ describe('owner-approved pre-registration launch content', () => {
     expect(tokenSentences.length).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(tokenSentences)('fills «%s» exactly as if the deadline were spelled out', (sentence) => {
+  it.each(tokenSentences)('fills «%s» exactly as if the value were spelled out', (sentence) => {
     expect(fillContentTokens(typographize(sentence), CONTENT_TOKENS)).toBe(
       typographize(fillContentTokens(sentence, CONTENT_TOKENS)),
     );

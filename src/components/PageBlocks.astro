@@ -12,6 +12,7 @@ import Accommodation from '@/components/Accommodation.astro';
 import Faq from '@/components/Faq.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Stub from '@/components/Stub.astro';
+import SubmissionGuide from '@/components/SubmissionGuide.astro';
 import type { PageBlock } from '@/content';
 
 interface Props {
@@ -27,6 +28,8 @@ const { blocks } = Astro.props;
        is not wrapped in the anonymous block div. */
     block.kind === 'accommodation' ? (
       <Accommodation block={block} />
+    ) : block.kind === 'submission-guide' ? (
+      <SubmissionGuide block={block} />
     ) : (
     <div class="ob-section">
       {block.kind === 'text' && (

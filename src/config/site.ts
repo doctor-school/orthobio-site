@@ -11,7 +11,7 @@
  *   wrong link can never ship silently.
  */
 
-import { instantFromEnv } from '@/lib/dates';
+import { formatDotted, formatRuDay, instantFromEnv, youngerThanCutoff } from '@/lib/dates';
 
 /** Public site metadata. */
 export const SITE = {
@@ -146,6 +146,20 @@ export const SUBMISSION_DEADLINES = {
 } as const;
 
 /**
+ * Poster talks are accepted from participants younger than this many years on
+ * the first day of the congress (organisers' ТЗ п. 6, Issue #108; the submission
+ * guide, Issue #99). The birth-date bounds the guide prints are derived from it
+ * and from `UPCOMING_CONGRESS_DATES.startDate`, so a moved congress day moves
+ * them too.
+ */
+export const POSTER_AGE_LIMIT_YEARS = 40;
+
+export const POSTER_AGE_CUTOFF = youngerThanCutoff(
+  UPCOMING_CONGRESS_DATES.startDate,
+  POSTER_AGE_LIMIT_YEARS,
+);
+
+/**
  * Values page copy (`src/content/pages/*.yaml`) may reference as `{{name}}`.
  * Filled in `getPage()` after the Content Layer cache, so components never see
  * a token and a future CMS loader feeding the same plain text needs no
@@ -155,6 +169,9 @@ export const SUBMISSION_DEADLINES = {
 export const CONTENT_TOKENS: Readonly<Record<string, string>> = {
   oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
   posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
+  congressStartDay: formatRuDay(UPCOMING_CONGRESS_DATES.startDate),
+  posterBornFrom: formatDotted(POSTER_AGE_CUTOFF.bornFrom),
+  posterBornUntil: formatDotted(POSTER_AGE_CUTOFF.bornUntil),
 };
 
 /**

@@ -1,0 +1,34 @@
+---
+/**
+ * The framed screenshots of one step or sub-step of the submission guide
+ * (SubmissionGuide.astro, Issue #99): the accommodation screenshot frame in
+ * the guide's own column, each image at its own width up to the card's.
+ */
+import { mediaUrl } from '@/config/site';
+import type { SubmissionGuideBlock } from '@/content';
+
+interface Props {
+  shots: SubmissionGuideBlock['steps'][number]['shots'];
+}
+
+const { shots } = Astro.props;
+---
+
+<div class="ob-sub__shots">
+  {
+    shots.map((shot) => (
+      <figure class="ob-acc__shot">
+        <div class="ob-acc__frame ob-acc__frame--native">
+          <img
+            src={mediaUrl(shot.url)}
+            alt={shot.alt}
+            width={shot.width}
+            height={shot.height}
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </figure>
+    ))
+  }
+</div>

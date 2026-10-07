@@ -26,6 +26,7 @@
 import { z } from 'astro/zod';
 
 import { segment } from '../lib/accommodation';
+import { GUIDE_ANCHORS } from '../lib/submission-guide';
 
 import { typographize } from './typographize';
 
@@ -606,12 +607,101 @@ const accommodationBlockSchema = z.object({
 
 export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
 
+/**
+ * «Как подать материалы» — the owner-approved instruction for submitting
+ * talks, posters and abstracts in the congress cabinet (Issue #99).
+ *
+ * Steps are numbered by their position, never by a field, so the printed
+ * numbers cannot skip or repeat. A step is a paragraph (`text`), an ordered
+ * list of sub-steps (`items`, each with its own screenshots), or both; one with
+ * neither prints its heading only — never an invented paragraph. `note` is the
+ * secondary «если не получилось» line; `cta: cabinet-login` is the sign-in
+ * button, whose label and URL come from the site config, never from the copy.
+ *
+ * A guide that is the whole page (/participants/zapolnit-zayavku) has no
+ * heading of its own — the page <h1> is it — and opens with `intro`, one line
+ * on what has to be done first, with its link.
+ *
+ * Like the accommodation block, the copy stays plain text: a link is a named
+ * phrase of the sentence (`links[].text`), placed by the renderer via
+ * `segment()`, and `pageSchemaChecked` fails the build when the sentence stops
+ * containing it. Dates are `{{tokens}}` filled from the site config.
+ */
+const guideShots = () =>
+  z
+    .array(
+      z.object({
+        url: mediaLocation(),
+        alt: prose(),
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      }),
+    )
+    .default([]);
+
+/** An internal route — the guide never sends a reader off-site. */
+const internalRoute = () => z.string().regex(/^\/(?!\/)/, 'an internal route: /path');
+
+/** Phrases of a sentence printed as links to pages of this site. */
+const phraseLinks = () =>
+  z
+    .array(
+      z.object({
+        /** A phrase of the sentence, printed as the link. */
+        text: prose(),
+        href: internalRoute(),
+      }),
+    )
+    .default([]);
+
+const submissionGuideBlockSchema = z.object({
+  kind: z.literal('submission-guide'),
+  /** The block's fixed anchor; its steps are `<anchor>-<n>`. */
+  anchor: z.enum(GUIDE_ANCHORS),
+  /** Null when the guide is the whole page: the page <h1> heads it. */
+  heading: proseOrNull(),
+  /** One line above the steps: what has to be done first, and where. */
+  intro: z.object({ text: prose(), links: phraseLinks() }).nullable().default(null),
+  steps: z
+    .array(
+      z.object({
+        title: prose(),
+        text: proseOrNull(),
+        links: phraseLinks(),
+        /**
+         * Numbered sub-steps, each with the button it names (site config,
+         * never copy) and the screenshots that follow it.
+         */
+        items: z
+          .array(
+            z.object({
+              text: prose(),
+              cta: z.enum(['cabinet-login']).nullable().default(null),
+              /** A muted line right under the button (or the sub-step text). */
+              note: proseOrNull(),
+              shots: guideShots(),
+            }),
+          )
+          .default([]),
+        /** Cabinet screenshots (ds-platform stand), in reading order. */
+        shots: guideShots(),
+        note: z.object({ lead: prose(), text: prose() }).nullable().default(null),
+      }),
+    )
+    .min(1),
+  /** The closing button to the next guide, on its own page («… →»). */
+  next: z.object({ text: prose(), href: internalRoute() }).nullable().default(null),
+});
+
+export type SubmissionGuideBlock = z.infer<typeof submissionGuideBlockSchema>;
+
 const pageBlockSchema = z.discriminatedUnion('kind', [
   textBlockSchema,
   listBlockSchema,
   stubBlockSchema,
   faqBlockSchema,
   accommodationBlockSchema,
+  submissionGuideBlockSchema,
 ]);
 
 export type PageBlock = z.infer<typeof pageBlockSchema>;
@@ -648,7 +738,62 @@ export const pageSchema = z.object({
  */
 export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
   let accommodationSeen = false;
+  const guideAnchors = new Set<string>();
   page.blocks.forEach((block, i) => {
+    if (block.kind === 'submission-guide') {
+      // Its anchor is fixed and linked from outside the site (Issue #99).
+      if (guideAnchors.has(block.anchor)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', i, 'anchor'],
+          message: `at most one submission-guide block per anchor — #${block.anchor} is fixed`,
+        });
+      }
+      guideAnchors.add(block.anchor);
+      const intro = block.intro;
+      intro?.links.forEach((link, l) => {
+        try {
+          segment(intro.text, [link.text]);
+        } catch {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['blocks', i, 'intro', 'links', l, 'text'],
+            message: `the intro must contain «${link.text}» — the renderer links it there`,
+          });
+        }
+      });
+      block.steps.forEach((step, s) => {
+        if (step.text === null) {
+          const headingOnly = step.items.length === 0;
+          if (
+            step.links.length > 0 ||
+            (headingOnly && (step.shots.length > 0 || step.note !== null))
+          ) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['blocks', i, 'steps', s],
+              message: headingOnly
+                ? 'a step without text or items carries nothing — it is a heading only'
+                : 'links are phrases of the step text — a step without text carries none',
+            });
+          }
+          return;
+        }
+        const text = step.text;
+        step.links.forEach((link, l) => {
+          try {
+            segment(text, [link.text]);
+          } catch {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['blocks', i, 'steps', s, 'links', l, 'text'],
+              message: `the step text must contain «${link.text}» — the renderer links it there`,
+            });
+          }
+        });
+      });
+      return;
+    }
     if (block.kind === 'accommodation') {
       // The section carries fixed ids (the /registration link target and its
       // aria-labelledby); a second copy would duplicate both.

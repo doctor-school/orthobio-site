@@ -19,7 +19,7 @@ export type CongressEntry = CollectionEntry<'congress'>;
 export type PageEntry = CollectionEntry<'page'>;
 
 export { PARTNER_TIERS, PARTNER_TIER_LABELS } from './schemas';
-export type { AccommodationBlock, PartnerTier, PageBlock } from './schemas';
+export type { AccommodationBlock, PartnerTier, PageBlock, SubmissionGuideBlock } from './schemas';
 
 /**
  * Filename↔content invariant, enforced at the content layer so EVERY consumer

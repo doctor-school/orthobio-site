@@ -516,7 +516,10 @@ test.describe('sign-up form', () => {
   });
 
   // Owner, 2026-10-07: the card signs in; the cabinet steps are «Как заполнить
-  // заявку» on /participants, which the card links to in both variants.
+  // заявку», a page of their own, which the card links to in both variants —
+  // in a new tab: the card is a state of this page's script, so leaving it in
+  // this tab and coming Back shows the empty form and loses the personal
+  // 24-hour button.
   for (const handoff of [true, false]) {
     test(`after step 3 the card points to «Как заполнить заявку» (${handoff ? 'with' : 'without'} a hand-off)`, async ({
       page,
@@ -529,9 +532,10 @@ test.describe('sign-up form', () => {
       const card = page.locator('[data-signup-success]');
       const link = card.getByRole('link', { name: /^Как заполнить заявку/ });
       await expect(link).toBeVisible();
-      await expect(link).toHaveAttribute('href', '/participants#zapolnit-zayavku');
-      // An on-site link opens in the same tab, as the site's internal links do.
-      await expect(link).not.toHaveAttribute('target', /.*/);
+      await expect(link).toHaveAttribute('href', '/participants/zapolnit-zayavku');
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener');
+      await expect(link).toHaveAccessibleName(/^Как заполнить заявку\s+\(открывается в новой вкладке\)$/);
       await expect(link).toHaveClass(/ob-btn--ghost/);
       const lead = card.locator('.ob-signup__lead').last();
       await expect(lead).toBeVisible();

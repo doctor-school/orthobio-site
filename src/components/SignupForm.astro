@@ -498,11 +498,13 @@ const SIGNIN_SHOTS = {
           </figure>
         </li>
       </ol>
-      <!-- The sign-in ends here; the cabinet steps are their own instruction on
-           /participants, with no sign-in in it (owner, 2026-10-07). An
-           on-site link, so the same tab, as the site's internal links are. -->
+      <!-- The sign-in ends here; the cabinet steps are their own page, with no
+           sign-in in it (owner, 2026-10-07). On-site, yet in a NEW tab: this
+           card is a state of the form's script, so leaving it in this tab and
+           coming Back shows the empty form and loses the personal 24-hour
+           button above. `external` writes the target and its announcement. -->
       <p class="ob-signup__stext ob-signup__lead">Как заполнить заявку&nbsp;— по шагам, со скриншотами:</p>
-      <Button class="ob-signup__fill" variant="ghost" arrow href={FILL_GUIDE_URL}>Как заполнить заявку</Button>
+      <Button class="ob-signup__fill" variant="ghost" arrow href={FILL_GUIDE_URL} external>Как заполнить заявку</Button>
       <p class="ob-signup__stext">
         Кнопка действует сутки. Если вернётесь позже&nbsp;— войдите через раздел «Участникам» →
         «Как подать материалы».

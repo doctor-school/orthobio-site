@@ -42,7 +42,9 @@ const recentYears = (await getCongressYears()).slice(0, 3);
     {/* Issue #78: the primary CTA leads to the on-site form. The opening
         status stays beside it: registration is open (REGISTRATION_WINDOW,
         since 1 October 2026), so the line says so instead of announcing an
-        opening that has passed. */}
+        opening that has passed. The claim is pinned to the window by
+        tests/unit/content-dates.test.ts: once closesAt passes, the build
+        fails until this line is reworded. */}
     <div slot="cta" class="ob-hero__cta">
       <Button size="lg" href={REGISTRATION_URL}>
         {REGISTRATION_CTA_LABEL}

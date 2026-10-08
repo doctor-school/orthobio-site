@@ -234,7 +234,7 @@ test.describe('the guides read as a how-to (owner, 2026-10-08)', () => {
     const callout = page.locator('#zapolnit-zayavku-3').getByRole('note');
     await expect(callout).toHaveClass(/\bob-sub__callout\b/);
     expect(unbreak((await callout.textContent()) ?? '')).toContain(
-      'Файл постера сейчас прикладывать не нужно — правила оформления появятся на сайте позже.',
+      'Файл постера сейчас прикладывать не нужно — правила оформления постера появятся на сайте позже.',
     );
   });
 });

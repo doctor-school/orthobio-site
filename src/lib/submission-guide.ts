@@ -1,3 +1,5 @@
+import { segment } from './accommodation';
+
 /**
  * «Как подать материалы» on /participants (Issue #99) — where the section
  * lives. The anchor is PERMANENT: the letter to already registered
@@ -34,3 +36,61 @@ export type GuideAnchor = (typeof GUIDE_ANCHORS)[number];
 
 /** Id of the n-th step (1-based) of a guide, so a reply can point at one step. */
 export const guideStepId = (anchor: GuideAnchor, n: number): string => `${anchor}-${n}`;
+
+/** A piece of a guide sentence as the page prints it. */
+export type GuidePart =
+  | { kind: 'text'; text: string }
+  | { kind: 'link'; text: string; href: string }
+  | { kind: 'ui'; text: string };
+
+/**
+ * Splits outermost «…» spans off a piece of running text. Typograf turns
+ * quotes inside quotes into „…“, but a hand-typed «…«…»…» stays as it is, so
+ * the depth is counted rather than the first «…» taken.
+ */
+function splitUiLabels(text: string): GuidePart[] {
+  const out: GuidePart[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '«') {
+      if (depth === 0) {
+        if (i > start) out.push({ kind: 'text', text: text.slice(start, i) });
+        start = i;
+      }
+      depth++;
+    } else if (text[i] === '»' && depth > 0) {
+      depth--;
+      if (depth === 0) {
+        out.push({ kind: 'ui', text: text.slice(start, i + 1) });
+        start = i + 1;
+      }
+    }
+  }
+  // An unclosed «: the rest is running text, never a half-marked label.
+  if (start < text.length) {
+    const prev = out.at(-1);
+    if (prev?.kind === 'text') prev.text += text.slice(start);
+    else out.push({ kind: 'text', text: text.slice(start) });
+  }
+  return out;
+}
+
+/**
+ * The inline marks of a guide sentence (owner, 2026-10-08: «инструкции тяжело
+ * читать»). The copy stays plain text (loader-swap invariant); two marks are
+ * derived from it here:
+ *
+ * - a named phrase of the sentence (`links[].text`) is a link — every phrase
+ *   must occur, or this throws and the build fails (`segment()`);
+ * - every other «…» names an element of the cabinet — a button, field, status
+ *   or letter subject — and prints in the one UI-label style, so a reader
+ *   scanning for «Отправить» finds it. In a guide, guillemets are reserved
+ *   for that; a phrase that is not an interface element is not quoted.
+ */
+export function guideInline(text: string, links: readonly { text: string; href: string }[] = []): GuidePart[] {
+  const hrefs = new Map(links.map((l) => [l.text, l.href]));
+  return segment(text, [...hrefs.keys()]).flatMap((s): GuidePart[] =>
+    s.mark === null ? splitUiLabels(s.text) : [{ kind: 'link', text: s.text, href: hrefs.get(s.mark)! }],
+  );
+}

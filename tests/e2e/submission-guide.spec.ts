@@ -109,7 +109,9 @@ test.describe('«Как подать материалы» on /participants', () 
     const below = await items.nth(0).evaluate((li) => {
       const btn = li.querySelector('.ob-btn')!.getBoundingClientRect();
       const range = document.createRange();
-      range.selectNodeContents(li.firstChild!);
+      // The sentence is several nodes now (its «…» are marked): all of it up to the button.
+      range.setStartBefore(li.firstChild!);
+      range.setEndBefore(li.querySelector('.ob-btn')!);
       const text = range.getBoundingClientRect();
       return btn.top >= text.bottom - 1 && btn.top - text.bottom < 40;
     });
@@ -191,6 +193,50 @@ test.describe('«Как заполнить заявку» page', () => {
   });
 });
 
+test.describe('the guides read as a how-to (owner, 2026-10-08)', () => {
+  test('cabinet names print in the one UI-label style, link phrases stay links', async ({ page }) => {
+    await page.goto(FILL_PATH);
+    const labels = page.locator(`${FILL} strong.ob-sub__ui`);
+    expect(await labels.count()).toBeGreaterThan(40);
+    // Every mark is a whole «…» name, never a fragment of one.
+    for (const text of await labels.allTextContents()) expect(text).toMatch(/^«[^]*»$/);
+    await expect(page.locator('#zapolnit-zayavku-1 ol > li').first().locator('strong.ob-sub__ui')).toHaveText(/^«\+\sНовая\sзаявка»$/);
+    await page.goto('/participants');
+    await expect(page.locator('#podat-materialy-1 strong.ob-sub__ui')).toHaveCount(0);
+    await expect(page.locator('#podat-materialy-2 ol > li').nth(2).locator('strong.ob-sub__ui')).toHaveText(/^«Отправить\sкод»$/);
+  });
+
+  test('long steps are split by sub-headings one level under the step heading', async ({ page }) => {
+    await page.goto(FILL_PATH);
+    const subs = (await page.locator('#zapolnit-zayavku-1 h3').allTextContents()).map((t) => unbreak(t).trim());
+    expect(subs).toEqual(['Новая заявка', 'Черновик', 'Список заявок']);
+    await expect(page.locator('#zapolnit-zayavku-1 ol > li')).toHaveCount(3);
+  });
+
+  test('«Частые вопросы» is an accordion of separate questions that open without JavaScript', async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto(FILL_PATH);
+    const items = page.locator('#zapolnit-zayavku-8 details.ob-faq__item');
+    await expect(items).toHaveCount(6);
+    await expect(items.first().locator('.ob-faq__q')).toHaveText(/^Приём закрылся/);
+    const answer = items.nth(3).locator('.ob-faq__a');
+    await expect(answer).toBeHidden();
+    await items.nth(3).locator('.ob-faq__q').click();
+    await expect(answer).toBeVisible();
+    await expect(answer.locator('strong.ob-sub__ui').first()).toHaveText('«Отправлена»');
+    await context.close();
+  });
+
+  test('the poster step tells the reader no file is needed, in a callout', async ({ page }) => {
+    await page.goto(FILL_PATH);
+    const callout = page.locator('#zapolnit-zayavku-3 > .ob-sub__callout');
+    expect(unbreak((await callout.textContent()) ?? '')).toContain(
+      'Файл постера сейчас прикладывать не нужно — правила оформления появятся на сайте позже.',
+    );
+  });
+});
+
 test('prints the dates from the site settings, never a raw token', async ({ page }) => {
   await page.goto('/participants');
   let text = unbreak((await page.locator(SECTION).textContent()) ?? '');
@@ -198,10 +244,10 @@ test('prints the dates from the site settings, never a raw token', async ({ page
   text += '\n' + unbreak((await page.locator(FILL).textContent()) ?? '');
   expect(text).not.toContain('{{');
   expect(text).not.toMatch(/приём открыт|открыт приём/);
-  expect(text).toMatch(/«Забрать на исправление» до окончания приёма своего вида: устные доклады — до \d{1,2} [а-я]+ \d{4} года/);
-  expect(text).toMatch(/устные доклады — до \d{1,2} [а-я]+ \d{4} года, постерные доклады и тезисы — до \d{1,2} [а-я]+ \d{4} года, до 23:59/);
-  expect(text).toMatch(/устный доклад — \d{1,2} [а-я]+ \d{4} года; постерный доклад и тезисы — \d{1,2} [а-я]+ \d{4} года\./);
-  expect(text).toMatch(/младше 40 лет на \d{1,2} [а-я]+ \d{4}: родились \d{2}\.\d{2}\.\d{4} или позже — можно; \d{2}\.\d{2}\.\d{4} или раньше — нельзя/);
+  expect(text).toMatch(/До окончания приёма своего вида можно «Забрать на исправление»: устные доклады — до \d{1,2} [а-я]+ \d{4} года/);
+  expect(text).toMatch(/до 23:59 по московскому времени:\s*устные доклады — до \d{1,2} [а-я]+ \d{4} года;\s*постерные доклады и тезисы — до \d{1,2} [а-я]+ \d{4} года\./);
+  expect(text).toMatch(/устный доклад — \d{1,2} [а-я]+ \d{4} года;\s*постерный доклад и тезисы — \d{1,2} [а-я]+ \d{4} года\./);
+  expect(text).toMatch(/младше 40 лет на \d{1,2} [а-я]+ \d{4}:\s*родились \d{2}\.\d{2}\.\d{4} или позже — можно;\s*родились \d{2}\.\d{2}\.\d{4} или раньше — нельзя/);
 });
 
 /** Each guide: its page, its section and how many screenshots it carries (14 together). */

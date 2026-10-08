@@ -612,11 +612,23 @@ export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
  * talks, posters and abstracts in the congress cabinet (Issue #99).
  *
  * Steps are numbered by their position, never by a field, so the printed
- * numbers cannot skip or repeat. A step is a paragraph (`text`), an ordered
- * list of sub-steps (`items`, each with its own screenshots), or both; one with
- * neither prints its heading only — never an invented paragraph. `note` is the
- * secondary «если не получилось» line; `cta: cabinet-login` is the sign-in
- * button, whose label and URL come from the site config, never from the copy.
+ * numbers cannot skip or repeat. A step's `body` is a sequence of small
+ * blocks, so a how-to reads as one action per line rather than one paragraph
+ * per step (owner, 2026-10-08: «сплошная простыня»):
+ *
+ * - `paragraph` — one short paragraph (at most three sentences);
+ * - `steps` — an ordered list, for actions done in sequence;
+ * - `bullets` — an unordered list, for facts of equal weight;
+ * - `subheading` — a heading inside a long step;
+ * - `note` — a callout aside («Если не получилось.»);
+ * - `shots` — cabinet screenshots, placed where they illustrate;
+ * - `faq` — separate question/answer items, the /faq accordion.
+ *
+ * A list item is a sentence, or an object when it carries a link phrase, the
+ * button it names (`cta: cabinet-login` — label and URL come from the site
+ * config, never from the copy), a muted line under that button (`note`) or the
+ * screenshots that follow it. A step with an empty body prints its heading
+ * only — never an invented paragraph.
  *
  * A guide that is the whole page (/participants/zapolnit-zayavku) has no
  * heading of its own — the page <h1> is it — and opens with `intro`, one line
@@ -625,19 +637,19 @@ export type AccommodationBlock = z.infer<typeof accommodationBlockSchema>;
  * Like the accommodation block, the copy stays plain text: a link is a named
  * phrase of the sentence (`links[].text`), placed by the renderer via
  * `segment()`, and `pageSchemaChecked` fails the build when the sentence stops
- * containing it. Dates are `{{tokens}}` filled from the site config.
+ * containing it. A «…» phrase names an interface element and is marked by the
+ * renderer (`guideInline()`), never in the copy. Dates are `{{tokens}}` filled
+ * from the site config.
  */
 const guideShots = () =>
-  z
-    .array(
-      z.object({
-        url: mediaLocation(),
-        alt: prose(),
-        width: z.number().int().positive(),
-        height: z.number().int().positive(),
-      }),
-    )
-    .default([]);
+  z.array(
+    z.object({
+      url: mediaLocation(),
+      alt: prose(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    }),
+  );
 
 /** An internal route — the guide never sends a reader off-site. */
 const internalRoute = () => z.string().regex(/^\/(?!\/)/, 'an internal route: /path');
@@ -654,6 +666,44 @@ const phraseLinks = () =>
     )
     .default([]);
 
+const guideListItemObject = z.object({
+  text: prose(),
+  links: phraseLinks(),
+  /** The button this item tells the reader to press (site config, never copy). */
+  cta: z.enum(['cabinet-login']).nullable().default(null),
+  /** A muted line right under the button (or the item text). */
+  note: proseOrNull(),
+  /** Cabinet screenshots (ds-platform stand) that follow this item. */
+  shots: guideShots().default([]),
+});
+
+/** A list item: a bare sentence, or the object when it carries more. */
+const guideListItem = z.union([
+  // The object schema typesets the text — `prose()` here would run Typograf twice.
+  z.string().transform((text) => guideListItemObject.parse({ text })),
+  guideListItemObject,
+]);
+
+const guideBodyBlockSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('paragraph'), text: prose(), links: phraseLinks() }),
+  z.object({ kind: z.literal('steps'), items: z.array(guideListItem).min(1) }),
+  z.object({ kind: z.literal('bullets'), items: z.array(guideListItem).min(1) }),
+  z.object({ kind: z.literal('subheading'), text: prose() }),
+  z.object({
+    kind: z.literal('note'),
+    /** Printed first, in emphasis («Если не получилось.»). */
+    lead: proseOrNull(),
+    paragraphs: z.array(prose()).min(1),
+  }),
+  z.object({ kind: z.literal('shots'), shots: guideShots().min(1) }),
+  z.object({
+    kind: z.literal('faq'),
+    items: z.array(z.object({ q: prose(), a: prose() })).min(1),
+  }),
+]);
+
+export type GuideBodyBlock = z.infer<typeof guideBodyBlockSchema>;
+
 const submissionGuideBlockSchema = z.object({
   kind: z.literal('submission-guide'),
   /** The block's fixed anchor; its steps are `<anchor>-<n>`. */
@@ -666,26 +716,7 @@ const submissionGuideBlockSchema = z.object({
     .array(
       z.object({
         title: prose(),
-        text: proseOrNull(),
-        links: phraseLinks(),
-        /**
-         * Numbered sub-steps, each with the button it names (site config,
-         * never copy) and the screenshots that follow it.
-         */
-        items: z
-          .array(
-            z.object({
-              text: prose(),
-              cta: z.enum(['cabinet-login']).nullable().default(null),
-              /** A muted line right under the button (or the sub-step text). */
-              note: proseOrNull(),
-              shots: guideShots(),
-            }),
-          )
-          .default([]),
-        /** Cabinet screenshots (ds-platform stand), in reading order. */
-        shots: guideShots(),
-        note: z.object({ lead: prose(), text: prose() }).nullable().default(null),
+        body: z.array(guideBodyBlockSchema).default([]),
       }),
     )
     .min(1),
@@ -762,36 +793,29 @@ export const pageSchemaChecked = pageSchema.superRefine((page, ctx) => {
           });
         }
       });
-      block.steps.forEach((step, s) => {
-        if (step.text === null) {
-          const headingOnly = step.items.length === 0;
-          if (
-            step.links.length > 0 ||
-            (headingOnly && (step.shots.length > 0 || step.note !== null))
-          ) {
-            ctx.addIssue({
-              code: 'custom',
-              path: ['blocks', i, 'steps', s],
-              message: headingOnly
-                ? 'a step without text or items carries nothing — it is a heading only'
-                : 'links are phrases of the step text — a step without text carries none',
-            });
-          }
-          return;
-        }
-        const text = step.text;
-        step.links.forEach((link, l) => {
+      // A sentence that stops containing its link phrase would ship without
+      // the link — silently.
+      const phrases = (text: string, links: { text: string }[], path: (string | number)[]) =>
+        links.forEach((link, l) => {
           try {
             segment(text, [link.text]);
           } catch {
             ctx.addIssue({
               code: 'custom',
-              path: ['blocks', i, 'steps', s, 'links', l, 'text'],
-              message: `the step text must contain «${link.text}» — the renderer links it there`,
+              path: ['blocks', i, ...path, 'links', l, 'text'],
+              message: `the sentence must contain «${link.text}» — the renderer links it there`,
             });
           }
         });
-      });
+      block.steps.forEach((step, s) =>
+        step.body.forEach((part, p) => {
+          const at = ['steps', s, 'body', p];
+          if (part.kind === 'paragraph') phrases(part.text, part.links, at);
+          if (part.kind === 'steps' || part.kind === 'bullets') {
+            part.items.forEach((item, n) => phrases(item.text, item.links, [...at, 'items', n]));
+          }
+        }),
+      );
       return;
     }
     if (block.kind === 'accommodation') {

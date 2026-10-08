@@ -5,12 +5,19 @@
  * Zero client JS by construction: the disclosure behaviour, keyboard operation
  * and the expanded/collapsed semantics all come from the browser. The «+/−»
  * affordance is a CSS `::after` on the summary.
+ *
+ * `uiLabels`: the answers name elements of the congress cabinet in «…», as in
+ * the submission guide, and print them in its UI-label style (GuideText). Off
+ * for /faq, whose «…» are section and place names.
  */
+import GuideText from '@/components/GuideText.astro';
+
 interface Props {
   items: { q: string; a: string }[];
+  uiLabels?: boolean;
 }
 
-const { items } = Astro.props;
+const { items, uiLabels = false } = Astro.props;
 ---
 
 <div class="ob-faq">
@@ -18,7 +25,7 @@ const { items } = Astro.props;
     items.map((item) => (
       <details class="ob-faq__item">
         <summary class="ob-faq__q">{item.q}</summary>
-        <p class="ob-faq__a">{item.a}</p>
+        <p class="ob-faq__a">{uiLabels ? <GuideText text={item.a} /> : item.a}</p>
       </details>
     ))
   }

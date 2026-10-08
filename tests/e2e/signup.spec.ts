@@ -1927,11 +1927,11 @@ test.describe('privacy policy page', () => {
   });
 });
 
-test('the home page leads to the registration form and still states the opening date', async ({ page }) => {
+test('the home page leads to the registration form and states that registration is open', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('link', { name: 'Регистрация на конгресс' })).toHaveAttribute(
     'href',
     '/registration',
   );
-  await expect(page.getByText('Регистрация — с 1 октября 2026 года')).toBeVisible();
+  await expect(page.getByText('Регистрация открыта', { exact: true })).toBeVisible();
 });

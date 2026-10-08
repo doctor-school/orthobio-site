@@ -19,6 +19,7 @@ import { fillContentTokensDeep, formatDotted, formatRuDay, youngerThanCutoff } f
 import { STATIC_PUBLIC_ROUTES } from '@/lib/seo';
 import {
   FILL_GUIDE_ANCHOR,
+  guideInline,
   FILL_GUIDE_PATH,
   FILL_GUIDE_REDIRECT_SCRIPT,
   guideStepId,
@@ -49,6 +50,29 @@ const guides = [guide, fill];
 // What the page prints: getPage() fills the tokens after the schema.
 const filled = fillContentTokensDeep(guide, CONTENT_TOKENS);
 const filledFill = fillContentTokensDeep(fill, CONTENT_TOKENS);
+
+type Step = SubmissionGuideBlock['steps'][number];
+type Body = Step['body'][number];
+/** Every sentence a body block prints, in reading order. */
+const sentences = (b: Body): string[] => {
+  switch (b.kind) {
+    case 'paragraph':
+    case 'subheading':
+      return [b.text];
+    case 'steps':
+    case 'bullets':
+      return b.items.flatMap((item) => [item.text, ...(item.note ? [item.note] : [])]);
+    case 'note':
+      return [...(b.lead ? [b.lead] : []), ...b.paragraphs];
+    case 'faq':
+      return b.items.flatMap((item) => [item.q, item.a]);
+    case 'shots':
+      return [];
+  }
+};
+const stepText = (step: Step) => plain(step.body.flatMap(sentences).join('\n'));
+const isList = (b: Body) => b.kind === 'steps' || b.kind === 'bullets';
+const listItems = (step: Step) => step.body.flatMap((b) => (b.kind === 'steps' || b.kind === 'bullets' ? b.items : []));
 
 describe('date helpers', () => {
   it('prints a day the way Typograf typesets it in running text', () => {
@@ -101,6 +125,46 @@ describe('poster age cutoff in the config', () => {
     expect(CONTENT_TOKENS.congressStartDay).toBe(formatRuDay(UPCOMING_CONGRESS_DATES.startDate));
     expect(CONTENT_TOKENS.posterBornFrom).toBe(formatDotted(POSTER_AGE_CUTOFF.bornFrom));
     expect(CONTENT_TOKENS.posterBornUntil).toBe(formatDotted(POSTER_AGE_CUTOFF.bornUntil));
+  });
+});
+
+describe('guideInline — the marks a guide sentence gets', () => {
+  it('prints every «…» as a UI label and the rest as running text', () => {
+    expect(guideInline('Нажмите «+ Новая заявка», затем «Начать заявку →».')).toEqual([
+      { kind: 'text', text: 'Нажмите ' },
+      { kind: 'ui', text: '«+ Новая заявка»' },
+      { kind: 'text', text: ', затем ' },
+      { kind: 'ui', text: '«Начать заявку →»' },
+      { kind: 'text', text: '.' },
+    ]);
+  });
+
+  it('leaves a sentence without guillemets whole', () => {
+    expect(guideInline('Пароль не нужен.')).toEqual([{ kind: 'text', text: 'Пароль не нужен.' }]);
+  });
+
+  it('marks the outermost pair when quotes nest', () => {
+    expect(guideInline('Экран «Кабинет «Мои заявки»» открыт.')).toEqual([
+      { kind: 'text', text: 'Экран ' },
+      { kind: 'ui', text: '«Кабинет «Мои заявки»»' },
+      { kind: 'text', text: ' открыт.' },
+    ]);
+  });
+
+  it('never half-marks an unclosed quote', () => {
+    expect(guideInline('Строка «без конца.')).toEqual([{ kind: 'text', text: 'Строка «без конца.' }]);
+  });
+
+  it('prints a link phrase as the link, even when it is quoted', () => {
+    expect(guideInline('Ещё нет — «Зарегистрироваться».', [{ text: '«Зарегистрироваться»', href: '/registration' }])).toEqual([
+      { kind: 'text', text: 'Ещё нет — ' },
+      { kind: 'link', text: '«Зарегистрироваться»', href: '/registration' },
+      { kind: 'text', text: '.' },
+    ]);
+  });
+
+  it('fails when the sentence lost its link phrase', () => {
+    expect(() => guideInline('Текст.', [{ text: 'ссылка', href: '/x' }])).toThrow(/does not contain/);
   });
 });
 
@@ -176,32 +240,34 @@ describe('participants.yaml → submission guide', () => {
 
   it('shows no sign-in in the eight steps — the intro line is the one pointer to it', () => {
     const text = JSON.stringify(fillContentTokensDeep(fill.steps, CONTENT_TOKENS));
-    expect(fill.steps.flatMap((s) => s.items.map((item) => item.cta))).toEqual([]);
+    expect(fill.steps.flatMap((s) => listItems(s).map((item) => item.cta)).filter(Boolean)).toEqual([]);
     expect(text).not.toContain(CABINET_LOGIN_LABEL);
     expect(text).not.toMatch(/Отправить код|код для входа|войти|вход[ау]?[^а-яё]/i);
     // «Тезисы» points at «Согласие» by its number on this page.
-    expect(plain(fill.steps[3].text ?? '')).toContain('покрывает согласие (раздел 5).');
+    expect(stepText(fill.steps[3])).toContain('покрывает согласие (раздел 5).');
     expect(plain(fill.steps[4].title)).toBe('Согласие на обработку персональных данных');
   });
 
-  it('walks «Как войти в кабинет» as five numbered sub-steps, the button under the first, and a note', () => {
+  it('walks «Как войти в кабинет» as five numbered sub-steps, the button under the first, then a note', () => {
     const step = guide.steps[1];
-    expect(step.text).toBeNull();
-    expect(step.items).toHaveLength(5);
+    expect(step.body.map((b) => b.kind)).toEqual(['steps', 'note']);
+    const items = listItems(step);
+    expect(items).toHaveLength(5);
     // The button sits under the sub-step that tells the reader to press it.
-    expect(step.items.map((item) => item.cta)).toEqual(['cabinet-login', null, null, null, null]);
+    expect(items.map((item) => item.cta)).toEqual(['cabinet-login', null, null, null, null]);
     // A returning reader is told up front that no code is coming (30-day session).
-    expect(step.items.map((item) => item.note && plain(item.note))).toEqual([
+    expect(items.map((item) => item.note && plain(item.note))).toEqual([
       'Если вы уже входили в кабинет с этого устройства, он откроется сразу — код не понадобится.',
       null,
       null,
       null,
       null,
     ]);
-    expect(step.note).not.toBeNull();
-    expect(plain(step.items[0].text)).toContain(`«${CABINET_LOGIN_LABEL}»`);
+    expect(plain(items[0].text)).toContain(`«${CABINET_LOGIN_LABEL}»`);
     // The screenshots follow «Отправить код» (3) and the code letter (4).
-    expect(step.items.map((item) => item.shots.length)).toEqual([0, 0, 1, 2, 0]);
+    expect(items.map((item) => item.shots.length)).toEqual([0, 0, 1, 2, 0]);
+    const note = step.body[1];
+    expect(note.kind === 'note' && plain(note.lead ?? '')).toBe('Если не получилось.');
   });
 
   it('sends «Войти в кабинет» to the Doctor.School sign-in by code, back to the congress cabinet', () => {
@@ -215,11 +281,12 @@ describe('participants.yaml → submission guide', () => {
   });
 
   it('writes every date as a token — none is spelled out in the copy', () => {
-    const steps = [raw, rawFill]
-      .flatMap((p) => p.blocks as { kind: string; steps?: { text: string | null }[] }[])
-      .filter((b) => b.kind === 'submission-guide')
-      .flatMap((b) => b.steps!);
-    const copy = steps.map((s) => s.text ?? '').join('\n');
+    const copy = JSON.stringify(
+      [raw, rawFill]
+        .flatMap((p) => p.blocks as { kind: string; steps?: unknown[] }[])
+        .filter((b) => b.kind === 'submission-guide')
+        .flatMap((b) => b.steps!),
+    );
     for (const token of [
       '{{oralTalkDeadline}}',
       '{{posterAbstractDeadline}}',
@@ -236,31 +303,38 @@ describe('participants.yaml → submission guide', () => {
   it('prints the config dates where the tokens stood', () => {
     // Steps 1–2 are «Как подать материалы», 3–10 the eight of «Как заполнить заявку».
     const all = [...filled.steps, ...filledFill.steps];
-    const text = (n: number) => plain(all[n - 1].text ?? '');
+    const text = (n: number) => stepText(all[n - 1]);
     const oral = plain(SUBMISSION_DEADLINES.oralTalk.display);
     const poster = plain(SUBMISSION_DEADLINES.posterAbstract.display);
-    expect(text(1)).toContain(`устные доклады — до ${oral}, постерные доклады и тезисы — до ${poster}, до 23:59`);
-    expect(text(8)).toContain(`устный доклад — ${oral}; постерный доклад и тезисы — ${poster}.`);
+    expect(text(1)).toContain('до 23:59 по московскому времени');
+    expect(text(1)).toContain(`устные доклады — до ${oral};\nпостерные доклады и тезисы — до ${poster}.`);
+    expect(text(8)).toContain(`устный доклад — ${oral};\nпостерный доклад и тезисы — ${poster}.`);
     expect(text(5)).toContain(
-      'младше 40 лет на 23 апреля 2027: родились 24.04.1987 или позже — можно; 23.04.1987 или раньше — нельзя',
+      'младше 40 лет на 23 апреля 2027:\nродились 24.04.1987 или позже — можно;\nродились 23.04.1987 или раньше — нельзя',
     );
     // The take-back deadline is dated, as the cabinet now states it
     // (ds-platform #2573) — never «пока приём открыт».
     const takeBack = `устные доклады — до ${oral}, постерные доклады и тезисы — до ${poster}`;
-    expect(text(9)).toContain(`можно «Забрать на исправление» до окончания приёма своего вида: ${takeBack};`);
-    expect(text(10)).toContain(`пока заявка «Отправлена», до окончания приёма своего вида (${takeBack}): «Забрать на исправление»`);
-    expect(all.map((s) => plain(s.text ?? '')).join('\n')).not.toMatch(/приём открыт|открыт приём/);
+    expect(text(9)).toContain(
+      `«Отправлена» — ждёт рассмотрения. До окончания приёма своего вида можно «Забрать на исправление»: ${takeBack}.`,
+    );
+    expect(text(10)).toContain(`пока заявка «Отправлена» и приём своего вида не закончился (${takeBack})`);
+    expect(all.map(stepText).join('\n')).not.toMatch(/приём открыт|открыт приём/);
     expect(JSON.stringify([filled, filledFill])).not.toContain('{{');
   });
 
   it('links «Зарегистрироваться» to the on-site registration form', () => {
-    expect(guide.steps[0].links).toEqual([{ text: '«Зарегистрироваться»', href: '/registration' }]);
+    const first = guide.steps[0].body[0];
+    expect(first.kind === 'paragraph' && first.links).toEqual([{ text: '«Зарегистрироваться»', href: '/registration' }]);
   });
 
+  const shotsOf = (step: Step) =>
+    step.body.flatMap((b) =>
+      b.kind === 'shots' ? b.shots : b.kind === 'steps' || b.kind === 'bullets' ? b.items.flatMap((item) => item.shots) : [],
+    );
+
   it('places the fourteen screenshots, each once, from our bucket', () => {
-    const shots = guides
-      .flatMap((g) => g.steps)
-      .flatMap((s) => [...s.items.flatMap((item) => item.shots), ...s.shots]);
+    const shots = guides.flatMap((g) => g.steps).flatMap(shotsOf);
     expect(shots).toHaveLength(14);
     expect(new Set(shots.map((s) => s.url)).size).toBe(14);
     const listed = new Set(
@@ -275,14 +349,19 @@ describe('participants.yaml → submission guide', () => {
     }
   });
 
-  it('shows each screenshot under the step it illustrates', () => {
+  it('shows each screenshot under the step — and the list item — it illustrates', () => {
     const file = (url: string) => url.split('/').at(-1)!;
     const where = Object.fromEntries(
       guides.flatMap((g) =>
-        g.steps.flatMap((s, i) => [
-          ...s.items.flatMap((item, j) => item.shots.map((shot) => [file(shot.url), `${g.anchor}-${i + 1}.${j + 1}`])),
-          ...s.shots.map((shot) => [file(shot.url), `${g.anchor}-${i + 1}`]),
-        ]),
+        g.steps.flatMap((s, i) =>
+          s.body.flatMap((b) =>
+            b.kind === 'shots'
+              ? b.shots.map((shot) => [file(shot.url), `${g.anchor}-${i + 1}`])
+              : b.kind === 'steps' || b.kind === 'bullets'
+                ? b.items.flatMap((item, j) => item.shots.map((shot) => [file(shot.url), `${g.anchor}-${i + 1}.${j + 1}`]))
+                : [],
+          ),
+        ),
       ),
     );
     expect(where).toEqual({
@@ -293,20 +372,69 @@ describe('participants.yaml → submission guide', () => {
       '11-list-with-statuses-v2.png': 'zapolnit-zayavku-1',
       '03-oral-form-authors.png': 'zapolnit-zayavku-2',
       '04-oral-form-text.png': 'zapolnit-zayavku-2',
-      '05-validation-errors.png': 'zapolnit-zayavku-2',
-      '07-submit-confirm-v2.png': 'zapolnit-zayavku-2',
+      // «Отправить» → the error list; «Да, отправить» → the confirmation.
+      '05-validation-errors.png': 'zapolnit-zayavku-2.1',
+      '07-submit-confirm-v2.png': 'zapolnit-zayavku-2.2',
       '08-poster-birthdate.png': 'zapolnit-zayavku-3',
       '09-poster-age-refusal.png': 'zapolnit-zayavku-3',
       '10-abstract-form.png': 'zapolnit-zayavku-4',
       '06-consent-and-submit.png': 'zapolnit-zayavku-5',
-      '12-sent-card-actions-v2.png': 'zapolnit-zayavku-7',
+      // The sent card, under the status «Отправлена» it shows.
+      '12-sent-card-actions-v2.png': 'zapolnit-zayavku-7.1',
     });
+  });
+});
+
+/**
+ * Owner, 2026-10-08: «инструкции тяжело читать, сплошная простыня; FAQ даже
+ * не разбит на строки». What made them so is checkable in the copy: numbered
+ * sequences inlined as «1) … 2) …», «→» chains of actions, paragraphs that
+ * run on, a FAQ written as one paragraph.
+ */
+describe('the guides read as a how-to, not a wall of text', () => {
+  const allSteps = guides.flatMap((g) => g.steps);
+  const paragraphs = (step: Step) =>
+    step.body.flatMap((b) => (b.kind === 'paragraph' ? [b.text] : b.kind === 'note' ? b.paragraphs : []));
+  // A sentence ends at . ! ? … before a space and a capital, a digit or a quote.
+  const sentenceCount = (text: string) => plain(text).split(/(?<=[.!?…])\s+(?=[«А-ЯЁA-Z0-9])/u).length;
+  const outsideQuotes = (text: string) => plain(text).replace(/«[^«»]*(?:«[^«»]*»[^«»]*)*»/g, '«…»');
+
+  it('keeps every paragraph to three sentences at most', () => {
+    expect(allSteps.flatMap(paragraphs).filter((p) => sentenceCount(p) > 3)).toEqual([]);
+  });
+
+  it('writes a sequence as a list, never «1) … 2) …» inline', () => {
+    expect(allSteps.map(stepText).join('\n')).not.toMatch(/(^|\s)\d\)\s/);
+  });
+
+  it('chains no actions with «→» outside a button label', () => {
+    const chains = allSteps.flatMap((s) => s.body.flatMap(sentences)).filter((t) => /\s→\s/.test(outsideQuotes(t)));
+    expect(chains).toEqual([]);
+  });
+
+  it('breaks every filling step but the FAQ up with a list', () => {
+    expect(fill.steps.slice(0, 7).map((s) => s.body.some(isList))).toEqual(Array(7).fill(true));
+  });
+
+  it('asks «Частые вопросы» as separate questions, each with its answer', () => {
+    const faq = fill.steps[7].body;
+    expect(faq.map((b) => b.kind)).toEqual(['faq']);
+    const items = faq[0].kind === 'faq' ? faq[0].items : [];
+    expect(items.map((item) => plain(item.q))).toEqual([
+      'Приём закрылся, а заявка осталась в черновиках. Можно её отправить?',
+      'Можно подать четвёртые тезисы?',
+      'Постер не подходит по возрасту. Что можно подать?',
+      'Можно изменить заявку после отправки?',
+      'Можно подать доклад и тезисы по одной работе?',
+      'Можно подать несколько заявок?',
+    ]);
   });
 });
 
 describe('schema guards of the guide', () => {
   const page = (blocks: unknown[]) => ({ title: 'T', blocks });
-  const step = (over: Record<string, unknown> = {}) => ({ title: 'Шаг', text: 'Текст шага.', ...over });
+  const paragraph = (text: string, links: unknown[] = []) => ({ kind: 'paragraph', text, links });
+  const step = (body: unknown[] = [paragraph('Текст шага.')]) => ({ title: 'Шаг', body });
   const block = (steps: unknown[], over: Record<string, unknown> = {}) => ({
     kind: 'submission-guide',
     anchor: 'podat-materialy',
@@ -314,70 +442,107 @@ describe('schema guards of the guide', () => {
     steps,
     ...over,
   });
+  const ok = (blocks: unknown[]) => pageSchemaChecked.safeParse(page(blocks));
+  const shot = { url: '/media/2027/submissions/x.png', alt: 'a', width: 1, height: 1 };
 
-  it('fails the build when a step stops containing its link phrase', () => {
-    const r = pageSchemaChecked.safeParse(
-      page([block([step({ links: [{ text: '«Зарегистрироваться»', href: '/registration' }] })])]),
-    );
+  it('takes every body block a how-to needs', () => {
+    const r = ok([
+      block([
+        step([
+          { kind: 'subheading', text: 'Новая заявка' },
+          { kind: 'steps', items: ['Нажмите «+ Новая заявка».', { text: 'Выберите вид.', shots: [shot] }] },
+          { kind: 'bullets', items: ['Черновик сохраняется сам.'] },
+          { kind: 'note', lead: 'Важно.', paragraphs: ['Файл не нужен.'] },
+          { kind: 'shots', shots: [shot] },
+          { kind: 'faq', items: [{ q: 'Можно?', a: 'Да.' }] },
+        ]),
+      ]),
+    ]);
+    expect(r.success).toBe(true);
+    const parsed = r.data?.blocks[0];
+    const list = parsed?.kind === 'submission-guide' ? parsed.steps[0].body[1] : null;
+    // A bare sentence becomes a full item: no link, no button, no shots.
+    expect(list?.kind === 'steps' && list.items[0]).toEqual({
+      text: 'Нажмите «+ Новая заявка».',
+      links: [],
+      cta: null,
+      note: null,
+      shots: [],
+    });
+  });
+
+  it('allows a heading-only step', () => {
+    expect(ok([block([step([])])]).success).toBe(true);
+  });
+
+  it('refuses an empty list, an empty note, an empty FAQ and screenshots of nothing', () => {
+    for (const empty of [
+      { kind: 'steps', items: [] },
+      { kind: 'bullets', items: [] },
+      { kind: 'note', lead: null, paragraphs: [] },
+      { kind: 'faq', items: [] },
+      { kind: 'shots', shots: [] },
+    ]) {
+      expect(ok([block([step([empty])])]).success, empty.kind).toBe(false);
+    }
+  });
+
+  it('refuses a body block it does not know', () => {
+    expect(ok([block([step([{ kind: 'table', rows: [] }])])]).success).toBe(false);
+  });
+
+  it('fails the build when a paragraph stops containing its link phrase', () => {
+    const r = ok([block([step([paragraph('Сначала зарегистрируйтесь.', [{ text: '«Зарегистрироваться»', href: '/registration' }])])])]);
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('must contain');
+  });
+
+  it('fails the build when a list item stops containing its link phrase', () => {
+    const item = { text: 'Откройте форму.', links: [{ text: 'регистрации', href: '/registration' }] };
+    const r = ok([block([step([{ kind: 'bullets', items: [item] }])])]);
     expect(r.success).toBe(false);
     expect(JSON.stringify(r.error?.issues)).toContain('must contain');
   });
 
   it('refuses an off-site link', () => {
-    const r = pageSchemaChecked.safeParse(
-      page([block([step({ text: 'Перейти сюда.', links: [{ text: 'сюда', href: 'https://example.com/' }] })])]),
-    );
-    expect(r.success).toBe(false);
+    expect(ok([block([step([paragraph('Перейти сюда.', [{ text: 'сюда', href: 'https://example.com/' }])])])]).success).toBe(false);
   });
 
-  it('refuses screenshots or a note on a heading-only step', () => {
-    const shot = { url: '/media/2027/submissions/x.png', alt: 'a', width: 1, height: 1 };
-    for (const extra of [{ shots: [shot] }, { note: { lead: 'Л.', text: 'Т.' } }]) {
-      expect(pageSchemaChecked.safeParse(page([block([step({ text: null, ...extra })])])).success).toBe(false);
-    }
-  });
-
-  it('allows a step of sub-steps only, with a button under a sub-step and a note', () => {
-    const items = [{ text: 'Один.', cta: 'cabinet-login' }];
-    const r = pageSchemaChecked.safeParse(page([block([step({ text: null, items, note: { lead: 'Л.', text: 'Т.' } })])]));
-    expect(r.success).toBe(true);
-  });
-
-  it('refuses a button the config does not define', () => {
-    const items = [{ text: 'Один.', cta: 'elsewhere' }];
-    expect(pageSchemaChecked.safeParse(page([block([step({ text: null, items })])])).success).toBe(false);
+  it('allows a button under a list item and refuses one the config does not define', () => {
+    const list = (cta: string) => ({ kind: 'steps', items: [{ text: 'Один.', cta }] });
+    expect(ok([block([step([list('cabinet-login')])])]).success).toBe(true);
+    expect(ok([block([step([list('elsewhere')])])]).success).toBe(false);
   });
 
   it('allows one guide per anchor — the anchors are fixed', () => {
-    const r = pageSchemaChecked.safeParse(page([block([step()]), block([step()])]));
+    const r = ok([block([step()]), block([step()])]);
     expect(r.success).toBe(false);
     expect(JSON.stringify(r.error?.issues)).toContain('at most one submission-guide block per anchor');
-    const two = page([block([step()]), block([step()], { anchor: 'zapolnit-zayavku' })]);
-    expect(pageSchemaChecked.safeParse(two).success).toBe(true);
+    expect(ok([block([step()]), block([step()], { anchor: 'zapolnit-zayavku' })]).success).toBe(true);
   });
 
   it('refuses an anchor that is not one of the fixed ones', () => {
-    expect(pageSchemaChecked.safeParse(page([block([step()], { anchor: 'elsewhere' })])).success).toBe(false);
+    expect(ok([block([step()], { anchor: 'elsewhere' })]).success).toBe(false);
   });
 
   it('points a guide on only to a page of this site', () => {
-    const next = (href: string) => page([block([step()], { next: { text: 'Дальше', href } })]);
-    expect(pageSchemaChecked.safeParse(next('/participants/zapolnit-zayavku')).success).toBe(true);
-    expect(pageSchemaChecked.safeParse(next('https://example.com/')).success).toBe(false);
-    expect(pageSchemaChecked.safeParse(next('//example.com/')).success).toBe(false);
+    const next = (href: string) => [block([step()], { next: { text: 'Дальше', href } })];
+    expect(ok(next('/participants/zapolnit-zayavku')).success).toBe(true);
+    expect(ok(next('https://example.com/')).success).toBe(false);
+    expect(ok(next('//example.com/')).success).toBe(false);
   });
 
   it('fails the build when the intro line stops containing its link phrase', () => {
     const link = { text: 'как войти', href: '/participants#podat-materialy' };
-    const intro = (text: string) => page([block([step()], { heading: null, intro: { text, links: [link] } })]);
-    expect(pageSchemaChecked.safeParse(intro('Если не вошли — как войти.')).success).toBe(true);
-    const r = pageSchemaChecked.safeParse(intro('Если не вошли — войдите.'));
+    const intro = (text: string) => [block([step()], { heading: null, intro: { text, links: [link] } })];
+    expect(ok(intro('Если не вошли — как войти.')).success).toBe(true);
+    const r = ok(intro('Если не вошли — войдите.'));
     expect(r.success).toBe(false);
     expect(JSON.stringify(r.error?.issues)).toContain('must contain');
   });
 
   it('refuses a screenshot hosted anywhere but our storage', () => {
-    const shot = { url: 'https://example.com/x.png', alt: 'a', width: 1, height: 1 };
-    expect(pageSchemaChecked.safeParse(page([block([step({ shots: [shot] })])])).success).toBe(false);
+    const bad = { ...shot, url: 'https://example.com/x.png' };
+    expect(ok([block([step([{ kind: 'shots', shots: [bad] }])])]).success).toBe(false);
   });
 });

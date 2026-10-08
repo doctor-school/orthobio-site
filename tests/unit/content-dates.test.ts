@@ -426,7 +426,8 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
 
 /**
  * «Регистрация открыта» is written as a plain present-tense claim on the home
- * hero and the /participants lead (PR #118). It cannot be evaluated at build
+ * hero, the /participants lead and the FAQ «Как зарегистрироваться?» answer
+ * (PR #118). It cannot be evaluated at build
  * time: preview and production ship the same bytes and the page is not
  * redeployed on a schedule (`src/lib/registration.ts`). So the claim is pinned
  * to the window here instead: once `REGISTRATION_WINDOW.closesAt` has passed,
@@ -436,6 +437,7 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
 const OPEN_CLAIMS: ReadonlyArray<{ file: string; claim: string }> = [
   { file: 'src/pages/index.astro', claim: 'Регистрация открыта' },
   { file: 'src/content/pages/participants.yaml', claim: 'Регистрация на VIII конгресс открыта.' },
+  { file: 'src/content/pages/faq.yaml', claim: 'Регистрация открыта с ' },
 ];
 
 const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));

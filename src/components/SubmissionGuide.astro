@@ -2,40 +2,45 @@
 /**
  * SubmissionGuide — «Как подать материалы» on /participants (Issue #99): the
  * owner-approved instruction for the congress cabinet, step by step, with the
- * cabinet's own screenshots under the step they illustrate.
+ * cabinet's own screenshots where they illustrate.
  *
  * Built from the «Проживание» section (Accommodation.astro) rather than a new
  * visual language: the same landmark section with a fixed anchor, the same
  * card (`.ob-acc__way`) with a round tile and an h3 head, the same paragraph,
- * link and framed screenshot. Only the step stack and the screenshot column
- * are its own (`.ob-sub*`). No client JS.
+ * link, note and framed screenshot. Only the step stack, the lists, the
+ * sub-headings and the UI-label mark are its own (`.ob-sub*`). No client JS.
  *
  * The tile carries the step number for the eye and is hidden from assistive
  * tech; the heading itself starts with the number, visually hidden, so the
  * outline reads «1. Кто может подать материалы» either way.
  *
- * A step of sub-steps (step 2, sign-in) is a real <ol> with each screenshot
- * under the sub-step it shows; the button sits under the sub-step that names
- * it (owner, 2026-10-07), the site Button in the accommodation CTA placement
- * (full width on a phone), `secondary` because the page's one primary is the
- * hotel booking; its «если не получилось» line is the accommodation note
- * (`.ob-acc__note`, muted). The button's label and URL are site config, never
- * copy.
+ * A step's body is a sequence of small blocks (owner, 2026-10-08: «сплошная
+ * простыня»), so the step reads as a how-to: short paragraphs, a numbered
+ * list for actions in sequence, a bulleted one for facts, a sub-heading one
+ * level under the step's, a callout note, screenshots where they belong and
+ * — for «Частые вопросы» — the /faq accordion. Every sentence goes through
+ * GuideText: link phrases become links, «…» cabinet names one inline style.
+ *
+ * A list item may carry a button (`cta`), the site Button in the
+ * accommodation CTA placement (full width on a phone), `secondary` because the
+ * page's one primary is the hotel booking; its label and URL are site config,
+ * never copy. Its `note` (the «уже входили» line) sits muted right under it,
+ * then the item's screenshots.
  *
  * Two of these blocks, one task per page (owner, 2026-10-07): «Как подать
  * материалы» on /participants (who may submit, sign-in) ends with a button to
  * /participants/zapolnit-zayavku, where «Как заполнить заявку» (the cabinet
  * steps, no sign-in) is the whole page — no heading of its own under the page
  * <h1>, and one intro line pointing back to the sign-in for whoever is not in
- * yet, its steps then <h2> (axe `heading-order`). A sub-step's `note` (the
- * «уже входили» line) sits muted right under its button.
+ * yet, its steps then <h2> (axe `heading-order`).
  */
 import Button from '@/components/Button.astro';
+import Faq from '@/components/Faq.astro';
+import GuideText from '@/components/GuideText.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Shots from '@/components/SubmissionGuideShots.astro';
 import { CABINET_LOGIN_LABEL, CABINET_LOGIN_URL } from '@/config/site';
 import type { SubmissionGuideBlock } from '@/content';
-import { segment } from '@/lib/accommodation';
 import { guideStepId } from '@/lib/submission-guide';
 
 interface Props {
@@ -46,34 +51,21 @@ const { block } = Astro.props;
 const headingId = `${block.anchor}-title`;
 // Steps sit one level under the guide's heading; with none, under the page <h1>.
 const StepHeading = block.heading ? 'h3' : 'h2';
+const SubHeading = block.heading ? 'h4' : 'h3';
 const CTAS = { 'cabinet-login': { label: CABINET_LOGIN_LABEL, href: CABINET_LOGIN_URL } } as const;
-const intro =
-  block.intro === null
-    ? null
-    : {
-        parts: segment(block.intro.text, block.intro.links.map((l) => l.text)),
-        hrefs: new Map(block.intro.links.map((l) => [l.text, l.href])),
-      };
-const steps = block.steps.map((step, i) => {
-  const n = i + 1;
-  const hrefs = new Map(step.links.map((l) => [l.text, l.href]));
-  return {
-    ...step,
-    n,
-    id: guideStepId(block.anchor, n),
-    parts: step.text === null ? [] : segment(step.text, [...hrefs.keys()]),
-    hrefs,
-    items: step.items.map((item) => ({ ...item, cta: item.cta === null ? null : CTAS[item.cta] })),
-  };
-});
+const steps = block.steps.map((step, i) => ({
+  ...step,
+  n: i + 1,
+  id: guideStepId(block.anchor, i + 1),
+}));
 ---
 
 <section class="ob-section ob-sub" id={block.anchor} aria-labelledby={block.heading ? headingId : undefined}>
   {block.heading && <SectionHeading title={block.heading} id={headingId} />}
   {
-    intro && (
+    block.intro && (
       <p class="ob-acc__p ob-sub__intro">
-        {intro.parts.map((s) => (s.mark ? <a class="ob-acc__link" href={intro.hrefs.get(s.mark)}>{s.text}</a> : s.text))}
+        <GuideText text={block.intro.text} links={block.intro.links} />
       </p>
     )
   }
@@ -88,34 +80,52 @@ const steps = block.steps.map((step, i) => {
             </span>
             <StepHeading class="ob-acc__wayt" id={`${step.id}-title`}><span class="ob-sr-only">{`${step.n}. `}</span>{step.title}</StepHeading>
           </div>
-          {step.parts.length > 0 && (
-            <p class="ob-acc__p">
-              {step.parts.map((s) =>
-                s.mark ? <a class="ob-acc__link" href={step.hrefs.get(s.mark)}>{s.text}</a> : s.text,
-              )}
-            </p>
-          )}
-          {step.items.length > 0 && (
-            <ol class="ob-list ob-sub__items">
-              {step.items.map((item) => (
-                <li>
-                  {item.text}
-                  {item.cta && (
-                    <Button class="ob-acc__cta ob-sub__cta" variant="secondary" size="lg" href={item.cta.href} external>
-                      {item.cta.label}
-                    </Button>
-                  )}
-                  {item.note && <p class="ob-sub__hint">{item.note}</p>}
-                  {item.shots.length > 0 && <Shots shots={item.shots} />}
-                </li>
-              ))}
-            </ol>
-          )}
-          {step.shots.length > 0 && <Shots shots={step.shots} />}
-          {step.note && (
-            <p class="ob-acc__note">
-              <span><em>{step.note.lead}</em> {step.note.text}</span>
-            </p>
+          {step.body.map((part) =>
+            part.kind === 'paragraph' ? (
+              <p class="ob-acc__p">
+                <GuideText text={part.text} links={part.links} />
+              </p>
+            ) : part.kind === 'subheading' ? (
+              <SubHeading class="ob-sub__subhead">{part.text}</SubHeading>
+            ) : part.kind === 'steps' || part.kind === 'bullets' ? (
+              (() => {
+                const List = part.kind === 'steps' ? 'ol' : 'ul';
+                return (
+                  <List class="ob-list ob-sub__items">
+                    {part.items.map((item) => {
+                      const cta = item.cta === null ? null : CTAS[item.cta];
+                      return (
+                        <li>
+                          <GuideText text={item.text} links={item.links} />
+                          {cta && (
+                            <Button class="ob-acc__cta ob-sub__cta" variant="secondary" size="lg" href={cta.href} external>
+                              {cta.label}
+                            </Button>
+                          )}
+                          {item.note && <p class="ob-sub__hint">{item.note}</p>}
+                          {item.shots.length > 0 && <Shots shots={item.shots} />}
+                        </li>
+                      );
+                    })}
+                  </List>
+                );
+              })()
+            ) : part.kind === 'note' ? (
+              <div class="ob-acc__note ob-sub__callout" role="note">
+                <div>
+                  {part.paragraphs.map((text, i) => (
+                    <p>
+                      {i === 0 && part.lead && <em>{part.lead} </em>}
+                      <GuideText text={text} />
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : part.kind === 'shots' ? (
+              <Shots shots={part.shots} />
+            ) : (
+              <Faq items={part.items} uiLabels />
+            ),
           )}
         </article>
       ))

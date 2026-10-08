@@ -1,0 +1,29 @@
+---
+/**
+ * One sentence of a submission guide (Issue #99) with its inline marks:
+ * link phrases as site links, every «…» — a button, field, status or letter
+ * subject in the cabinet — in the one UI-label style (`.ob-sub__ui`). The marks
+ * come from `guideInline()`; the copy itself stays plain text.
+ */
+import { guideInline } from '@/lib/submission-guide';
+
+interface Props {
+  text: string;
+  links?: readonly { text: string; href: string }[];
+}
+
+const { text, links = [] } = Astro.props;
+const parts = guideInline(text, links);
+---
+
+{
+  parts.map((part) =>
+    part.kind === 'link' ? (
+      <a class="ob-acc__link" href={part.href}>{part.text}</a>
+    ) : part.kind === 'ui' ? (
+      <strong class="ob-sub__ui">{part.text}</strong>
+    ) : (
+      part.text
+    ),
+  )
+}

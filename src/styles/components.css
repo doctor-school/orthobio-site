@@ -3852,8 +3852,82 @@ body > main:has(> .ob-reg) {
   margin: var(--sp-5) 0 0;
 }
 
+/* A screenshot under a sub-step is capped by the card, not by the list's
+   `ch` measure: `ch` is the loaded font's, and Inter swaps in after first
+   paint, so a measure-capped image would resize (~7%) under the reader. The
+   card is the size container; the shot spans from the list's text edge
+   (its `padding-left`) to the card's. The list's single track is pinned to
+   the list's width so the wider shot cannot widen the text lines beside it.
+   Without `cqi` the width computes to `unset` and the shot falls back to the
+   list's measure. */
+.ob-sub .ob-acc__way {
+  container-type: inline-size;
+}
+
+.ob-sub__items {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .ob-sub__items .ob-sub__shots {
   margin: var(--sp-3) 0 var(--sp-2);
+  width: var(--sub-shot-span);
+}
+
+/* A step's body is a run of small blocks (owner, 2026-10-08: «сплошная
+   простыня»): screenshots between them keep the paragraph's rhythm, and the
+   last block of a card sits flush with its padding. */
+.ob-acc__way > .ob-sub__shots {
+  margin: 0 0 var(--sp-5);
+}
+
+.ob-sub .ob-acc__way > :last-child {
+  margin-bottom: 0;
+}
+
+/* A heading inside a long step («Поля заявки», «Статусы заявки»): body size,
+   one weight up — it groups the lines under it, it is not a second step. */
+.ob-sub__subhead {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-semibold);
+  margin: var(--sp-5) 0 var(--sp-2);
+  max-width: var(--measure);
+  overflow-wrap: break-word;
+}
+
+.ob-acc__wayhead + .ob-sub__subhead {
+  margin-top: 0;
+}
+
+/* A name in the cabinet («+ Новая заявка», «Сохранено», «Черновик») — one
+   inline style for every button, field, status and letter subject, so a
+   reader scanning a step finds what to look for on the screen. */
+.ob-sub__ui {
+  font-weight: var(--fw-semibold);
+  color: var(--text-body);
+}
+
+/* The callout aside («Если не получилось.», «Файл постера не нужен»): the
+   accommodation note on the sky tint of the step tile. */
+.ob-sub__callout {
+  background: var(--ob-sky-tint);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+  margin: 0 0 var(--sp-5);
+  color: var(--text-body);
+}
+
+.ob-sub__callout p {
+  margin: 0;
+}
+
+.ob-sub__callout p + p {
+  margin-top: var(--sp-2);
+}
+
+/* «Частые вопросы» inside a step: the /faq accordion at the card's measure. */
+.ob-acc__way > .ob-faq {
+  max-width: var(--measure);
 }
 
 /* ── Privacy policy (/privacy) ───────────────────────────────────────────── */

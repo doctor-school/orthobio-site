@@ -14,7 +14,6 @@ import Stat from '@/components/Stat.astro';
 import Stub from '@/components/Stub.astro';
 import {
   REGISTRATION_CTA_LABEL,
-  REGISTRATION_OPENS,
   REGISTRATION_URL,
   UPCOMING_CONGRESS_DATES,
   UPCOMING_CONGRESS_VENUE,
@@ -27,10 +26,6 @@ const { data: programPage } = await getPage('program');
 const programStub = programPage.blocks.find((b) => b.kind === 'stub');
 
 // Teaser: the three most recent congresses; the hub has them all.
-// «1 октября 2026» with the day bound to its month, as Typograf binds dates
-// in YAML copy; `REGISTRATION_OPENS.display` stays plain for the date guard.
-const heroOpensDate = REGISTRATION_OPENS.display.replace(/^(\d+) /, '$1 ');
-
 const recentYears = (await getCongressYears()).slice(0, 3);
 
 ---
@@ -45,14 +40,16 @@ const recentYears = (await getCongressYears()).slice(0, 3);
     {page.lead.map((p) => <p>{p}</p>)}
 
     {/* Issue #78: the primary CTA leads to the on-site form. The opening
-        date stays beside it, so the reader need not click to learn it.
-        Worded to stay true on both sides of the opening day (Issue #108):
-        the page is static and may be deployed before or after it. */}
+        status stays beside it: registration is open (REGISTRATION_WINDOW,
+        since 1 October 2026), so the line says so instead of announcing an
+        opening that has passed. The claim is pinned to the window by
+        tests/unit/content-dates.test.ts: once closesAt passes, the build
+        fails until this line is reworded. */}
     <div slot="cta" class="ob-hero__cta">
       <Button size="lg" href={REGISTRATION_URL}>
         {REGISTRATION_CTA_LABEL}
       </Button>
-      <p class="ob-hero__cta-when">Регистрация&nbsp;— с&nbsp;{heroOpensDate}&nbsp;года</p>
+      <p class="ob-hero__cta-when">Регистрация открыта</p>
     </div>
 
     <Fragment slot="stats">

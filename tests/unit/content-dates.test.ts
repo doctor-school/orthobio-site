@@ -10,6 +10,7 @@ import {
   SUBMISSION_DEADLINES,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
+import { registrationState } from '../../src/lib/registration';
 
 /**
  * Two kinds of owner-confirmed date live in this file, and they guard each
@@ -420,5 +421,38 @@ describe('UPCOMING_CONGRESS_VENUE is the only venue on the site', () => {
       .filter((line) => foreignVenues(line).length > 0)
       .map((line) => line.trim());
     expect(strays, `${file} names a venue other than UPCOMING_CONGRESS_VENUE`).toEqual([]);
+  });
+});
+
+/**
+ * «Регистрация открыта» is written as a plain present-tense claim on the home
+ * hero, the /participants lead and the FAQ «Как зарегистрироваться?» answer
+ * (PR #118). It cannot be evaluated at build
+ * time: preview and production ship the same bytes and the page is not
+ * redeployed on a schedule (`src/lib/registration.ts`). So the claim is pinned
+ * to the window here instead: once `REGISTRATION_WINDOW.closesAt` has passed,
+ * every build fails and names the copy that has gone stale, rather than the
+ * site quietly announcing an open registration after it closed.
+ */
+const OPEN_CLAIMS: ReadonlyArray<{ file: string; claim: string }> = [
+  { file: 'src/pages/index.astro', claim: 'Регистрация открыта' },
+  { file: 'src/content/pages/participants.yaml', claim: 'Регистрация на VIII конгресс открыта.' },
+  { file: 'src/content/pages/faq.yaml', claim: 'Регистрация открыта с ' },
+];
+
+const REPO_ROOT = fileURLToPath(new URL('../../', import.meta.url));
+
+describe('«Регистрация открыта» copy is pinned to REGISTRATION_WINDOW', () => {
+  it.each(OPEN_CLAIMS)('$file still carries the claim this guard covers', ({ file, claim }) => {
+    // Keeps the list honest: reworded copy must be re-registered here.
+    expect(readFileSync(`${REPO_ROOT}${file}`, 'utf8')).toContain(claim);
+  });
+
+  it('the window is open at build time, so the claim is true', () => {
+    expect(
+      registrationState(REGISTRATION_WINDOW, new Date()),
+      `registration is not open now (window ${REGISTRATION_WINDOW.opensAt} – ${REGISTRATION_WINDOW.closesAt}); ` +
+        `reword «открыта» in: ${OPEN_CLAIMS.map((c) => c.file).join(', ')}`,
+    ).toBe('open');
   });
 });

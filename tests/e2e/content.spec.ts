@@ -42,14 +42,14 @@ test('the home page never presents 2026 content as 2027', async ({ page }) => {
 
 test('the home page leads to registration without a subscription CTA', async ({ page }) => {
   await page.goto('/');
-  // Issue #78: the primary CTA is the on-site form; the opening date stays
-  // beside it. The only «узнать первым» link lives on the /registration
+  // Issue #78: the primary CTA is the on-site form; the registration status
+  // stays beside it. The only «узнать первым» link lives on the /registration
   // «откроется» card (Issue #88) — see the next test — never on the home page.
   await expect(page.getByRole('link', { name: 'Регистрация на конгресс' })).toHaveAttribute(
     'href',
     '/registration',
   );
-  await expect(page.getByText('Регистрация — с 1 октября 2026 года')).toBeVisible();
+  await expect(page.getByText('Регистрация открыта', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /узнать первым/i })).toHaveCount(0);
   await expect(page.getByText(/канал.*будет объявлен/i)).toHaveCount(0);
 });

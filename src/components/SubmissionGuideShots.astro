@@ -5,10 +5,8 @@
  * the guide's own column, each image at its own width up to the card's.
  */
 import { mediaUrl } from '@/config/site';
-import type { SubmissionGuideBlock } from '@/content';
-
 interface Props {
-  shots: SubmissionGuideBlock['steps'][number]['shots'];
+  shots: readonly { url: string; alt: string; width: number; height: number }[];
 }
 
 const { shots } = Astro.props;

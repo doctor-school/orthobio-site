@@ -230,7 +230,9 @@ test.describe('the guides read as a how-to (owner, 2026-10-08)', () => {
 
   test('the poster step tells the reader no file is needed, in a callout', async ({ page }) => {
     await page.goto(FILL_PATH);
-    const callout = page.locator('#zapolnit-zayavku-3 > .ob-sub__callout');
+    // An aside to the step, announced as one (role="note"), not a bare box.
+    const callout = page.locator('#zapolnit-zayavku-3').getByRole('note');
+    await expect(callout).toHaveClass(/\bob-sub__callout\b/);
     expect(unbreak((await callout.textContent()) ?? '')).toContain(
       'Файл постера сейчас прикладывать не нужно — правила оформления появятся на сайте позже.',
     );
@@ -373,3 +375,34 @@ for (const { path, section } of GUIDE_PAGES) {
     });
   }
 }
+
+/**
+ * Font-swap guard (responsive-a11y audit of PR #118): a screenshot under a
+ * sub-step is sized by its card, never by the list's `ch` measure. Inter loads
+ * with `font-display: swap`, so a `ch`-capped image is laid out in the
+ * fallback's `ch` first and resizes when Inter lands. Measured once with every
+ * font request held open (fallback only), once with Inter loaded: same boxes.
+ */
+test(`${FILL_PATH} at 1280px: screenshots under sub-steps do not resize when the webfont swaps in`, async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const shots = `${FILL} .ob-sub__items img`;
+  const widths = () => page.locator(shots).evaluateAll((imgs) => imgs.map((img) => img.getBoundingClientRect().width));
+
+  await page.route('**/*.woff2', () => new Promise<void>(() => {}));
+  await page.goto(FILL_PATH, { waitUntil: 'domcontentloaded' });
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].every((link) => link.sheet !== null),
+      ),
+    )
+    .toBe(true);
+  expect(await page.evaluate(() => document.fonts.check('16px Inter'))).toBe(false);
+  const fallback = await widths();
+  expect(fallback.length, 'screenshots under sub-steps').toBeGreaterThan(0);
+
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+  await page.goto(FILL_PATH);
+  await waitForWebfonts(page);
+  expect(await widths()).toEqual(fallback);
+});

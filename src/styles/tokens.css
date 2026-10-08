@@ -403,6 +403,10 @@
   --acc-code-size-fallback: 26px;
   --acc-code-size: min(9.5cqi, 48px);
   --acc-code-tracking: 0.12em;
+  /* Submission guides (Issue #99): a screenshot under a sub-step spans its
+     card (container query units) from the list's text edge, so its box never
+     depends on the font's `ch`. */
+  --sub-shot-span: calc(100cqi - var(--sp-5));
   --acc-code-rule: oklch(0.86 0.012 250);
   --acc-kw-tracking: 0.04em;
   --acc-way-tile: 40px;

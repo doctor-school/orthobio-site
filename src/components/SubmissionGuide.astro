@@ -111,7 +111,7 @@ const steps = block.steps.map((step, i) => ({
                 );
               })()
             ) : part.kind === 'note' ? (
-              <div class="ob-acc__note ob-sub__callout">
+              <div class="ob-acc__note ob-sub__callout" role="note">
                 <div>
                   {part.paragraphs.map((text, i) => (
                     <p>

@@ -355,8 +355,9 @@ export const FOOTER = {
    * typography is hand-authored here, while the same slogan on the home page
    * (`content/pages/home.yaml`, `overline`) is stored as plain text and
    * typographed at the schema boundary. This slogan has nothing for the
-   * typographer to rewrite, so the two copies read alike — but the previous one
-   * carried a non-breaking space before its em dash, invisible in this file.
+   * typographer to rewrite, so the two copies read alike. A future one with a
+   * dash, quotes or a number must be typed here already typographed (e.g. a
+   * non-breaking space before an em dash) — characters an editor does not show.
    * Two copies of one string cannot be kept in sync by eye, so
    * `tests/unit/congress-slogan.test.ts` pins them to each other.
    */

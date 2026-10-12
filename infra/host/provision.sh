@@ -64,6 +64,7 @@ CERT_KEY=/etc/letsencrypt/live/$PRODUCTION_SITE/privkey.pem
 FORCED_COMMAND=/usr/local/bin/orthobio-deploy
 REDIRECT_INSTALLER=/usr/local/sbin/orthobio-apply-redirects
 REDIRECT_SNIPPET=/etc/nginx/snippets/orthobio-redirects.conf
+PREVIEW_HTPASSWD=/etc/nginx/orthobio-preview.htpasswd
 
 # shellcheck source=infra/host/orthobio-provision-transaction
 . /tmp/orthobio-provision-transaction
@@ -87,6 +88,16 @@ if [ "$ENABLE_PRODUCTION" = 1 ] || [ "$PRODUCTION_ACTIVE" = 1 ]; then
         echo "provision: certificate does not cover www.orthobio.ru" >&2
         exit 1
     fi
+fi
+
+# The preview vhost is closed by basic auth (Issue #119): its force-open
+# sign-up form writes to the stage API, so it must never serve the public.
+# The credential is host-only and created by hand; refuse before any mutation
+# rather than install a vhost whose auth file is missing.
+if ! sudo -n test -s "$PREVIEW_HTPASSWD"; then
+    echo "provision: preview basic-auth file is missing or empty: $PREVIEW_HTPASSWD" >&2
+    echo "Create it (root:www-data, 0640) before provisioning; see docs/infrastructure-decisions.md" >&2
+    exit 1
 fi
 
 # Refuse to overwrite a live TLS preview with a repo file that lost its

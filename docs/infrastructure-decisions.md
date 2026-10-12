@@ -150,8 +150,9 @@ smoke passed, and rollback was not required. The sequence remains the reusable
 runbook:
 
 1. Merge and provision the hostname-neutral release root, shared cache map and
-   preview vhost **without** `--enable-production`; verify preview remains 200,
-   HTTPS/HSTS and `noindex`.
+   preview vhost **without** `--enable-production`; verify preview answers
+   `401` without and `200` with its basic-auth credential, HTTPS/HSTS and
+   `noindex`.
 2. Do not delete the preview `X-Robots-Tag` header from
    `infra/nginx/new.orthobio.ru.conf`. Keep the preview independently reachable
    and non-indexable after launch.
@@ -222,8 +223,9 @@ this live decision and by the current baseline in the issue body.
 `orthobio.ru` is delegated to Beget and we have no Beget API access, so the
 `new.orthobio.ru` A-record was the owner's to add — and it is added and
 resolving globally. TLS followed immediately (see decision 2).
-**`https://new.orthobio.ru/` remains the non-indexable preview URL**; the apex
-has served the production site since the completed 2026-07-31 switchover.
+**`https://new.orthobio.ru/` remains the non-indexable preview URL**, closed to
+the public by basic auth (see «Preview basic auth» below); the apex has served
+the production site since the completed 2026-07-31 switchover.
 
 Nothing is outstanding for the temporary URL. The CI live check still uses a
 resolver override rather than plain DNS, deliberately: it verifies *our* host by
@@ -322,11 +324,40 @@ check the host still matches the repo.
 | `/usr/local/bin/orthobio-deploy` | `infra/host/orthobio-deploy` | `provision.sh` — forced command for the CI key: routes to `rrsync` or to the redirect-apply step, refuses everything else. |
 | `/usr/local/sbin/orthobio-apply-redirects` | `infra/host/orthobio-apply-redirects` | `provision.sh` — validates the deployed snippet, installs it, reloads nginx, rolls back on `nginx -t` failure. |
 | `/etc/nginx/conf.d/orthobio-cache-map.conf` | `infra/nginx/orthobio-cache-map.conf` | `provision.sh` — one `http`-scope map shared by both vhosts. |
-| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh`; always enabled, TLS/noindex retained. |
+| `/etc/nginx/sites-available/new.orthobio.ru` | `infra/nginx/new.orthobio.ru.conf` | `provision.sh`; always enabled, TLS/noindex/basic auth retained. |
+| `/etc/nginx/orthobio-preview.htpasswd` | **not in the repo** | **by hand** — the preview's basic-auth credential (user `preview`), `root:www-data` `0640`. `provision.sh` refuses to run while it is absent or empty. |
 | `/etc/nginx/sites-available/orthobio.ru` | `infra/nginx/orthobio.ru.conf` | `provision.sh`; enabled by `--enable-production` on 2026-07-31 after certificate/SAN checks. |
 | `deploy@…:~/.ssh/authorized_keys` | public half of `DEPLOY_SSH_KEY` | **by hand, once** — one line: `command="/usr/local/bin/orthobio-deploy",restrict ssh-ed25519 … orthobio-ci-deploy`. |
 | `/etc/nginx/snippets/orthobio-redirects.conf` | generated from `infra/redirects.yaml` | the deploy, every run. |
 | `/var/www/orthobio-site/public` | `dist/` | the deploy, every run; shared release root for preview and production. |
+
+**Preview basic auth (Issue #119).** The preview's registration form is
+force-open and its `/api` proxy writes to the **stage** platform API. Real
+doctors who reached the preview by link registered there; their sign-ups landed
+on the test stand and were lost at its next re-seed. `noindex` keeps search
+engines away but not people, so the whole HTTPS preview server sits behind
+`auth_basic`, the static pages and the proxy alike. The port-80 server only
+redirects to HTTPS and stays unauthenticated. Certbot renewal keeps working
+because this lineage uses the nginx authenticator, whose injected challenge
+location answers with `return 200` before the auth phase (verify with
+`sudo certbot renew --dry-run --cert-name new.orthobio.ru`); a switch to the
+webroot authenticator would hit the `401`. The preview strips the visitor's `Authorization` header before
+proxying, so the credential never reaches the stage API. To create or rotate the
+credential on the host:
+
+```sh
+# on the host; openssl prompts for the password without echo, never via argv
+sudo install -o root -g www-data -m 0640 /dev/null /etc/nginx/orthobio-preview.htpasswd
+printf 'preview:%s\n' "$(openssl passwd -6)" |
+  sudo tee /etc/nginx/orthobio-preview.htpasswd >/dev/null
+```
+
+nginx re-reads the file per request, so no reload is needed. The deploy's
+preview mode (`SITE_HOST=new.orthobio.ru`) carries no credential, so its live
+check would now stop at the `401`; the production mode the deploy runs in is
+unaffected. The owner's local
+copy of the credential is `~/.ds-platform/orthobio-preview-basic-auth.txt`
+(line 1 user, line 2 password).
 
 **Sudo posture.** `orthobio-apply-redirects` runs via `sudo -n` from the forced
 command. No sudoers entry of ours makes that work: the `deploy` account on this

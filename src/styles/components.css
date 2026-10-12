@@ -2183,9 +2183,18 @@ a.ob-dc:active {
 /* Several cards in one block: the archive pages stack single cards, but a
    `documents` page block may carry more than one. */
 .ob-dc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+}
+
+/* A flex item defaults to `min-width: auto`, so without this a long unbroken
+   title would stretch the item past the column instead of wrapping. */
+.ob-dc-list > li {
+  min-width: 0;
 }
 
 /* ── FAQ (native <details>, zero client JS) ──────────────────────────────── */

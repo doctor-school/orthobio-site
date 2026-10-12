@@ -42,8 +42,10 @@
      it is the value issue #35 took the focus ring OFF, and it must not be
      reached for as a state colour again. The green and lime rungs used to sit in
      this list; they have consumers now — the tints on the /registration status
-     badges (PR #82), and --ob-green-tint, --ob-green and --ob-green-deep on the
-     accent «Консенсусы» nav link (Issue #122). Sky is still the lead accent
+     badges (PR #82), and on the accent «Консенсусы» nav link (Issue #122) the
+     --ob-green-tint fill and the --ob-green-text text and ring, plus
+     --btn-accent-bg-active and --ink through the --nav-accent-* aliases.
+     (--ob-green and --ob-green-deep are used elsewhere, not by that link.) Sky is still the lead accent
      (brief §6.1); a new tinted surface is a design decision made in Claude.design
      and ported here, never invented in a CSS edit.
      TODO(Антон): оставить рампу целиком или вычистить незадействованный рунг —
@@ -67,7 +69,8 @@
      2.27:1 on white it cannot carry ANY non-text meaning WCAG measures (1.4.11
      wants 3:1), so it stays as the light rung of the Doctor.School ramp and is
      not to be reached for as a state colour. Kept rather than deleted for the
-     same reason as the green/lime tints below — this file is a 1:1 port. */
+     same reason the green/lime tints above were while they had no consumer —
+     this file is a 1:1 port. */
   --ds-blue-light: #6bb1f7;
   --ds-blue-pressed: #0d3a77;
 

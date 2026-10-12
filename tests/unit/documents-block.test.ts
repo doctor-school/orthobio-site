@@ -1,4 +1,8 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 
 import { pageSchemaChecked } from '@/content/schemas';
 
@@ -40,5 +44,37 @@ describe('pageSchema → documents block', () => {
 
   it('rejects an empty document list', () => {
     expect(page([]).success).toBe(false);
+  });
+});
+
+describe('documents blocks → the bucket', () => {
+  // The schema tests above run on synthetic input, so a link to an object that
+  // was never uploaded passed them (and CI) while the real page 404ed.
+  const ROOT = new URL('../../', import.meta.url);
+  const read = (path: string) => readFileSync(fileURLToPath(new URL(path, ROOT)), 'utf8');
+
+  const urls = readdirSync(fileURLToPath(new URL('src/content/pages/', ROOT)))
+    .filter((file) => file.endsWith('.yaml'))
+    .flatMap((file) => {
+      const page = parse(read(`src/content/pages/${file}`)) as { blocks?: { kind: string; items?: { url: string }[] }[] };
+      return (page.blocks ?? [])
+        .filter((block) => block.kind === 'documents')
+        .flatMap((block) => (block.items ?? []).map((item) => ({ file, url: item.url })));
+    });
+
+  it('finds the documents of the consensus page', () => {
+    expect(urls.some((u) => u.file === 'consensus.yaml')).toBe(true);
+  });
+
+  it('lists every linked /media/ object in the checksum list', () => {
+    const listed = new Set(
+      read('docs/assets-checksums.txt')
+        .split(/\r?\n/)
+        .map((line) => line.split('  ')[1]),
+    );
+    for (const { file, url } of urls) {
+      expect(url, `${file}: a documents link must point into our bucket`).toMatch(/^\/media\//);
+      expect(listed.has(url.replace('/media/', '')), `${file}: ${url} is not in docs/assets-checksums.txt`).toBe(true);
+    }
   });
 });

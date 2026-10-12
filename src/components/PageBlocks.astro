@@ -59,11 +59,13 @@ const { blocks } = Astro.props;
       {block.kind === 'documents' && (
         <>
           {block.heading && <SectionHeading title={block.heading} />}
-          <div class="ob-dc-list">
+          <ul class="ob-dc-list">
             {block.items.map((doc) => (
-              <DocCard href={doc.url} title={doc.title} meta={doc.meta} />
+              <li>
+                <DocCard href={doc.url} title={doc.title} meta={doc.meta} />
+              </li>
             ))}
-          </div>
+          </ul>
         </>
       )}
 

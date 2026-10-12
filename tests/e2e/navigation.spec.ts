@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { waitForWebfonts } from './_fonts';
-import { measureOverflow } from './_overflow';
+import { measureOverflow, SCROLLBAR_GUTTER } from './_overflow';
 
 const MOBILE_WIDTHS = [360, 390, 768] as const;
 
@@ -99,10 +99,14 @@ test.describe('primary navigation', () => {
           geometry.nav.right,
           `the nav sticks out past the header content box by ${geometry.nav.right - geometry.contentRight}px`,
         ).toBeLessThanOrEqual(geometry.contentRight + 0.5);
+        // The logo has `margin-right: auto` in a flex row with a 16px gap, so the
+        // gap itself survives even when the nav overflows and a bare `>= 16` can
+        // never fail. The slack beyond it is what a classic scrollbar eats
+        // (a 1024px window lays out at 1007px), so require that much in reserve.
         expect(
           geometry.nav.left - geometry.logo.right,
-          'the nav is pressed against the logo',
-        ).toBeGreaterThanOrEqual(16);
+          'the nav would be pressed against the logo under a classic scrollbar',
+        ).toBeGreaterThanOrEqual(16 + SCROLLBAR_GUTTER);
         expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
       });
     }

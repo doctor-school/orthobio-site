@@ -40,13 +40,19 @@
 # public URL = <s3_public_base_url><s3_key>.)
 #
 # Integrity: docs/assets-checksums.txt = SHA-256 of every staged file
-# (2245 lines, "hash  <relative path>", sorted). Verify tree or the future
+# (2262 lines, "hash  <relative path>", sorted by hash). Verify tree or the future
 # S3 upload object-by-object against it.
 #
 # 2026-07-29 (Issue #23): +22 objects — the 11 оргкомитет portraits rescued
 # from the LIVE orthobio.ru/orgs (originals + 288×288 square derivatives),
 # see item 2026-committee-portraits. This is the first rescue run after the
 # 2026-07-27 sweep; every other number in this file still describes that sweep.
+#
+# 2026-10-12 (Issue #122): +1 object — the consensus collection PDF
+# (2026/docs/consensus-2026-print.pdf), uploaded by the owner for the
+# /consensus page, see item 2026-consensus-collection. The owner confirmed the
+# same day that it is the «Консенсусы 2026» volume, although its title page
+# says «Консенсусы. Ортобиология 2024» (Москва, 2025).
 #
 # 2026-10-07 (Issues #116 and #99): +2 objects under 2027/submissions/ — the
 # two letters a congress registrant receives (letter-confirmation.png,
@@ -107,8 +113,9 @@ meta:
   # (Issue #112, item 2027-accommodation-promo-field), +17 cabinet and sign-in
   # screenshots (Issue #99, item 2027-submissions-guide; 13 referenced, four
   # orphaned), +2 letter
-  # screenshots (Issues #116/#99, item 2027-congress-letters).
-  s3_objects_total: 2356 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12 + 5 + 2
+  # screenshots (Issues #116/#99, item 2027-congress-letters), +1 owner-uploaded
+  # PDF (Issue #122, item 2026-consensus-collection).
+  s3_objects_total: 2357 # 2241 sweep + 22 portraits + 49 logos + 23 posters + 1 + 1 + 12 + 5 + 2 + 1
   # Measured total. NB: the Drive folders are far larger than the recon
   # estimates (recon saw ~45-48 photos per folder; actual listings are
   # 372-531). Counts below are from gdown folder listings, verified 1:1
@@ -456,8 +463,42 @@ years:
           - { title: 'Обращение к участникам, карточка 2', title_source: editorial, slot: 'ОБРАЩЕНИЯ К УЧАСТНИКАМ', url: 'https://rutube.ru/video/a050a5bd7bc358faa8cc74b057738053/' }
 
   2026:
-    counters: { files: 25, mb: 1.9 }
+    counters: { files: 26, mb: 3.8 }
     items:
+      - id: 2026-consensus-collection
+        source: owner-supplied, 2026-10-12 (Issue #122); the owner's file «консенсусы_Ортобиология_2026_печать.pdf»
+        source_urls: []
+        description: >-
+          PDF of the collection «Консенсусы 2026», 200 pages, 1991390 B, sha256
+          2defb2d8ddd3ad22ed1ae3b9fa94d61d0483dd609a7cb8d6ecaf58d039eecd53.
+          Served as-is (no derivative).
+
+          Attribution: on 2026-10-12 the owner confirmed that the file is the
+          right one and that these are the consensuses of 2026, although the
+          years inside the document are 2024 and 2025. The title page itself
+          reads «Консенсусы. Ортобиология 2024», Москва, 2025, ISBN
+          978-5-6056184-0-9. The site names it «Консенсусы 2026» and says what
+          the title page says (pages/consensus.yaml, lead). It is a standalone
+          consensus publication, not a congress programme or theses
+          collection. The key was chosen by the owner and is immutable (objects
+          carry Cache-Control immutable for a year).
+
+          Consumer: pages/consensus.yaml → documents block («Консенсусы»,
+          /consensus). tests/unit/documents-block.test.ts checks that the
+          link is listed in docs/assets-checksums.txt.
+
+          Upload: done by the owner on 2026-10-12. The file is not in the
+          staging tree (local: null).
+        actual_year: 2026
+        type: pdf
+        status: downloaded
+        local: null
+        s3_key: '2026/docs/consensus-2026-print.pdf'
+        # Uploaded 2026-10-12: anonymous GET returned 200, application/pdf,
+        # Cache-Control public, max-age=31536000, immutable; sha256 of the
+        # served object matches the owner's local file.
+        s3_status: uploaded
+        files: 1
       - id: 2026-committee-portraits
         source: https://orthobio.ru/orgs
         source_urls:

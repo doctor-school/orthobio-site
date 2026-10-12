@@ -47,6 +47,13 @@ async function focusByKeyboard(page: Page, element: Locator) {
     .toBe(true);
 }
 
+/**
+ * Any CSS colour function (`rgb(…)`, `oklch(…)`, `color(…)`): the computed value
+ * keeps the notation a token is authored in, so pinning `rgb(` would break the
+ * day a token moves to `oklch()`.
+ */
+const COLOR = String.raw`[a-z-]+\([^)]*\)`;
+
 /** The shadow layers the browser computed, split on the commas between them. */
 function shadowLayers(element: Locator) {
   return element.evaluate((node) =>
@@ -67,7 +74,7 @@ async function expectTwoToneRing(element: Locator, context: string) {
     .poll(async () => (await shadowLayers(element)).slice(0, 2).join(' | '), {
       message: `two-tone focus ring on ${context}`,
     })
-    .toMatch(/^(rgba?\([^)]*\)) 0px 0px 0px 2px \| (rgba?\([^)]*\)) 0px 0px 0px 4px$/);
+    .toMatch(new RegExp(`^${COLOR} 0px 0px 0px 2px \\| ${COLOR} 0px 0px 0px 4px$`));
 
   const [halo, ring] = await shadowLayers(element);
   expect(halo.replace(/ 0px.*/, ''), `halo and ring are the same colour on ${context}`).not.toBe(
@@ -132,13 +139,13 @@ test.describe('the «Консенсусы» item (Issue #122)', () => {
     // only because it travels through `--shadow-state`.
     await expect
       .poll(async () => (await shadowLayers(item)).slice(2).join(' | '))
-      .toMatch(/^rgb\([^)]*\) 0px 0px 0px 1px inset$/);
+      .toMatch(new RegExp(`^${COLOR} 0px 0px 0px 1px inset$`));
 
     await item.hover();
     await expectTwoToneRing(item, 'the current accent item — focused + hovered');
     await expect
       .poll(async () => (await shadowLayers(item)).slice(2).join(' | '))
-      .toMatch(/^rgb\([^)]*\) 0px 0px 0px 1px inset$/);
+      .toMatch(new RegExp(`^${COLOR} 0px 0px 0px 1px inset$`));
   });
 
   test('a focused mobile panel item is stacked above the item that follows it', async ({ page }) => {

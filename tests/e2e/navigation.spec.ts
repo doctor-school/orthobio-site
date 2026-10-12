@@ -1,8 +1,17 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { waitForWebfonts } from './_fonts';
 import { measureOverflow } from './_overflow';
 
 const MOBILE_WIDTHS = [360, 390, 768] as const;
+
+// NOMINAL window widths, deliberately without the scrollbar gutter that
+// `_overflow.ts` subtracts: the ladder there puts «1024» at 1007px, below the
+// `lg` breakpoint, where this menu is hidden. The range that carries nine items
+// at the tight padding (`--nav-link-pad-tight`, Issue #122) is 1024–1279, and
+// only a test that really stands in it protects it.
+const DESKTOP_WIDTHS = [1024, 1100, 1279, 1280] as const;
+const DESKTOP_ROUTES = ['/', '/consensus/'] as const;
 
 test.describe('primary navigation', () => {
   for (const width of MOBILE_WIDTHS) {
@@ -50,6 +59,53 @@ test.describe('primary navigation', () => {
       await panel.getByRole('link', { name: 'FAQ' }).click();
       await expect(page).toHaveURL(/\/faq$/);
     });
+  }
+
+  for (const route of DESKTOP_ROUTES) {
+    for (const width of DESKTOP_WIDTHS) {
+      test(`all nine items fit the header on ${route} at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(route);
+        await waitForWebfonts(page);
+
+        const nav = page.locator('.ob-nav');
+        await expect(nav).toBeVisible();
+        const links = nav.locator('a');
+        await expect(links).toHaveCount(9);
+
+        const geometry = await page.evaluate(() => {
+          const rect = (selector: string) => {
+            const box = document.querySelector(selector)!.getBoundingClientRect();
+            return { left: box.left, right: box.right };
+          };
+          const head = document.querySelector('.ob-head__in')!;
+          const headStyle = getComputedStyle(head);
+          const headBox = head.getBoundingClientRect();
+          return {
+            nav: rect('.ob-nav'),
+            logo: rect('.ob-head__logo'),
+            contentRight: headBox.right - Number.parseFloat(headStyle.paddingRight),
+            tops: [...document.querySelectorAll('.ob-nav a')].map((a) =>
+              Math.round(a.getBoundingClientRect().top),
+            ),
+          };
+        });
+
+        expect(
+          new Set(geometry.tops).size,
+          `nav links wrap onto several rows: tops ${geometry.tops.join(', ')}`,
+        ).toBe(1);
+        expect(
+          geometry.nav.right,
+          `the nav sticks out past the header content box by ${geometry.nav.right - geometry.contentRight}px`,
+        ).toBeLessThanOrEqual(geometry.contentRight + 0.5);
+        expect(
+          geometry.nav.left - geometry.logo.right,
+          'the nav is pressed against the logo',
+        ).toBeGreaterThanOrEqual(16);
+        expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
+      });
+    }
   }
 
   test('desktop navigation takes over at lg', async ({ page }) => {

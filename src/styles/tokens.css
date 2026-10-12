@@ -148,6 +148,16 @@
      pressed state sits between them, so a press reads as a change from both. */
   --btn-accent-bg-active: oklch(0.32 0.08 138);
   --btn-accent-fg: #ffffff;
+  /* «Консенсусы» nav item (Issue #122). The owner asked for a calm, always-green
+     item: the tint is the resting state and never changes, only the text colour
+     reacts. For that reason the current page is marked by a ring rather than a
+     fill — a second fill would have nothing left to change to. Aliases of the
+     button's greens on purpose, so the item stays in the accent family. */
+  --nav-accent-bg: var(--ob-green-tint);
+  --nav-accent-fg: var(--ob-green-text);
+  --nav-accent-fg-hover: var(--btn-accent-bg-active);
+  --nav-accent-fg-active: var(--ink);
+  --nav-accent-ring: var(--ob-green-text);
   /* Play-button scrim on the video facade (over the dark ink plate). */
   --scrim-play: oklch(0.35 0.05 250 / 0.85);
   --on-dark: #ffffff;

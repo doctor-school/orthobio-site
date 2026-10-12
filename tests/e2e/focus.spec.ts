@@ -120,6 +120,56 @@ test.describe('the focus ring survives every state it shares an element with', (
   });
 });
 
+test.describe('the «Консенсусы» item (Issue #122)', () => {
+  test('the current-page ring and the focus ring are both painted on the desktop item', async ({ page }) => {
+    await page.goto('/consensus/');
+    const item = page.locator('.ob-nav a.ob-nav__link--accent');
+    await expect(item).toHaveAttribute('aria-current', 'page');
+
+    await focusByKeyboard(page, item);
+    await expectTwoToneRing(item, 'the current accent item — focused');
+    // The unlayered focus rule replaces `box-shadow`; the inner ring survives
+    // only because it travels through `--shadow-state`.
+    await expect
+      .poll(async () => (await shadowLayers(item)).slice(2).join(' | '))
+      .toMatch(/^rgb\([^)]*\) 0px 0px 0px 1px inset$/);
+
+    await item.hover();
+    await expectTwoToneRing(item, 'the current accent item — focused + hovered');
+    await expect
+      .poll(async () => (await shadowLayers(item)).slice(2).join(' | '))
+      .toMatch(/^rgb\([^)]*\) 0px 0px 0px 1px inset$/);
+  });
+
+  test('a focused mobile panel item is stacked above the item that follows it', async ({ page }) => {
+    // The items sit flush and the ring reaches 4px past the box, so the next
+    // item's permanent fill (the green accent one) would paint over the ring's
+    // lower edge. Painting order is not observable through `elementFromPoint`
+    // (a box-shadow is not hit-testable), so the stacking itself is asserted.
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto('/');
+    await page.locator('.ob-menu summary').click();
+
+    const accent = page.locator('.ob-menu__panel a.ob-nav__link--accent');
+    const before = accent.locator('xpath=preceding-sibling::a[1]');
+    await expect(before).toBeVisible();
+
+    await focusByKeyboard(page, before);
+    await expectTwoToneRing(before, 'the panel item above the accent one — focused');
+
+    const stacking = await Promise.all(
+      [before, accent].map((item) =>
+        item.evaluate((node) => {
+          const { position, zIndex } = getComputedStyle(node);
+          return { position, z: zIndex === 'auto' ? 0 : Number(zIndex) };
+        }),
+      ),
+    );
+    expect(stacking[0].position, 'z-index does nothing on a static item').not.toBe('static');
+    expect(stacking[0].z, 'the focused item must out-stack its neighbour').toBeGreaterThan(stacking[1].z);
+  });
+});
+
 test('forced colours replace the ring with a system outline', async ({ page }) => {
   // Forced-colours mode discards box-shadows outright. Without the escape hatch
   // in base.css the `outline: none` that made room for the ring is all that is

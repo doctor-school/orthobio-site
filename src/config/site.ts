@@ -349,17 +349,19 @@ export const FOOTER_LINKS = [
  */
 export const FOOTER = {
   /**
-   * Slogan of the upcoming congress (owner request, Issue #74).
+   * Slogan of the upcoming congress (organising committee, Issue #121).
    *
    * Config strings bypass the Content Layer's `prose()` transform, so the RU
-   * typography is hand-authored: the space before the em dash is a NON-BREAKING
-   * one. It is invisible in this file but load-bearing — it is exactly what
-   * `typographize()` emits for the same slogan on the home page
-   * (`content/pages/home.yaml`, `overline`), which is stored as plain text.
+   * typography is hand-authored here, while the same slogan on the home page
+   * (`content/pages/home.yaml`, `overline`) is stored as plain text and
+   * typographed at the schema boundary. This slogan has nothing for the
+   * typographer to rewrite, so the two copies read alike. A future one with a
+   * dash, quotes or a number must be typed here already typographed (e.g. a
+   * non-breaking space before an em dash) — characters an editor does not show.
    * Two copies of one string cannot be kept in sync by eye, so
    * `tests/unit/congress-slogan.test.ts` pins them to each other.
    */
-  slogan: 'Объединяем знания — даём движение вперёд!',
+  slogan: 'Навстречу новой специальности!',
   about:
     'Конгресс по регенеративной травматологии и ортопедии. Организатор — МОО «Общество регенеративной травматологии и ортопедии» (ОРТО). Материалы конгрессов 2021–2026 — в архиве сайта.',
   /**

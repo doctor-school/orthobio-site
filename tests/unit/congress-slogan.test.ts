@@ -16,20 +16,19 @@ import { typographize } from '../../src/content/typographize';
  *   • `config/site.ts` is config: it never meets `prose()`, so its typography is
  *     authored by hand.
  *
- * The typographer puts a NON-BREAKING space before the em dash. That character
- * is invisible in a diff and in an editor, so the two copies cannot be kept
- * identical by reading them — one plain space in the config and the footer
- * silently wraps where the home page does not. Hence a test that compares the
- * rendered forms rather than trusting the eye.
+ * The typographer inserts characters that are invisible in a diff and in an
+ * editor — the slogan of Issue #74 carried a NON-BREAKING space before its em
+ * dash — so the two copies cannot be kept identical by reading them: one plain
+ * space in the config and the footer silently wraps where the home page does
+ * not. The current slogan (Issue #121) has no such character; the comparison of
+ * rendered forms stays so the next one cannot drift unnoticed.
  */
 const source = (path: string): string =>
   readFileSync(fileURLToPath(new URL(`../../${path}`, import.meta.url)), 'utf8');
 
 describe('congress slogan', () => {
-  it('publishes the owner-approved slogan with hand-authored RU typography', () => {
-    //   spelled as an escape: the literal in site.ts is a real nbsp, and an
-    // assertion that also hid it would pass against the wrong character.
-    expect(FOOTER.slogan).toBe('Объединяем знания\u00A0— даём движение вперёд!');
+  it('publishes the owner-approved slogan', () => {
+    expect(FOOTER.slogan).toBe('Навстречу новой специальности!');
   });
 
   it('renders the identical string in the footer and above the home heading', () => {

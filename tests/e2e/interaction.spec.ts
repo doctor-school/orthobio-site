@@ -193,7 +193,8 @@ test.describe('without JavaScript', () => {
     // link of the /participants «Проживание» section. 60 since Issue #99: the
     // «Войти в кабинет» button of the /participants submission guide. 61 since
     // Issue #116: the «Войти в кабинет» button of the /registration success card.
-    expect(checked, 'the sweep must reach every external link on the site').toBe(61);
+    // 62 since Issue #122: the consensus collection PDF on /consensus.
+    expect(checked, 'the sweep must reach every external link on the site').toBe(62);
   });
 
   test('a Rutube card announces the tab it really opens without the island', async ({ page }) => {

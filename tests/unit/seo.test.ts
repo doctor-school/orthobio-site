@@ -33,6 +33,10 @@ describe('public SEO routes', () => {
     expect(STATIC_PUBLIC_ROUTES).toContain('/privacy/');
   });
 
+  it('publishes the consensus collection page (Issue #122)', () => {
+    expect(STATIC_PUBLIC_ROUTES).toContain('/consensus/');
+  });
+
   it('refuses duplicate or technical URLs instead of silently publishing them', () => {
     expect(() =>
       buildPublicRoutes({ years: [2026, 2026], profileSlugs: [] }),

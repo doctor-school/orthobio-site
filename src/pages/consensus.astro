@@ -1,0 +1,14 @@
+---
+/**
+ * /consensus — the consensus collection for download (Issue #122). A page of
+ * its own rather than a block on /nmo or /participants: the owner asked for a
+ * dedicated menu entry, and the PDF link lives in YAML (`documents` block) so
+ * the schema, not this file, guarantees it points at our own storage.
+ */
+import { getPage } from '@/content';
+import SectionLayout from '@/layouts/SectionLayout.astro';
+
+const { data: page } = await getPage('consensus');
+---
+
+<SectionLayout page={page} />

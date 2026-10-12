@@ -283,6 +283,43 @@
   color: var(--ds-blue-pressed);
 }
 
+/* «Консенсусы» (Issue #122): the one green item. Every state is spelled out,
+   including aria-current, because the sky-blue current-page rules above have
+   equal or lower specificity and would otherwise win on the accent link.
+   Rest is tint + AA green text (4.8:1); hover and press go to solid greens
+   with ink text; the current page is the sign-up button's solid accent fill. */
+.ob-nav a.ob-nav__link--accent {
+  --focus-shadow: var(--focus-shadow-accent);
+
+  background: var(--ob-green-tint);
+  color: var(--ob-green-text);
+}
+
+.ob-nav a.ob-nav__link--accent:hover {
+  background: var(--ob-green);
+  color: var(--ink);
+}
+
+.ob-nav a.ob-nav__link--accent:active {
+  background: var(--ob-green-deep);
+  color: var(--ink);
+}
+
+.ob-nav a.ob-nav__link--accent[aria-current='page'] {
+  background: var(--btn-accent-bg);
+  color: var(--btn-accent-fg);
+}
+
+.ob-nav a.ob-nav__link--accent[aria-current='page']:hover {
+  background: var(--btn-accent-bg-hover);
+  color: var(--btn-accent-fg);
+}
+
+.ob-nav a.ob-nav__link--accent[aria-current='page']:active {
+  background: var(--btn-accent-bg-active);
+  color: var(--btn-accent-fg);
+}
+
 .ob-menu summary {
   list-style: none;
   display: flex;
@@ -386,13 +423,56 @@
   color: var(--ds-blue-pressed);
 }
 
+/* Same scheme as the desktop accent link above; see the note there. */
+.ob-menu__panel a.ob-nav__link--accent {
+  --focus-shadow: var(--focus-shadow-accent);
+
+  background: var(--ob-green-tint);
+  color: var(--ob-green-text);
+}
+
+.ob-menu__panel a.ob-nav__link--accent:hover {
+  background: var(--ob-green);
+  color: var(--ink);
+}
+
+.ob-menu__panel a.ob-nav__link--accent:active {
+  background: var(--ob-green-deep);
+  color: var(--ink);
+}
+
+.ob-menu__panel a.ob-nav__link--accent[aria-current='page'] {
+  background: var(--btn-accent-bg);
+  color: var(--btn-accent-fg);
+}
+
+.ob-menu__panel a.ob-nav__link--accent[aria-current='page']:hover {
+  background: var(--btn-accent-bg-hover);
+  color: var(--btn-accent-fg);
+}
+
+.ob-menu__panel a.ob-nav__link--accent[aria-current='page']:active {
+  background: var(--btn-accent-bg-active);
+  color: var(--btn-accent-fg);
+}
+
 @media (min-width: 1024px) {
   .ob-nav {
     display: flex;
   }
 
+  .ob-nav a {
+    padding: var(--nav-link-pad-tight);
+  }
+
   .ob-menu {
     display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .ob-nav a {
+    padding: var(--nav-link-pad);
   }
 }
 
@@ -2076,6 +2156,14 @@ a.ob-dc:active {
 .ob-dc__meta {
   font-size: var(--fs-small);
   color: var(--text-muted);
+}
+
+/* Several cards in one block: the archive pages stack single cards, but a
+   `documents` page block may carry more than one. */
+.ob-dc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
 }
 
 /* ── FAQ (native <details>, zero client JS) ──────────────────────────────── */

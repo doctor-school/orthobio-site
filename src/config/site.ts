@@ -295,7 +295,17 @@ export const CONTACT_PHONE: string | null = '8 (495) 410-04-90';
  * Primary navigation. Covers the ТЗ §4 page map; the design mockup's 6-item nav
  * is extended with «Участникам» and «НМО» so no §4 route is reachable only from
  * the footer. Below lg the same data renders in the design's disclosure menu.
+ *
+ * `accent` paints one item green in the header only (owner request, Issue #122);
+ * the footer reuses these items but ignores the flag, so the highlight stays in
+ * the header menus.
  */
+export interface NavItem {
+  readonly href: string;
+  readonly label: string;
+  readonly accent?: boolean;
+}
+
 export const NAV = [
   { href: '/', label: 'Главная' },
   { href: '/program', label: 'Программа' },
@@ -303,9 +313,10 @@ export const NAV = [
   { href: '/orgs', label: 'Оргкомитет' },
   { href: '/nmo', label: 'НМО' },
   { href: '/partners', label: 'Партнёрам' },
+  { href: '/consensus', label: 'Консенсусы', accent: true },
   { href: '/archive/', label: 'Архив' },
   { href: '/faq', label: 'FAQ' },
-] as const;
+] as const satisfies readonly NavItem[];
 
 /**
  * Footer sitemap — the full §4 map, including routes absent from the nav: the

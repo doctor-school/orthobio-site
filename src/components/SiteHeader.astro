@@ -12,7 +12,7 @@
 // browser fetches once per session (PR #14 review). The 553-byte metaball in
 // the hero stays inline — there the request would cost more than the bytes.
 import markUrl from '@/assets/orto-mark-color.svg?url';
-import { NAV, SITE } from '@/config/site';
+import { NAV, SITE, type NavItem } from '@/config/site';
 
 interface Props {
   /** Pathname of the current page — drives aria-current. */
@@ -20,6 +20,8 @@ interface Props {
 }
 
 const { path } = Astro.props;
+/** `NAV` is `as const`, so its items differ in shape; widen to read the optional `accent`. */
+const navItems: readonly NavItem[] = NAV;
 /** `/archive/2025` marks the «Архив» item; `/` matches only itself. */
 const isCurrent = (href: string): boolean =>
   href === '/' ? path === '/' : path === href || path.startsWith(href.replace(/\/$/, '') + '/');
@@ -37,8 +39,12 @@ const isCurrent = (href: string): boolean =>
     </a>
     <nav class="ob-nav" aria-label="Основная навигация">
       {
-        NAV.map((item) => (
-          <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+        navItems.map((item) => (
+          <a
+            href={item.href}
+            class:list={{ 'ob-nav__link--accent': item.accent }}
+            aria-current={isCurrent(item.href) ? 'page' : undefined}
+          >
             {item.label}
           </a>
         ))
@@ -71,8 +77,12 @@ const isCurrent = (href: string): boolean =>
       </summary>
       <nav class="ob-menu__panel" aria-label="Меню">
         {
-          NAV.map((item) => (
-            <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+          navItems.map((item) => (
+            <a
+              href={item.href}
+              class:list={{ 'ob-nav__link--accent': item.accent }}
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
+            >
               {item.label}
             </a>
           ))

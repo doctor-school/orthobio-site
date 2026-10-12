@@ -37,7 +37,7 @@ test.describe('primary navigation', () => {
       await expect(panel).toBeVisible();
       await expect(menu.locator('.ob-menu__icon--menu')).toBeHidden();
       await expect(menu.locator('.ob-menu__icon--close')).toBeVisible();
-      await expect(panel.locator('a')).toHaveCount(8);
+      await expect(panel.locator('a')).toHaveCount(9);
       await expect(panel.locator('a[aria-current="page"]')).toHaveText('Архив');
       expect(await measureOverflow(page)).toBeLessThanOrEqual(0);
 

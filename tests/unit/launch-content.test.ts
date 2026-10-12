@@ -11,6 +11,7 @@ import {
   REGISTRATION_OPENS,
   FOOTER_LINKS,
   NAV,
+  type NavItem,
   REGISTRATION_CTA_LABEL,
   REGISTRATION_URL,
   SUBMISSION_DEADLINES,
@@ -36,6 +37,17 @@ describe('owner-approved pre-registration launch content', () => {
     const nav: readonly string[] = NAV.map(({ href }) => href);
     expect(nav).not.toContain('/registration');
     expect(nav).not.toContain('/privacy');
+  });
+
+  // The green highlight is a header-only flag (Issue #122): exactly one nav
+  // item carries it, and the route it points at must still reach the footer map.
+  it('marks «Консенсусы» as the only accent nav item and keeps it in the footer', () => {
+    const items: readonly NavItem[] = NAV;
+    const accented = items.filter((item) => item.accent);
+    expect(accented).toHaveLength(1);
+    expect(accented[0]).toMatchObject({ href: '/consensus', label: 'Консенсусы', accent: true });
+    const footer = FOOTER_LINKS.map(({ href, label }) => ({ href, label }));
+    expect(footer).toContainEqual({ href: '/consensus', label: 'Консенсусы' });
   });
 
   it('publishes the Doctor.School manager contacts', () => {

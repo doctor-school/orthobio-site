@@ -283,6 +283,52 @@
   color: var(--ds-blue-pressed);
 }
 
+/* «Консенсусы» (Issue #122): the one green item, and a calm one. The background
+   is the green tint in EVERY state; only the text colour reacts (hover → deep
+   green, press → ink), and the current page is marked by a thin inner ring
+   instead of a fill. Every state is spelled out, including aria-current,
+   because the sky-blue current-page rules above have equal or lower
+   specificity and would otherwise win on the accent link (they repaint the
+   background).
+   The ring is published into `--shadow-state`, not painted over it: the
+   unlayered `:focus-visible` rule in base.css REPLACES `box-shadow`, so a plain
+   `box-shadow` here would vanish under focus. Through `--shadow-state` the
+   focus ring is drawn outside and this one stays inside, both visible. */
+.ob-nav a.ob-nav__link--accent {
+  --focus-shadow: var(--focus-shadow-accent);
+
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg);
+}
+
+.ob-nav a.ob-nav__link--accent:hover {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-hover);
+}
+
+.ob-nav a.ob-nav__link--accent:active {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-active);
+}
+
+.ob-nav a.ob-nav__link--accent[aria-current='page'] {
+  --shadow-state: inset 0 0 0 var(--border-thin) var(--nav-accent-ring);
+
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg);
+  box-shadow: var(--shadow-state);
+}
+
+.ob-nav a.ob-nav__link--accent[aria-current='page']:hover {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-hover);
+}
+
+.ob-nav a.ob-nav__link--accent[aria-current='page']:active {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-active);
+}
+
 .ob-menu summary {
   list-style: none;
   display: flex;
@@ -341,7 +387,11 @@
   box-shadow: var(--shadow-lift);
 }
 
+/* Items sit flush, the focus ring reaches 4px past the box, and a neighbour
+   with a permanent fill (the green «Консенсусы») paints over it. The focused
+   item is lifted above its siblings instead. */
 .ob-menu__panel a {
+  position: relative;
   display: flex;
   align-items: center;
   min-height: var(--sp-7);
@@ -359,6 +409,10 @@
 
 .ob-menu__panel a:last-child {
   border-bottom: none;
+}
+
+.ob-menu__panel a:focus-visible {
+  z-index: 1;
 }
 
 .ob-menu__panel a:hover {
@@ -386,13 +440,61 @@
   color: var(--ds-blue-pressed);
 }
 
+/* Same scheme as the desktop accent link above; see the note there. The
+   semibold weight of the current page is inherited from the generic
+   `[aria-current='page']` rule, which the accent link matches too. */
+.ob-menu__panel a.ob-nav__link--accent {
+  --focus-shadow: var(--focus-shadow-accent);
+
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg);
+}
+
+.ob-menu__panel a.ob-nav__link--accent:hover {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-hover);
+}
+
+.ob-menu__panel a.ob-nav__link--accent:active {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-active);
+}
+
+.ob-menu__panel a.ob-nav__link--accent[aria-current='page'] {
+  --shadow-state: inset 0 0 0 var(--border-thin) var(--nav-accent-ring);
+
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg);
+  box-shadow: var(--shadow-state);
+}
+
+.ob-menu__panel a.ob-nav__link--accent[aria-current='page']:hover {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-hover);
+}
+
+.ob-menu__panel a.ob-nav__link--accent[aria-current='page']:active {
+  background: var(--nav-accent-bg);
+  color: var(--nav-accent-fg-active);
+}
+
 @media (min-width: 1024px) {
   .ob-nav {
     display: flex;
   }
 
+  .ob-nav a {
+    padding: var(--nav-link-pad-tight);
+  }
+
   .ob-menu {
     display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .ob-nav a {
+    padding: var(--nav-link-pad);
   }
 }
 
@@ -2076,6 +2178,23 @@ a.ob-dc:active {
 .ob-dc__meta {
   font-size: var(--fs-small);
   color: var(--text-muted);
+}
+
+/* Several cards in one block: the archive pages stack single cards, but a
+   `documents` page block may carry more than one. */
+.ob-dc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* A flex item defaults to `min-width: auto`, so without this a long unbroken
+   title would stretch the item past the column instead of wrapping. */
+.ob-dc-list > li {
+  min-width: 0;
 }
 
 /* ── FAQ (native <details>, zero client JS) ──────────────────────────────── */

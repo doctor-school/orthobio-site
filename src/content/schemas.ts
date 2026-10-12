@@ -726,9 +726,32 @@ const submissionGuideBlockSchema = z.object({
 
 export type SubmissionGuideBlock = z.infer<typeof submissionGuideBlockSchema>;
 
+/**
+ * Downloadable documents (PDFs). The file location lives in YAML and passes
+ * `mediaLocation()`, so a link to a Drive/Yandex.Disk copy fails the build
+ * instead of shipping (ТЗ §4: no external archive links, Issue #122).
+ */
+const documentsBlockSchema = z.object({
+  kind: z.literal('documents'),
+  heading: proseOrNull(),
+  items: z
+    .array(
+      z.object({
+        title: prose(),
+        url: mediaLocation(),
+        /** Short caption under the title; DocCard's own default is `PDF`. */
+        meta: prose().default('PDF'),
+      }),
+    )
+    .min(1),
+});
+
+export type DocumentsBlock = z.infer<typeof documentsBlockSchema>;
+
 const pageBlockSchema = z.discriminatedUnion('kind', [
   textBlockSchema,
   listBlockSchema,
+  documentsBlockSchema,
   stubBlockSchema,
   faqBlockSchema,
   accommodationBlockSchema,

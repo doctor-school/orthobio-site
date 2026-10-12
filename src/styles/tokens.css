@@ -35,19 +35,20 @@
   --ob-lime-tint: #f7fae4;
   --ob-green-tint: #eef8e8;
 
-  /* DELIBERATELY DECLARED WITHOUT A CONSUMER: --ob-green-deep, --ob-lime-tint,
-     --ob-green-tint, --ds-blue and --ds-blue-light further down. They
-     are ramp members of the design bundle's own token files, and this file is
-     their 1:1 port — the green/lime rungs exist so the ramps are symmetrical,
-     not because a component was dropped. The two blue rungs are the same kind of
-     entry with one extra caveat recorded at their declaration: --ds-blue-light
-     is the value issue #35 took the focus ring OFF, and it must not be reached
-     for as a state colour again. Sky is the lead accent (brief §6.1), so green and lime live in the
-     identity layer (brand ribbon, metaball pattern, hero overline) and own no
-     tinted surface yet. Giving them one is a design decision — it is made in
-     Claude.design and ported here, never invented in a CSS edit; deleting them
-     would only make the next port re-add them.
-     TODO(Антон): оставить рампу целиком или вычистить незадействованные рунги —
+  /* DELIBERATELY DECLARED WITHOUT A CONSUMER: --ds-blue-light further down. It
+     is a ramp member of the design bundle's own token files, and this file is
+     their 1:1 port — the rung exists so the ramp is symmetrical, not because a
+     component was dropped. It also carries a caveat recorded at its declaration:
+     it is the value issue #35 took the focus ring OFF, and it must not be
+     reached for as a state colour again. The green and lime rungs used to sit in
+     this list; they have consumers now — the tints on the /registration status
+     badges (PR #82), and on the accent «Консенсусы» nav link (Issue #122) the
+     --ob-green-tint fill and the --ob-green-text text and ring, plus
+     --btn-accent-bg-active and --ink through the --nav-accent-* aliases.
+     (--ob-green and --ob-green-deep are used elsewhere, not by that link.) Sky is still the lead accent
+     (brief §6.1); a new tinted surface is a design decision made in Claude.design
+     and ported here, never invented in a CSS edit.
+     TODO(Антон): оставить рампу целиком или вычистить незадействованный рунг —
      решение владельца; код работает одинаково в обоих случаях. */
 
   /* Brand chrome ribbon — one token because the header and the footer must
@@ -68,7 +69,8 @@
      2.27:1 on white it cannot carry ANY non-text meaning WCAG measures (1.4.11
      wants 3:1), so it stays as the light rung of the Doctor.School ramp and is
      not to be reached for as a state colour. Kept rather than deleted for the
-     same reason as the green/lime tints below — this file is a 1:1 port. */
+     same reason the green/lime tints above were while they had no consumer —
+     this file is a 1:1 port. */
   --ds-blue-light: #6bb1f7;
   --ds-blue-pressed: #0d3a77;
 
@@ -149,6 +151,16 @@
      pressed state sits between them, so a press reads as a change from both. */
   --btn-accent-bg-active: oklch(0.32 0.08 138);
   --btn-accent-fg: #ffffff;
+  /* «Консенсусы» nav item (Issue #122). The owner asked for a calm, always-green
+     item: the tint is the resting state and never changes, only the text colour
+     reacts. For that reason the current page is marked by a ring rather than a
+     fill — a second fill would have nothing left to change to. Aliases of the
+     button's greens on purpose, so the item stays in the accent family. */
+  --nav-accent-bg: var(--ob-green-tint);
+  --nav-accent-fg: var(--ob-green-text);
+  --nav-accent-fg-hover: var(--btn-accent-bg-active);
+  --nav-accent-fg-active: var(--ink);
+  --nav-accent-ring: var(--ob-green-text);
   /* Play-button scrim on the video facade (over the dark ink plate). */
   --scrim-play: oklch(0.35 0.05 250 / 0.85);
   --on-dark: #ffffff;
@@ -298,6 +310,9 @@
   --chrome-ribbon-height: 3px;
   --head-logo-size: 36px;
   --nav-link-pad: 8px 12px;
+  /* lg–xl only: nine nav items at the full pad run 36px past the gutter at
+     1024px (Issue #122); 4px less per side buys that back twice over. */
+  --nav-link-pad-tight: 8px 8px;
   --footer-mark-size: 40px;
   --footer-ds-logo-height: 34px;
   --footer-map-pad-block: 5px;

@@ -9,6 +9,7 @@
  * outline stays h1 → h2 → h3 (axe `heading-order`).
  */
 import Accommodation from '@/components/Accommodation.astro';
+import DocCard from '@/components/DocCard.astro';
 import Faq from '@/components/Faq.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import Stub from '@/components/Stub.astro';
@@ -50,6 +51,19 @@ const { blocks } = Astro.props;
           <ul class="ob-list">
             {block.items.map((item) => (
               <li>{item}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {block.kind === 'documents' && (
+        <>
+          {block.heading && <SectionHeading title={block.heading} />}
+          <ul class="ob-dc-list">
+            {block.items.map((doc) => (
+              <li>
+                <DocCard href={doc.url} title={doc.title} meta={doc.meta} />
+              </li>
             ))}
           </ul>
         </>

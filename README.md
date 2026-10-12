@@ -106,7 +106,10 @@ Deploy завершается ошибкой, если одна из них от
 - [`https://orthobio.ru/`](https://orthobio.ru/) — индексируемый production
   canonical; apex A указывает на Timeweb, а `www` перенаправляется на apex.
 - [`https://new.orthobio.ru/`](https://new.orthobio.ru/) — отдельный preview на
-  тех же байтах, намеренно отдающий `X-Robots-Tag: noindex, nofollow`.
+  тех же байтах, закрытый HTTP basic auth (Issue #119: форма регистрации там
+  открыта принудительно и пишет в stage API) и отдающий
+  `X-Robots-Tag: noindex, nofollow`. Учётные данные живут только на хосте
+  (`/etc/nginx/orthobio-preview.htpasswd`), в репозитории их нет.
 
 Оба имени работают по HTTPS с HSTS. Production-сертификат покрывает apex и
 `www`; автоматическое продление через certbot проверено после переключения.

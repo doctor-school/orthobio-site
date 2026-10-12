@@ -90,8 +90,24 @@ describe.each(VHOSTS)('$file', ({ file, api, stageGate }) => {
 
   it('never carries a gate secret in the repo', () => {
     expect(readFileSync(file, 'utf8')).not.toMatch(/ds_stage_gate=(?!<STAGE_GATE_TOKEN>)/);
-    expect(conf).not.toMatch(/proxy_set_header\s+(Cookie|Authorization)/i);
+    expect(conf).not.toMatch(/proxy_set_header\s+Cookie/i);
+    // Only clearing is allowed: a set Authorization would be a secret in git.
+    expect(conf).not.toMatch(/proxy_set_header\s+Authorization\s+(?!""\s*;)/i);
   });
+
+  it.each(PROXIED)(
+    stageGate
+      ? 'keeps the preview Basic credential at this edge on %s'
+      : 'has no preview credential to strip on %s',
+    (path) => {
+      const body = exactLocation(conf, path);
+      if (stageGate) {
+        expect(body).toContain('proxy_set_header Authorization "";');
+      } else {
+        expect(body).not.toContain('Authorization');
+      }
+    },
+  );
 
   it('accepts only POST on sign-up, with a small body cap', () => {
     const body = exactLocation(conf, '/api/v1/congress/sign-up');
@@ -111,11 +127,75 @@ describe.each(VHOSTS)('$file', ({ file, api, stageGate }) => {
   });
 });
 
+const PREVIEW_HTPASSWD = '/etc/nginx/orthobio-preview.htpasswd';
+
+/** Every top-level `server { ... }` block, in file order. */
+function serverBlocks(conf: string): string[] {
+  const blocks: string[] = [];
+  for (const match of conf.matchAll(/^server\s*\{/gm)) {
+    let depth = 0;
+    for (let i = match.index + match[0].length - 1; i < conf.length; i++) {
+      if (conf[i] === '{') depth++;
+      if (conf[i] === '}' && --depth === 0) {
+        blocks.push(conf.slice(match.index, i + 1));
+        break;
+      }
+    }
+  }
+  return blocks;
+}
+
+/** A block's own directives, with every nested `{ ... }` removed. */
+function topLevel(block: string): string {
+  let body = block.slice(block.indexOf('{') + 1, block.lastIndexOf('}'));
+  while (/\{[^{}]*\}/.test(body)) body = body.replace(/\{[^{}]*\}/g, '');
+  return body;
+}
+
+// Issue #119: the preview's force-open form writes to the stage API, so real
+// sign-ups there were lost. The whole HTTPS preview is closed by basic auth.
+describe('preview basic auth', () => {
+  const [https, http] = serverBlocks(directives('infra/nginx/new.orthobio.ru.conf'));
+
+  it('closes the whole HTTPS preview server at server level', () => {
+    expect(https).toContain('listen 443 ssl;');
+    const own = topLevel(https);
+    expect(own).toMatch(/^\s*auth_basic "[^"]+";\s*$/m);
+    expect(own).toContain(`auth_basic_user_file ${PREVIEW_HTPASSWD};`);
+    expect(https).not.toMatch(/auth_basic\s+off/);
+  });
+
+  it('keeps the port-80 server a bare HTTPS redirect', () => {
+    expect(http).toContain('listen 80;');
+    expect(http).toContain('return 301 https://$host$request_uri;');
+    expect(http).not.toContain('auth_basic');
+  });
+
+  it('still marks the preview noindex, on the 401 too', () => {
+    expect(topLevel(https)).toContain('add_header X-Robots-Tag "noindex, nofollow" always;');
+  });
+
+  it('leaves the production vhost open', () => {
+    expect(directives('infra/nginx/orthobio.ru.conf')).not.toContain('auth_basic');
+  });
+});
+
 describe('provisioning', () => {
+  const provision = readFileSync('infra/host/provision.sh', 'utf8');
+
   it('creates the root-only directory the stage-gate include reads', () => {
-    expect(readFileSync('infra/host/provision.sh', 'utf8')).toContain(
+    expect(provision).toContain(
       'sudo -n install -d -o root -g root -m 0700 /etc/nginx/orthobio\n',
     );
+  });
+
+  it('refuses before any host mutation when the preview credential is absent', () => {
+    expect(provision).toContain(`PREVIEW_HTPASSWD=${PREVIEW_HTPASSWD}\n`);
+    const check = provision.indexOf('if ! sudo -n test -s "$PREVIEW_HTPASSWD"; then');
+    expect(check).toBeGreaterThan(-1);
+    expect(provision.slice(check, provision.indexOf('\nfi\n', check))).toContain('exit 1');
+    expect(check).toBeLessThan(provision.indexOf('BACKUP=$(mktemp'));
+    expect(check).toBeLessThan(provision.indexOf('CHANGES_STARTED=1'));
   });
 });
 

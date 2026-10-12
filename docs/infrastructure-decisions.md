@@ -337,15 +337,18 @@ doctors who reached the preview by link registered there; their sign-ups landed
 on the test stand and were lost at its next re-seed. `noindex` keeps search
 engines away but not people, so the whole HTTPS preview server sits behind
 `auth_basic`, the static pages and the proxy alike. The port-80 server only
-redirects to HTTPS and stays unauthenticated, which also keeps certbot's HTTP-01
-renewal working. The preview strips the visitor's `Authorization` header before
+redirects to HTTPS and stays unauthenticated. Certbot renewal keeps working
+because this lineage uses the nginx authenticator, whose injected challenge
+location answers with `return 200` before the auth phase (verify with
+`sudo certbot renew --dry-run --cert-name new.orthobio.ru`); a switch to the
+webroot authenticator would hit the `401`. The preview strips the visitor's `Authorization` header before
 proxying, so the credential never reaches the stage API. To create or rotate the
 credential on the host:
 
 ```sh
-# on the host; the password is read from stdin, never put in argv
+# on the host; openssl prompts for the password without echo, never via argv
 sudo install -o root -g www-data -m 0640 /dev/null /etc/nginx/orthobio-preview.htpasswd
-printf 'preview:%s\n' "$(openssl passwd -6 -stdin)" |
+printf 'preview:%s\n' "$(openssl passwd -6)" |
   sudo tee /etc/nginx/orthobio-preview.htpasswd >/dev/null
 ```
 

@@ -24,7 +24,7 @@ import { expectNoOverflow, OVERFLOW_WIDTHS, SCROLLBAR_GUTTER } from './_overflow
  * - the filling page heads with one line pointing back to the sign-in, then the
  *   eight cabinet steps and no sign-in;
  * - every date token was filled — the pages never show «{{…}}»;
- * - every screenshot actually loads from our bucket at its declared size, and
+ * - every screenshot actually loads as a build-time WebP at its declared size, and
  *   none of them pushes the page or its card wider than the viewport.
  */
 const SECTION = '#podat-materialy';
@@ -100,9 +100,9 @@ test.describe('«Как подать материалы» on /participants', () 
     await expect(items).toHaveCount(5);
     const shots = await items.evaluateAll((lis) => lis.map((li) => li.querySelectorAll('img').length));
     expect(shots).toEqual([0, 0, 1, 2, 0]);
-    await expect(items.nth(2).locator('img')).toHaveAttribute('src', /\/2027\/submissions\/login-02-[a-z0-9-]+\.png$/);
-    await expect(items.nth(3).locator('img').first()).toHaveAttribute('src', /\/2027\/submissions\/letter-code\.png$/);
-    await expect(items.nth(3).locator('img').last()).toHaveAttribute('src', /\/2027\/submissions\/login-03-[a-z0-9-]+\.png$/);
+    await expect(items.nth(2).locator('img')).toHaveAttribute('src', /^\/_astro\/login-02-[a-z0-9-]+_[\w-]+\.webp$/);
+    await expect(items.nth(3).locator('img').first()).toHaveAttribute('src', /^\/_astro\/letter-code_[\w-]+\.webp$/);
+    await expect(items.nth(3).locator('img').last()).toHaveAttribute('src', /^\/_astro\/login-03-[a-z0-9-]+_[\w-]+\.webp$/);
     // The button sits right under the sub-step that names it, and only there.
     const buttons = await items.evaluateAll((lis) => lis.map((li) => li.querySelectorAll('.ob-btn').length));
     expect(buttons).toEqual([1, 0, 0, 0, 0]);
@@ -259,12 +259,12 @@ const GUIDE_PAGES = [
 ] as const;
 
 for (const { path, section, shots } of GUIDE_PAGES) {
-  test(`${path}: every screenshot loads from our bucket at its declared size`, async ({ page }) => {
+  test(`${path}: every screenshot loads as a build-time WebP at its declared size`, async ({ page }) => {
     await page.goto(path);
     const imgs = page.locator(`${section} img`);
     await expect(imgs).toHaveCount(shots);
     for (const img of await imgs.all()) {
-      await expect(img).toHaveAttribute('src', /^https:\/\/s3\.twcstorage\.ru\/orthobio-media\/2027\/submissions\/((login-)?\d{2}-[a-z0-9-]+|letter-code)\.png$/);
+      await expect(img).toHaveAttribute('src', /^\/_astro\/((login-)?\d{2}-[a-z0-9-]+|letter-code)_[\w-]+\.webp$/);
       await expect(img).toHaveAttribute('loading', 'lazy');
       expect((await img.getAttribute('alt'))?.length ?? 0).toBeGreaterThan(40);
       await img.scrollIntoViewIfNeeded();
@@ -315,7 +315,8 @@ for (const { path, section, shots } of GUIDE_PAGES) {
   }
 }
 
-const BUCKET = 'https://s3.twcstorage.ru/**';
+/** The screenshots' build-time WebPs (Issue #125) — the originals stay in the bucket. */
+const SHOT_WEBP = '**/_astro/*.webp';
 
 /** Box heights of every screenshot in `section`, rounded to the pixel. */
 const shotHeights = (page: Page, section: string) =>
@@ -329,16 +330,16 @@ const shotHeights = (page: Page, section: string) =>
  * sizes the image from its content (`width: auto`) leaves it 0×0 until load, so
  * every one of them shoves the text below it down as it lands.
  *
- * First measurement: the bucket requests are held open, never answered. Second:
+ * First measurement: the WebP requests are held open, never answered. Second:
  * each is answered with an image of exactly its declared size — the test above
- * proves the bucket serves every screenshot at that size, and keeping this one
- * off the network keeps a slow bucket from failing a layout assertion.
+ * proves the build serves every screenshot at that size, and keeping this one
+ * off the network keeps a slow load from failing a layout assertion.
  */
 for (const { path, section } of GUIDE_PAGES) {
   for (const width of [390, 1280]) {
     test(`${path} at ${width}px: every screenshot holds its loaded box before it loads`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.route(BUCKET, () => new Promise<void>(() => {}));
+      await page.route(SHOT_WEBP, () => new Promise<void>(() => {}));
       await page.goto(path, { waitUntil: 'domcontentloaded' });
       // `load` never comes while the images hang; the boxes are the
       // stylesheet's to size, so measure once it has arrived.
@@ -358,7 +359,7 @@ for (const { path, section } of GUIDE_PAGES) {
       );
 
       await page.unrouteAll({ behavior: 'ignoreErrors' });
-      await page.route(BUCKET, (route) => {
+      await page.route(SHOT_WEBP, (route) => {
         const [w, h] = declared.get(route.request().url()) ?? [];
         if (!w || !h) return route.abort();
         return route.fulfill({

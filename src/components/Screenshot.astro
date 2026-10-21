@@ -1,0 +1,36 @@
+---
+/**
+ * A UI screenshot inside an `.ob-acc__frame` (accommodation, the submission
+ * guide, the sign-in letters and steps). The originals are PNG at 1x of their
+ * declared size, so `<Image>` re-encodes them as WebP at exactly that size —
+ * never upscaled, since there are no more pixels to show (Issue #125). One file,
+ * no narrower variant: a resized copy rounds its height, so the loaded box
+ * would differ from the reserved one by a pixel and shift the text under it,
+ * and a downscaled screenshot is the first to lose legible UI text.
+ *
+ * Quality 90, not Astro's default: these are interface text, and lossy WebP at
+ * lower settings rings around glyph edges — the guide is read, not glanced at.
+ */
+import { Image } from 'astro:assets';
+
+import { mediaUrl } from '@/config/site';
+
+interface Props {
+  url: string;
+  alt: string;
+  width: number;
+  height: number;
+}
+
+const { url, alt, width, height } = Astro.props;
+---
+
+<Image
+  src={mediaUrl(url)}
+  alt={alt}
+  width={width}
+  height={height}
+  quality={90}
+  loading="lazy"
+  decoding="async"
+/>

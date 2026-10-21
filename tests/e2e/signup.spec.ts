@@ -439,7 +439,7 @@ test.describe('sign-up form', () => {
     expect(await page.locator('[data-signup-success]').innerText()).not.toContain('ivanov@example.com');
   });
 
-  test('shows the two letters under the line that announces them, each from our bucket at its declared size', async ({
+  test('shows the two letters under the line that announces them, each a build-time WebP at its declared size', async ({
     page,
   }) => {
     await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });
@@ -452,10 +452,7 @@ test.describe('sign-up form', () => {
     const imgs = figures.locator('img');
     await expect(imgs).toHaveCount(2);
     for (const [i, img] of (await imgs.all()).entries()) {
-      await expect(img).toHaveAttribute(
-        'src',
-        `https://s3.twcstorage.ru/orthobio-media/2027/submissions/${['letter-confirmation', 'letter-code'][i]}.png`,
-      );
+      await expect(img).toHaveAttribute('src', new RegExp(`^/_astro/${['letter-confirmation', 'letter-code'][i]}_[\\w-]+\\.webp$`));
       await expect(img).toHaveAttribute('loading', 'lazy');
       expect(await img.getAttribute('alt')).toMatch(/^Письмо «.+»: .{40,}/);
       await img.scrollIntoViewIfNeeded();
@@ -489,7 +486,7 @@ test.describe('sign-up form', () => {
     ] as const) {
       const img = steps.nth(i).locator('.ob-signup__shot img');
       await expect(img).toHaveCount(1);
-      await expect(img).toHaveAttribute('src', `https://s3.twcstorage.ru/orthobio-media/2027/submissions/${key}.png`);
+      await expect(img).toHaveAttribute('src', new RegExp(`^/_astro/${key}_[\\w-]+\\.webp$`));
       expect(await img.getAttribute('alt')).toMatch(/^(Экран|Кабинет) «.+»: .{40,}/);
       await img.scrollIntoViewIfNeeded();
       await expect
@@ -611,16 +608,16 @@ test.describe('sign-up form', () => {
   // Responsive-a11y audit of #117: every image of the card reserves its box
   // from its width/height attributes before its bytes arrive — sized from its
   // content it is 0×0 until load and shoves the steps below it down as it
-  // lands. The bucket requests are held, measured, then answered with an image
-  // of exactly the declared size (the tests above prove the bucket serves each
-  // at that size; staying off the network keeps a slow bucket out of a layout
+  // lands. The WebP requests are held, measured, then answered with an image
+  // of exactly the declared size (the tests above prove the build serves each
+  // at that size; staying off the network keeps a slow load out of a layout
   // assertion).
   for (const width of [390, 1280]) {
     test(`every image of the card holds its loaded box before it loads at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width: width - SCROLLBAR_GUTTER, height: 900 });
       const held: Route[] = [];
       let answer: ((route: Route) => Promise<void>) | null = null;
-      await page.route('https://s3.twcstorage.ru/orthobio-media/2027/submissions/**', (route) =>
+      await page.route('**/_astro/*.webp', (route) =>
         answer ? answer(route) : void held.push(route),
       );
       await mockSignUp(page, 200, { status: 'accepted', handoff: HANDOFF });

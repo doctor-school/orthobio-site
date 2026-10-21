@@ -1,0 +1,36 @@
+---
+/**
+ * One partner mark in its 120×72 lockup box (PartnerTier cards, the profile
+ * head). The bucket holds the rescued originals as PNG/JPEG at about twice the
+ * box (240×240, 240×101), so `<Image>` re-encodes them at BUILD time as WebP
+ * at 1x and 2x of the box (Issue #125).
+ *
+ * `fit="contain"` is load-bearing: with both a width and a height, sharp's own
+ * default is `cover`, which would CROP every non-5:3 mark. `contain` scales
+ * the mark inside the box instead, never enlarging it, and the CSS
+ * (`object-fit: contain` on the box) centres it. width/height stay the box,
+ * so the grid reserves it before the file arrives.
+ */
+import { Image } from 'astro:assets';
+
+import { mediaUrl } from '@/config/site';
+
+interface Props {
+  src: string;
+  alt: string;
+  loading?: 'lazy' | 'eager';
+}
+
+const { src, alt, loading = 'lazy' } = Astro.props;
+---
+
+<Image
+  src={mediaUrl(src)}
+  alt={alt}
+  width={120}
+  height={72}
+  fit="contain"
+  densities={[1, 2]}
+  loading={loading}
+  decoding="async"
+/>

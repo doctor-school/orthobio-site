@@ -13,9 +13,10 @@
  */
 import Button from '@/components/Button.astro';
 import NewTabHint from '@/components/NewTabHint.astro';
+import Screenshot from '@/components/Screenshot.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
-import { mediaUrl, UPCOMING_CONGRESS_VENUE } from '@/config/site';
+import { UPCOMING_CONGRESS_VENUE } from '@/config/site';
 import type { AccommodationBlock } from '@/content';
 import { ACCOMMODATION_ANCHOR, segment, splitLastWord, telHref } from '@/lib/accommodation';
 
@@ -69,13 +70,11 @@ const address = splitLastWord(contacts.address);
       </p>
       <figure class="ob-acc__shot">
         <div class="ob-acc__frame">
-          <img
-            src={mediaUrl(online.screenshot.url)}
+          <Screenshot
+            url={online.screenshot.url}
             alt={online.screenshot.alt}
             width={online.screenshot.width}
             height={online.screenshot.height}
-            loading="lazy"
-            decoding="async"
           />
         </div>
         <figcaption class="ob-acc__cap">

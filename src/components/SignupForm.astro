@@ -32,6 +32,7 @@
  * rely on stay as they were.
  */
 import Button from '@/components/Button.astro';
+import Screenshot from '@/components/Screenshot.astro';
 import StrokeIcon from '@/components/StrokeIcon.astro';
 import {
   CABINET_LOGIN_LABEL,
@@ -44,7 +45,6 @@ import {
   SMARTCAPTCHA_SITEKEY,
   SMARTCAPTCHA_SITEKEY_PREVIEW,
   UPCOMING_CONGRESS_DATES,
-  mediaUrl,
 } from '@/config/site';
 import { FORCE_OPEN_HOSTS, formatMoscowInstant } from '@/lib/registration';
 
@@ -443,14 +443,7 @@ const SIGNIN_SHOTS = {
           SIGNUP_LETTERS.map((letter) => (
             <figure class="ob-acc__shot" data-signup-handoff={letter.handoffOnly ? 'with' : undefined}>
               <div class="ob-acc__frame ob-acc__frame--native">
-                <img
-                  src={mediaUrl(letter.url)}
-                  alt={letter.alt}
-                  width={letter.width}
-                  height={letter.height}
-                  loading="lazy"
-                  decoding="async"
-                />
+                <Screenshot url={letter.url} alt={letter.alt} width={letter.width} height={letter.height} />
               </div>
               <figcaption class="ob-acc__cap">{letter.caption}</figcaption>
             </figure>
@@ -474,14 +467,7 @@ const SIGNIN_SHOTS = {
           открывшейся странице.
           <figure class="ob-acc__shot ob-signup__shot">
             <div class="ob-acc__frame ob-acc__frame--native">
-              <img
-                src={mediaUrl(SIGNIN_SHOTS.codeStep.url)}
-                alt={SIGNIN_SHOTS.codeStep.alt}
-                width={SIGNIN_SHOTS.codeStep.width}
-                height={SIGNIN_SHOTS.codeStep.height}
-                loading="lazy"
-                decoding="async"
-              />
+              <Screenshot url={SIGNIN_SHOTS.codeStep.url} alt={SIGNIN_SHOTS.codeStep.alt} width={SIGNIN_SHOTS.codeStep.width} height={SIGNIN_SHOTS.codeStep.height} />
             </div>
           </figure>
         </li>
@@ -489,14 +475,7 @@ const SIGNIN_SHOTS = {
           Откроется кабинет «Мои заявки на Конгресс»&nbsp;— нажмите «+&nbsp;Новая заявка».
           <figure class="ob-acc__shot ob-signup__shot">
             <div class="ob-acc__frame ob-acc__frame--native">
-              <img
-                src={mediaUrl(SIGNIN_SHOTS.cabinet.url)}
-                alt={SIGNIN_SHOTS.cabinet.alt}
-                width={SIGNIN_SHOTS.cabinet.width}
-                height={SIGNIN_SHOTS.cabinet.height}
-                loading="lazy"
-                decoding="async"
-              />
+              <Screenshot url={SIGNIN_SHOTS.cabinet.url} alt={SIGNIN_SHOTS.cabinet.alt} width={SIGNIN_SHOTS.cabinet.width} height={SIGNIN_SHOTS.cabinet.height} />
             </div>
           </figure>
         </li>

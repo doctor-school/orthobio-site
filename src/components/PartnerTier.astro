@@ -39,19 +39,19 @@
  * unreachable by keyboard.
  *
  * The logo slot is 120×72, declared in CSS (.ob-pt__card img, `object-fit:
- * contain`) and repeated as width/height on both <img> below: the schema
+ * contain`) and repeated as width/height by `PartnerLogo`: the schema
  * carries no logo dimensions and the marks are fetched from S3, so the
  * reserved box is what keeps the grid from reflowing while they lazy-load.
- * Both branches render the same <img> — only the wrapper differs (<a> for a
+ * Both branches render the same `PartnerLogo` — only the wrapper differs (<a> for a
  * partner with a url, <span> without) — so the contract is stated here once
  * rather than twice inside the markup. Its values are pinned in
  * tests/unit/partner-logos.test.ts.
  */
-import { mediaUrl } from '@/config/site';
 import type { CongressEntry, PartnerTier } from '@/content';
 import { MAJOR_TIERS } from '@/lib/congress';
 import { partnerCardHref } from '@/lib/partners';
 import NewTabHint from './NewTabHint.astro';
+import PartnerLogo from './PartnerLogo.astro';
 
 interface Props {
   tier: PartnerTier;
@@ -135,7 +135,7 @@ const isExternal = (url: string): boolean => {
             >
               {
                 p.logo ? (
-                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
+                  <PartnerLogo src={p.logo} alt={p.name} />
                 ) : (
                   p.name
                 )
@@ -161,7 +161,7 @@ const isExternal = (url: string): boolean => {
             <span class="ob-pt__card ob-pt__card--static">
               {
                 p.logo ? (
-                  <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" loading="lazy" />
+                  <PartnerLogo src={p.logo} alt={p.name} />
                 ) : (
                   p.name
                 )

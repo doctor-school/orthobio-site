@@ -2,8 +2,8 @@
 /**
  * One partner mark in its 120×72 lockup box (PartnerTier cards, the profile
  * head). The bucket holds the rescued originals as PNG/JPEG at about twice the
- * box (240×240, 240×101), so `<Image>` re-encodes them at BUILD time as WebP —
- * alpha intact — at 1x and 2x of the box (Issue #125).
+ * box (240×240, 240×101), so `<Image>` re-encodes them at BUILD time as WebP
+ * at 1x and 2x of the box (Issue #125).
  *
  * `fit="contain"` is load-bearing: with both a width and a height, sharp's own
  * default is `cover`, which would CROP every non-5:3 mark. `contain` scales

@@ -316,7 +316,7 @@ for (const { path, section, shots } of GUIDE_PAGES) {
 }
 
 /** The screenshots' build-time WebPs (Issue #125) — the originals stay in the bucket. */
-const BUCKET = '**/_astro/*.webp';
+const SHOT_WEBP = '**/_astro/*.webp';
 
 /** Box heights of every screenshot in `section`, rounded to the pixel. */
 const shotHeights = (page: Page, section: string) =>
@@ -339,7 +339,7 @@ for (const { path, section } of GUIDE_PAGES) {
   for (const width of [390, 1280]) {
     test(`${path} at ${width}px: every screenshot holds its loaded box before it loads`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.route(BUCKET, () => new Promise<void>(() => {}));
+      await page.route(SHOT_WEBP, () => new Promise<void>(() => {}));
       await page.goto(path, { waitUntil: 'domcontentloaded' });
       // `load` never comes while the images hang; the boxes are the
       // stylesheet's to size, so measure once it has arrived.
@@ -359,7 +359,7 @@ for (const { path, section } of GUIDE_PAGES) {
       );
 
       await page.unrouteAll({ behavior: 'ignoreErrors' });
-      await page.route(BUCKET, (route) => {
+      await page.route(SHOT_WEBP, (route) => {
         const [w, h] = declared.get(route.request().url()) ?? [];
         if (!w || !h) return route.abort();
         return route.fulfill({

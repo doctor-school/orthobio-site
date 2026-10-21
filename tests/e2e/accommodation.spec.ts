@@ -102,16 +102,13 @@ test.describe('accommodation section', () => {
     });
   }
 
-  test('the screenshot is lazy, sized and served from our bucket', async ({ page }) => {
+  test('the screenshot is lazy, sized and served as a build-time WebP', async ({ page }) => {
     await page.goto('/participants');
     const img = page.locator(`${SECTION} .ob-acc__frame img`);
     await expect(img).toHaveAttribute('loading', 'lazy');
     await expect(img).toHaveAttribute('width', '560');
     await expect(img).toHaveAttribute('height', '257');
-    await expect(img).toHaveAttribute(
-      'src',
-      'https://s3.twcstorage.ru/orthobio-media/2027/accommodation/hotel-promo-field.png',
-    );
+    await expect(img).toHaveAttribute('src', /^\/_astro\/hotel-promo-field_[\w-]+\.webp$/);
   });
 
   test('the /registration venue card links into the section', async ({ page }) => {

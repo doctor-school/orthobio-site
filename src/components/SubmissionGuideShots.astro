@@ -4,7 +4,7 @@
  * (SubmissionGuide.astro, Issue #99): the accommodation screenshot frame in
  * the guide's own column, each image at its own width up to the card's.
  */
-import { mediaUrl } from '@/config/site';
+import Screenshot from '@/components/Screenshot.astro';
 interface Props {
   shots: readonly { url: string; alt: string; width: number; height: number }[];
 }
@@ -17,14 +17,7 @@ const { shots } = Astro.props;
     shots.map((shot) => (
       <figure class="ob-acc__shot">
         <div class="ob-acc__frame ob-acc__frame--native">
-          <img
-            src={mediaUrl(shot.url)}
-            alt={shot.alt}
-            width={shot.width}
-            height={shot.height}
-            loading="lazy"
-            decoding="async"
-          />
+          <Screenshot url={shot.url} alt={shot.alt} width={shot.width} height={shot.height} />
         </div>
       </figure>
     ))

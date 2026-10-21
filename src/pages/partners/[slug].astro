@@ -14,8 +14,8 @@
  * docs/assets-manifest.yaml → `profiles:`), so there was nothing to rescue.
  */
 import NewTabHint from '@/components/NewTabHint.astro';
+import PartnerLogo from '@/components/PartnerLogo.astro';
 import SectionHeading from '@/components/SectionHeading.astro';
-import { mediaUrl } from '@/config/site';
 import { getCongressYears } from '@/content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { PARTNER_TIER_LABELS } from '@/content/schemas';
@@ -77,7 +77,7 @@ const phoneHref = p.contacts?.phone ? telHref(p.contacts.phone) : null;
       {
         p.logo && (
           <div class="ob-cp__logo">
-            <img src={mediaUrl(p.logo)} alt={p.name} width="120" height="72" />
+            <PartnerLogo src={p.logo} alt={p.name} loading="eager" />
           </div>
         )
       }

@@ -121,28 +121,24 @@ export const REGISTRATION_OPENS = {
 } as const;
 
 /**
- * Submission deadlines of the VIII congress — the organisers' spec for 2027
- * (ТЗ «регистрация участников и подача материалов на Конгресс 2027», п. 4),
- * owner-approved in Issue #108. They replace the single submission window of
- * Issue #98: the opening of submissions is deliberately not dated («откроется
- * в ближайшее время»), and the two kinds of material close on different days.
+ * The final submission deadline of the VIII congress, set by the organisers
+ * (Issue #127): one day for every kind of material — oral talks, poster talks
+ * and abstracts alike. The opening of submissions is deliberately not dated.
  *
- * ONE place to change them. Page copy never spells a deadline out — it writes
- * the tokens `{{oralTalkDeadline}}` / `{{posterAbstractDeadline}}` (see
- * `CONTENT_TOKENS`), which `getPage()` fills; /registration prints `display`
- * directly. `tests/unit/content-dates.test.ts` fails if a page carries a
- * literal copy of either date.
+ * ONE place to change it. Page copy never spells the deadline out — it writes
+ * the token `{{submissionDeadline}}` (see `CONTENT_TOKENS`), which `getPage()`
+ * fills; /registration prints `display` directly.
+ * `tests/unit/content-dates.test.ts` fails if a page carries a literal copy of
+ * the date.
  *
  * `display` is typeset by hand (nbsp exactly where Typograf puts it in the
  * same sentence spelled out; `tests/unit/launch-content.test.ts` holds the two
  * equal), because tokens are filled after the Typograf pass. `date` is the
  * machine-readable twin, kept for regression checks.
  */
-export const SUBMISSION_DEADLINES = {
-  /** Oral talks: «до 15 января 2027 года». */
-  oralTalk: { date: '2027-01-15', display: '15 января 2027 года' },
-  /** Poster talks and abstracts: «до 29 января 2027 года». */
-  posterAbstract: { date: '2027-01-29', display: '29 января 2027 года' },
+export const SUBMISSION_DEADLINE = {
+  date: '2026-12-18',
+  display: '18 декабря 2026 года',
 } as const;
 
 /**
@@ -167,8 +163,7 @@ export const POSTER_AGE_CUTOFF = youngerThanCutoff(
  * Values arrive already typeset: the page's Typograf pass ran before the fill.
  */
 export const CONTENT_TOKENS: Readonly<Record<string, string>> = {
-  oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
-  posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
+  submissionDeadline: SUBMISSION_DEADLINE.display,
   congressStartDay: formatRuDay(UPCOMING_CONGRESS_DATES.startDate),
   posterBornFrom: formatDotted(POSTER_AGE_CUTOFF.bornFrom),
   posterBornUntil: formatDotted(POSTER_AGE_CUTOFF.bornUntil),

@@ -36,17 +36,17 @@ describe('instantFromEnv', () => {
 });
 
 describe('fillContentTokens', () => {
-  const TOKENS = { oralTalkDeadline: '15 января 2027 года' };
+  const TOKENS = { submissionDeadline: '18 декабря 2026 года' };
 
   it('substitutes a known token', () => {
-    expect(fillContentTokens('Устные доклады — до {{oralTalkDeadline}}.', TOKENS)).toBe(
-      'Устные доклады — до 15 января 2027 года.',
+    expect(fillContentTokens('Доклады, постеры и тезисы принимаются до {{submissionDeadline}}.', TOKENS)).toBe(
+      'Доклады, постеры и тезисы принимаются до 18 декабря 2026 года.',
     );
   });
 
   it('tolerates inner spaces and repeats', () => {
-    expect(fillContentTokens('{{ oralTalkDeadline }} / {{oralTalkDeadline}}', TOKENS)).toBe(
-      `${TOKENS.oralTalkDeadline} / ${TOKENS.oralTalkDeadline}`,
+    expect(fillContentTokens('{{ submissionDeadline }} / {{submissionDeadline}}', TOKENS)).toBe(
+      `${TOKENS.submissionDeadline} / ${TOKENS.submissionDeadline}`,
     );
   });
 
@@ -57,36 +57,36 @@ describe('fillContentTokens', () => {
   });
 
   it('fails loudly on an unknown token instead of publishing it', () => {
-    expect(() => fillContentTokens('до {{submissionDeadline}}', TOKENS)).toThrow(
-      /submissionDeadline/,
+    expect(() => fillContentTokens('до {{registrationDeadline}}', TOKENS)).toThrow(
+      /registrationDeadline/,
     );
   });
 });
 
 describe('fillContentTokensDeep', () => {
-  const TOKENS = { oralTalkDeadline: '15 января' };
+  const TOKENS = { submissionDeadline: '18 декабря' };
 
   it('fills strings at any depth and keeps every other value as it is', () => {
     const data = {
       title: 'Участникам',
-      description: 'До {{oralTalkDeadline}}.',
+      description: 'До {{submissionDeadline}}.',
       overline: null,
-      lead: ['a', '{{oralTalkDeadline}}'],
-      blocks: [{ kind: 'faq', items: [{ q: 'Когда?', a: 'До {{oralTalkDeadline}}.' }] }],
+      lead: ['a', '{{submissionDeadline}}'],
+      blocks: [{ kind: 'faq', items: [{ q: 'Когда?', a: 'До {{submissionDeadline}}.' }] }],
       stats: [{ value: '6', n: 6, on: true }],
     };
     expect(fillContentTokensDeep(data, TOKENS)).toEqual({
       ...data,
-      description: 'До 15 января.',
-      lead: ['a', '15 января'],
-      blocks: [{ kind: 'faq', items: [{ q: 'Когда?', a: 'До 15 января.' }] }],
+      description: 'До 18 декабря.',
+      lead: ['a', '18 декабря'],
+      blocks: [{ kind: 'faq', items: [{ q: 'Когда?', a: 'До 18 декабря.' }] }],
     });
   });
 
   it('does not mutate its input', () => {
-    const data = { lead: ['{{oralTalkDeadline}}'] };
+    const data = { lead: ['{{submissionDeadline}}'] };
     fillContentTokensDeep(data, TOKENS);
-    expect(data.lead[0]).toBe('{{oralTalkDeadline}}');
+    expect(data.lead[0]).toBe('{{submissionDeadline}}');
   });
 
   it('fails loudly on an unknown token anywhere in the tree', () => {

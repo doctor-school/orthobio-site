@@ -7,15 +7,15 @@ import {
   FOOTER,
   REGISTRATION_OPENS,
   REGISTRATION_WINDOW,
-  SUBMISSION_DEADLINES,
+  SUBMISSION_DEADLINE,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 import { registrationState } from '../../src/lib/registration';
 
 /**
  * Two kinds of owner-confirmed date live in this file, and they guard each
- * other's blind spot. Registration opens on a day; submissions close on two
- * deadlines (Issue #108). The registration matcher below only checks lines that
+ * other's blind spot. Registration opens on a day; submissions close on one
+ * deadline (Issue #127). The registration matcher below only checks lines that
  * mention registration, so page copy that names a deadline on such a line
  * writes it as a token — and the deadline guard covers every line.
  *
@@ -138,7 +138,7 @@ describe('REGISTRATION_OPENS is the only registration date on the site', () => {
       .split('\n')
       .filter((line) => ABOUT_REGISTRATION.test(line))
       // A sentence may name both events («…после регистрации на конгресс…
-      // до {{oralTalkDeadline}}»): deadlines are tokens, not dates, so such a
+      // до {{submissionDeadline}}»): the deadline is a token, not a date, so such a
       // line needs no exemption here and every literal date left on it is
       // still checked (PR #72 re-review).
       .flatMap((line) => [...line.matchAll(DATE_IN_PROSE)].map((m) => m[0].toLowerCase().trim()))
@@ -246,38 +246,34 @@ describe('no copy promises anything by the opening of registration', () => {
 });
 
 /**
- * Issue #108 made the submission deadlines a setting: page copy writes the
- * tokens `{{oralTalkDeadline}}` / `{{posterAbstractDeadline}}` and `getPage()`
- * fills them from `SUBMISSION_DEADLINES`, so a date change is one edit in
- * `src/config/site.ts`. A page may not spell either deadline out: a literal
- * copy — even of today's correct date — is exactly the copy that stays behind
- * when the setting moves.
+ * The submission deadline is a setting (Issue #127): page copy writes the
+ * token `{{submissionDeadline}}` and `getPage()` fills it from
+ * `SUBMISSION_DEADLINE`, so a date change is one edit in `src/config/site.ts`.
+ * A page may not spell the deadline out: a literal copy — even of today's
+ * correct date — is exactly the copy that stays behind when the setting moves.
  *
  * Matched by the value, not by topic: a filter on «приём/подача» cannot tell
- * the 2027 deadlines from an archive fact (PR #72 review), because accepting
+ * the 2027 congress deadline from an archive fact (PR #72 review), because accepting
  * materials is equally something the 2026 congress did. Comparison is
  * nbsp-insensitive and ignores «года»: the constant carries hand-authored
  * U+00A0, the YAML is plain text, and «2027 г.» is the same stray copy.
  */
-const DEADLINE_TOKENS = ['{{oralTalkDeadline}}', '{{posterAbstractDeadline}}'];
+const DEADLINE_TOKEN = '{{submissionDeadline}}';
 const TOKEN_IN_COPY = /\{\{\s*([A-Za-z][A-Za-z0-9]*)\s*\}\}/g;
 const plainSpaces = (s: string) => s.replace(/ /g, ' ');
-const spelledDeadlines = Object.values(SUBMISSION_DEADLINES).map((d) =>
-  plainSpaces(d.display).replace(/ года$/, ''),
-);
+const spelledDeadline = plainSpaces(SUBMISSION_DEADLINE.display).replace(/ года$/, '');
 
-describe('SUBMISSION_DEADLINES are the only submission deadlines on the site', () => {
-  it('reduces each deadline to the bare «day month year» the check looks for', () => {
-    expect(spelledDeadlines).toEqual(['15 января 2027', '29 января 2027']);
+describe('SUBMISSION_DEADLINE is the only submission deadline on the site', () => {
+  it('reduces the deadline to the bare «day month year» the check looks for', () => {
+    expect(spelledDeadline).toBe('18 декабря 2026');
   });
 
-  it.each(pageFiles)('%s spells no deadline out — it uses the tokens', (file) => {
+  it.each(pageFiles)('%s spells no deadline out — it uses the token', (file) => {
     const body = plainSpaces(readFileSync(`${PAGES_DIR}/${file}`, 'utf8'));
-    const strays = spelledDeadlines.filter((d) => body.includes(d));
     expect(
-      strays,
-      `${file} spells a deadline out; write ${DEADLINE_TOKENS.join(' / ')} instead`,
-    ).toEqual([]);
+      body.includes(spelledDeadline),
+      `${file} spells the deadline out; write ${DEADLINE_TOKEN} instead`,
+    ).toBe(false);
   });
 
   it.each(pageFiles)('%s uses only tokens the config defines', (file) => {
@@ -288,12 +284,12 @@ describe('SUBMISSION_DEADLINES are the only submission deadlines on the site', (
     expect(unknown, `${file} uses tokens CONTENT_TOKENS does not define`).toEqual([]);
   });
 
-  it.each(DEADLINE_TOKENS)('%s is actually published, so the guard above is not green on nothing', (token) => {
+  it(`${DEADLINE_TOKEN} is actually published, so the guard above is not green on nothing`, () => {
     // Without this the stray check passes trivially the day someone deletes
-    // the copy. Participants owns the topic and the FAQ answers it (Issue #108
-    // names both); /registration prints the constants from its template.
+    // the copy. Participants owns the topic and the FAQ answers it;
+    // /registration prints the constant from its template.
     const carriers = pageFiles.filter((file) =>
-      readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(token),
+      readFileSync(`${PAGES_DIR}/${file}`, 'utf8').includes(DEADLINE_TOKEN),
     );
     expect(carriers).toEqual(expect.arrayContaining(['participants.yaml', 'faq.yaml']));
   });

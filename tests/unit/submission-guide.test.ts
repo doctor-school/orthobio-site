@@ -364,8 +364,8 @@ describe('participants.yaml → submission guide', () => {
       'login-02-by-code-email.png': 'podat-materialy-2.3',
       'login-03-check-email.png': 'podat-materialy-2.4',
       'letter-code.png': 'podat-materialy-2.4',
-      '01-cabinet-empty.png': 'zapolnit-zayavku-1',
-      '11-list-with-statuses-v2.png': 'zapolnit-zayavku-1',
+      '01-cabinet-empty-v2.png': 'zapolnit-zayavku-1',
+      '11-list-with-statuses-v3.png': 'zapolnit-zayavku-1',
       '03-oral-form-authors.png': 'zapolnit-zayavku-2',
       '04-oral-form-text.png': 'zapolnit-zayavku-2',
       // «Отправить» → the error list; «Да, отправить» → the confirmation.
@@ -376,7 +376,7 @@ describe('participants.yaml → submission guide', () => {
       '10-abstract-form.png': 'zapolnit-zayavku-4',
       '06-consent-and-submit.png': 'zapolnit-zayavku-5',
       // The sent card, under the status «Отправлена» it shows.
-      '12-sent-card-actions-v2.png': 'zapolnit-zayavku-7.1',
+      '12-sent-card-actions-v3.png': 'zapolnit-zayavku-7.1',
     });
   });
 });

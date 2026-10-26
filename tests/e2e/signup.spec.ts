@@ -482,7 +482,7 @@ test.describe('sign-up form', () => {
     await expect(steps.nth(0).locator('img')).toHaveCount(0);
     for (const [i, key, size] of [
       [1, 'login-03-check-email', [492, 560]],
-      [2, '01-cabinet-empty', [1080, 544]],
+      [2, '01-cabinet-empty-v2', [1080, 567]],
     ] as const) {
       const img = steps.nth(i).locator('.ob-signup__shot img');
       await expect(img).toHaveCount(1);

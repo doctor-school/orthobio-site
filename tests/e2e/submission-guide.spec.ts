@@ -246,7 +246,7 @@ test('prints the dates from the site settings, never a raw token', async ({ page
   text += '\n' + unbreak((await page.locator(FILL).textContent()) ?? '');
   expect(text).not.toContain('{{');
   expect(text).not.toMatch(/приём открыт|открыт приём/);
-  expect(text).toMatch(/До \d{1,2} [а-я]+ \d{4} года заявку можно «Забрать на исправление»\./);
+  expect(text).toMatch(/До \d{1,2} [а-я]+ \d{4} года включительно заявку можно «Забрать на исправление»\./);
   expect(text).toMatch(/Доклады, постеры и тезисы принимаются до \d{1,2} [а-я]+ \d{4} года включительно, до 23:59 по московскому времени\./);
   expect(text).toMatch(/Заявку любого вида можно отправить до \d{1,2} [а-я]+ \d{4} года включительно, до 23:59 МСК\./);
   expect(text).toMatch(/младше 40 лет на \d{1,2} [а-я]+ \d{4}:\s*родились \d{2}\.\d{2}\.\d{4} или позже — можно;\s*родились \d{2}\.\d{2}\.\d{4} или раньше — нельзя/);

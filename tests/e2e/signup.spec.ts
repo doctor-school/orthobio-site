@@ -1455,7 +1455,7 @@ test.describe('registration page design', () => {
     await expect(dates.locator('dd')).toHaveText([
       '1 октября 2026 года, 00:00 (МСК)',
       '22 апреля 2027 года, 00:00 (МСК)',
-      'до 18 декабря 2026 года',
+      'до 18 декабря 2026 года включительно',
     ]);
 
     const venue = page.locator('.ob-reg__venue');

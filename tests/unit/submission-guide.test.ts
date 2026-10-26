@@ -313,8 +313,8 @@ describe('participants.yaml → submission guide', () => {
     );
     // The take-back deadline is dated, as the cabinet now states it
     // (ds-platform #2573) — never «пока приём открыт».
-    expect(text(9)).toContain(`«Отправлена» — ждёт рассмотрения. До ${deadline} заявку можно «Забрать на исправление».`);
-    expect(text(10)).toContain(`пока заявка «Отправлена» и приём не закончился (до ${deadline})`);
+    expect(text(9)).toContain(`«Отправлена» — ждёт рассмотрения. До ${deadline} включительно заявку можно «Забрать на исправление».`);
+    expect(text(10)).toContain(`пока заявка «Отправлена» и приём не закончился (до ${deadline} включительно)`);
     expect(all.map(stepText).join('\n')).not.toMatch(/приём открыт|открыт приём/);
     expect(JSON.stringify([filled, filledFill])).not.toContain('{{');
   });

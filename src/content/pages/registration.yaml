@@ -4,9 +4,9 @@
 # отправки), даты окна регистрации и карточка площадки с картой (Issue #82). Форма, её подписи и состояния («откроется …»,
 # «закрыта», «заявка принята») живут в SignupForm.astro — это интерфейс, а не
 # редакционный текст. Даты сюда НЕ пишутся: открытие и закрытие регистрации
-# страница печатает из REGISTRATION_WINDOW (src/config/site.ts), дедлайны
-# приёма докладов и тезисов — из SUBMISSION_DEADLINES (Issue #108), даты конгресса —
-# из UPCOMING_CONGRESS_DATES, площадку — из UPCOMING_CONGRESS_VENUE, так что у
+# страница печатает из REGISTRATION_WINDOW (src/config/site.ts), срок приёма
+# докладов, постеров и тезисов — из SUBMISSION_DEADLINE (Issue #127), даты
+# конгресса — из UPCOMING_CONGRESS_DATES, площадку — из UPCOMING_CONGRESS_VENUE, так что у
 # факта одно место правки.
 
 title: Регистрация участников

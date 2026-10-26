@@ -14,7 +14,7 @@ import {
   type NavItem,
   REGISTRATION_CTA_LABEL,
   REGISTRATION_URL,
-  SUBMISSION_DEADLINES,
+  SUBMISSION_DEADLINE,
   UPCOMING_CONGRESS_VENUE,
 } from '../../src/config/site';
 import { typographize } from '../../src/content/typographize';
@@ -67,20 +67,16 @@ describe('owner-approved pre-registration launch content', () => {
     expect(UPCOMING_CONGRESS_VENUE.name).toBe('ГК «Милан»');
   });
 
-  it('publishes the organisers’ 2027 submission deadlines (Issue #108)', () => {
-    // ТЗ «подача материалов на Конгресс 2027», п. 4: oral talks until
-    // 15 January, posters and abstracts until 29 January 2027.
+  it('publishes the one submission deadline the organisers set (Issue #127)', () => {
+    // Oral talks, poster talks and abstracts all close on 18 December 2026.
     const NB = ' ';
-    expect(SUBMISSION_DEADLINES.oralTalk.date).toBe('2027-01-15');
-    expect(SUBMISSION_DEADLINES.oralTalk.display).toBe(`15${NB}января 2027${NB}года`);
-    expect(SUBMISSION_DEADLINES.posterAbstract.date).toBe('2027-01-29');
-    expect(SUBMISSION_DEADLINES.posterAbstract.display).toBe(`29${NB}января 2027${NB}года`);
-    // Page copy sees exactly these values, under these names: the two
-    // deadlines, and the first congress day with the poster birth-date bounds
-    // the submission guide prints (Issue #99).
+    expect(SUBMISSION_DEADLINE.date).toBe('2026-12-18');
+    expect(SUBMISSION_DEADLINE.display).toBe(`18${NB}декабря 2026${NB}года`);
+    // Page copy sees exactly these values, under these names: the deadline,
+    // and the first congress day with the poster birth-date bounds the
+    // submission guide prints (Issue #99).
     expect(CONTENT_TOKENS).toEqual({
-      oralTalkDeadline: SUBMISSION_DEADLINES.oralTalk.display,
-      posterAbstractDeadline: SUBMISSION_DEADLINES.posterAbstract.display,
+      submissionDeadline: SUBMISSION_DEADLINE.display,
       congressStartDay: `23${NB}апреля 2027`,
       posterBornFrom: '24.04.1987',
       posterBornUntil: '23.04.1987',

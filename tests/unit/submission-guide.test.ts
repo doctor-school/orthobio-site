@@ -11,7 +11,7 @@ import {
   FILL_GUIDE_URL,
   POSTER_AGE_CUTOFF,
   POSTER_AGE_LIMIT_YEARS,
-  SUBMISSION_DEADLINES,
+  SUBMISSION_DEADLINE,
   UPCOMING_CONGRESS_DATES,
 } from '@/config/site';
 import { pageSchemaChecked, type SubmissionGuideBlock } from '@/content/schemas';
@@ -288,8 +288,7 @@ describe('participants.yaml → submission guide', () => {
         .flatMap((b) => b.steps!),
     );
     for (const token of [
-      '{{oralTalkDeadline}}',
-      '{{posterAbstractDeadline}}',
+      '{{submissionDeadline}}',
       '{{congressStartDay}}',
       '{{posterBornFrom}}',
       '{{posterBornUntil}}',
@@ -304,21 +303,18 @@ describe('participants.yaml → submission guide', () => {
     // Steps 1–2 are «Как подать материалы», 3–10 the eight of «Как заполнить заявку».
     const all = [...filled.steps, ...filledFill.steps];
     const text = (n: number) => stepText(all[n - 1]);
-    const oral = plain(SUBMISSION_DEADLINES.oralTalk.display);
-    const poster = plain(SUBMISSION_DEADLINES.posterAbstract.display);
-    expect(text(1)).toContain('до 23:59 по московскому времени');
-    expect(text(1)).toContain(`устные доклады — до ${oral};\nпостерные доклады и тезисы — до ${poster}.`);
-    expect(text(8)).toContain(`устный доклад — ${oral};\nпостерный доклад и тезисы — ${poster}.`);
+    const deadline = plain(SUBMISSION_DEADLINE.display);
+    expect(text(1)).toContain(
+      `Доклады, постеры и тезисы принимаются до ${deadline} включительно, до 23:59 по московскому времени.`,
+    );
+    expect(text(8)).toContain(`Заявку любого вида можно отправить до ${deadline} включительно, до 23:59 МСК.`);
     expect(text(5)).toContain(
       'младше 40 лет на 23 апреля 2027:\nродились 24.04.1987 или позже — можно;\nродились 23.04.1987 или раньше — нельзя',
     );
     // The take-back deadline is dated, as the cabinet now states it
     // (ds-platform #2573) — never «пока приём открыт».
-    const takeBack = `устные доклады — до ${oral}, постерные доклады и тезисы — до ${poster}`;
-    expect(text(9)).toContain(
-      `«Отправлена» — ждёт рассмотрения. До окончания приёма своего вида можно «Забрать на исправление»: ${takeBack}.`,
-    );
-    expect(text(10)).toContain(`пока заявка «Отправлена» и приём своего вида не закончился (${takeBack})`);
+    expect(text(9)).toContain(`«Отправлена» — ждёт рассмотрения. До ${deadline} заявку можно «Забрать на исправление».`);
+    expect(text(10)).toContain(`пока заявка «Отправлена» и приём не закончился (до ${deadline})`);
     expect(all.map(stepText).join('\n')).not.toMatch(/приём открыт|открыт приём/);
     expect(JSON.stringify([filled, filledFill])).not.toContain('{{');
   });

@@ -370,7 +370,7 @@ describe('participants.yaml → submission guide', () => {
       '04-oral-form-text.png': 'zapolnit-zayavku-2',
       // «Отправить» → the error list; «Да, отправить» → the confirmation.
       '05-validation-errors.png': 'zapolnit-zayavku-2.1',
-      '07-submit-confirm-v2.png': 'zapolnit-zayavku-2.2',
+      '07-submit-confirm-v3.png': 'zapolnit-zayavku-2.2',
       '08-poster-birthdate.png': 'zapolnit-zayavku-3',
       '09-poster-age-refusal.png': 'zapolnit-zayavku-3',
       '10-abstract-form.png': 'zapolnit-zayavku-4',

@@ -123,7 +123,7 @@ describe('participants.yaml → accommodation', () => {
     expect(acc!.phone.numbers).toEqual(['+7 (495) 648-93-00', '+7 (495) 648-93-02']);
     expect(acc!.phone.numbers.map(telHref)).toEqual(['tel:+74956489300', 'tel:+74956489302']);
     expect(acc!.email.address).toBe('reservation@hotelmilan.ru');
-    expect(acc!.group.email).toBe('manager@doctor.school');
+    expect(acc!.group.email).toBe('m.ivanova@doctor.school');
     // The organisation's name never parts across lines.
     expect(acc!.group.text).toContain('«Доктор Скул»');
     expect(nbspless(acc!.contacts.address)).toBe('115563, Москва, ул. Шипиловская, 28А');

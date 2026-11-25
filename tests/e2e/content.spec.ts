@@ -83,18 +83,20 @@ test('only the owner-approved public contacts are published', async ({ page }) =
 
   await page.goto('/contacts');
   const main = page.locator('#main');
-  await expect(main.getByRole('link', { name: 'manager@doctor.school' })).toHaveAttribute(
+  await expect(main.getByText('Иванова Мария', { exact: true })).toBeVisible();
+  await expect(main.getByRole('link', { name: 'm.ivanova@doctor.school' })).toHaveAttribute(
     'href',
-    'mailto:manager@doctor.school',
+    'mailto:m.ivanova@doctor.school',
   );
   await expect(main.getByRole('link', { name: '8 (495) 410-04-90' })).toHaveAttribute(
     'href',
     'tel:84954100490',
   );
   const footer = page.getByRole('contentinfo');
-  await expect(footer.getByRole('link', { name: 'manager@doctor.school' })).toHaveAttribute(
+  await expect(footer.getByText('Иванова Мария', { exact: true })).toBeVisible();
+  await expect(footer.getByRole('link', { name: 'm.ivanova@doctor.school' })).toHaveAttribute(
     'href',
-    'mailto:manager@doctor.school',
+    'mailto:m.ivanova@doctor.school',
   );
   await expect(footer.getByRole('link', { name: '8 (495) 410-04-90' })).toHaveAttribute(
     'href',
@@ -104,7 +106,12 @@ test('only the owner-approved public contacts are published', async ({ page }) =
   await page.goto('/partners');
   await expect(
     page.getByRole('link', { name: 'Стать партнёром — написать команде конгресса' }),
-  ).toHaveAttribute('href', 'mailto:manager@doctor.school');
+  ).toHaveAttribute('href', 'mailto:m.ivanova@doctor.school');
+
+  await page.goto('/participants#accommodation');
+  await expect(
+    page.locator('#accommodation').getByRole('link', { name: 'm.ivanova@doctor.school' }),
+  ).toHaveAttribute('href', 'mailto:m.ivanova@doctor.school');
 });
 
 test('archive pages link to no external content host', async ({ page }) => {

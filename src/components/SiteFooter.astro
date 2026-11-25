@@ -11,7 +11,7 @@
 // these two are 19KB of artwork repeated in the chrome of every page.
 import dsLogoUrl from '@/assets/ds-logo-with-slogan-color.svg?url';
 import markUrl from '@/assets/orto-mark-green.svg?url';
-import { CONTACT_EMAIL, CONTACT_PHONE, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
+import { CONTACT_EMAIL, CONTACT_NAME, CONTACT_PHONE, FOOTER, FOOTER_LINKS, SITE } from '@/config/site';
 ---
 
 <footer class="ob-foot">
@@ -43,6 +43,7 @@ import { CONTACT_EMAIL, CONTACT_PHONE, FOOTER, FOOTER_LINKS, SITE } from '@/conf
       {
         CONTACT_EMAIL || CONTACT_PHONE ? (
           <>
+            <p>{CONTACT_NAME}</p>
             {
               CONTACT_EMAIL && (
                 <p>

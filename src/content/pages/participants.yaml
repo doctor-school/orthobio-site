@@ -184,8 +184,8 @@ blocks:
     group:
       # Неразрывный пробел ( ) внутри названия: «Доктор» и «Скул» не
       # должны расходиться по строкам.
-      text: "Групповые заявки направляйте в АНО «Доктор Скул»: manager@doctor.school"
-      email: manager@doctor.school
+      text: "Групповые заявки направляйте в АНО «Доктор Скул»: m.ivanova@doctor.school"
+      email: m.ivanova@doctor.school
     contacts:
       heading: Контакты отеля «Милан»
       addressLabel: Адрес

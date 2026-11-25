@@ -15,7 +15,7 @@
  * which stays true in both states.
  */
 import SectionHeading from '@/components/SectionHeading.astro';
-import { CONTACT_EMAIL, CONTACT_PHONE } from '@/config/site';
+import { CONTACT_EMAIL, CONTACT_NAME, CONTACT_PHONE } from '@/config/site';
 import { getPage } from '@/content';
 import SectionLayout from '@/layouts/SectionLayout.astro';
 
@@ -29,6 +29,7 @@ const blocks = hasContacts ? page.blocks.filter((b) => b.kind !== 'stub') : page
     hasContacts && (
       <div class="ob-container ob-section">
         <SectionHeading title="По вопросам участия" />
+        <p>{CONTACT_NAME}</p>
         <ul class="ob-list">
           {CONTACT_EMAIL && (
             <li>

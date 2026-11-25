@@ -268,7 +268,8 @@ export const CABINET_LOGIN_LABEL = 'Войти в кабинет';
  * Public congress contacts approved by the owner in Issue #54 (2026-07-30).
  * These belong to Doctor.School, not to the outgoing site's technical operator.
  */
-export const CONTACT_EMAIL: string | null = 'manager@doctor.school';
+export const CONTACT_NAME = 'Иванова Мария';
+export const CONTACT_EMAIL: string | null = 'm.ivanova@doctor.school';
 export const CONTACT_PHONE: string | null = '8 (495) 410-04-90';
 
 /**

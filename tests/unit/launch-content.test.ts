@@ -51,7 +51,7 @@ describe('owner-approved pre-registration launch content', () => {
   });
 
   it('publishes the Doctor.School manager contacts', () => {
-    expect(CONTACT_EMAIL).toBe('manager@doctor.school');
+    expect(CONTACT_EMAIL).toBe('m.ivanova@doctor.school');
     expect(CONTACT_PHONE).toBe('8 (495) 410-04-90');
   });
 
